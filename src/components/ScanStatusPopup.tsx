@@ -32,10 +32,9 @@ interface SessionScanStatus {
 interface ScanStatusPopupProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  activeTab: string;
 }
 
-const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupProps) => {
+const ScanStatusPopup = ({ isOpen, onOpenChange }: ScanStatusPopupProps) => {
   const [scanSessions, setScanSessions] = useState<SessionScanStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,20 +44,12 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
     const fetchInitialData = async () => {
       setLoading(true);
 
-      const campaignTypeMap: { [key: string]: string } = {
-        facebook: 'Facebook',
-        website: 'Website',
-        combined: 'Tổng hợp'
-      };
-      const currentCampaignType = campaignTypeMap[activeTab];
-
       const { data: campaignsData, error: campaignError } = await supabase
         .from('danh_sach_chien_dich')
-        .select('id, name')
-        .eq('type', currentCampaignType);
+        .select('id, name');
 
       if (campaignError) {
-        console.error("Error fetching campaigns for tab:", campaignError);
+        console.error("Error fetching campaigns:", campaignError);
         setLoading(false);
         return;
       }
@@ -160,7 +151,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupPro
       supabase.removeChannel(channel);
     };
 
-  }, [isOpen, activeTab]);
+  }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

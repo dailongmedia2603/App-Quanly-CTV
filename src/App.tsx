@@ -12,7 +12,6 @@ import Login from "./pages/Login";
 import Account from "./pages/Account";
 import Guide from "./pages/Guide";
 import Profile from "./pages/Profile";
-import Pricing from "./pages/Pricing";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import FindCustomers from "./pages/FindCustomers";
 import CreatePost from "./pages/CreatePost";
@@ -73,7 +72,6 @@ const AppContent = () => {
           <Route path="/account" element={<Account />} />
           <Route path="/guide" element={<Guide />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/pricing" element={<Pricing />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

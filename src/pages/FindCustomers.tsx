@@ -78,8 +78,8 @@ const FindCustomers = () => {
 
         <Card className="border-orange-200">
           <CardHeader>
-            <CardTitle>Kết quả ({reportData.length})</CardTitle>
-            <CardDescription>Danh sách các bài viết được thu thập.</CardDescription>
+            <CardTitle>Khách hàng tiềm năng ({reportData.length})</CardTitle>
+            <CardDescription>Danh sách các khách hàng tiềm năng được thu thập.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="border rounded-lg">

@@ -331,7 +331,43 @@ const Income = () => {
             <ReportWidget icon={<Percent className="h-5 w-5" />} title="Hoa hồng" value={formatCurrency(monthlyStats.totalCommission)} />
             <ReportWidget icon={<FileText className="h-5 w-5" />} title="Hợp đồng" value={monthlyStats.contractCount.toString()} />
           </div>
-          <Card><CardHeader><CardTitle>Danh sách hợp đồng trong tháng</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Tên dự án</TableHead><TableHead>Giá trị hợp đồng</TableHead><TableHead>Hoa hồng</TableHead><TableHead>Tiến độ</TableHead><TableHead>Đã thanh toán</TableHead><TableHead>Hoa hồng đã nhận</TableHead></TableRow></TableHeader><TableBody>{loadingAll ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Đang tải...</TableCell></TableRow> : monthlyContracts.length === 0 ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Không có hợp đồng nào trong tháng này.</TableCell></TableRow> : (monthlyContracts.map((contract) => (<TableRow key={contract.id}><TableCell className="font-medium">{contract.project_name}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell>{formatCurrency(contract.contract_value * contract.commission_rate)}</TableCell><TableCell><Badge variant={contract.status === 'completed' ? 'default' : 'secondary'} className={cn(contract.status === 'completed' ? 'bg-green-500 text-white' : 'bg-yellow-100 text-yellow-800')}>{contract.status === 'completed' ? 'Hoàn thành' : 'Đang chạy'}</Badge></TableCell><TableCell><Badge variant={contract.payment_status === 'paid' ? 'default' : 'outline'} className={cn(contract.payment_status === 'paid' && 'bg-blue-500 text-white')}>{contract.payment_status}</Badge></TableCell><TableCell><Badge variant={contract.commission_paid ? 'default' : 'destructive'} className={cn(contract.commission_paid && 'bg-green-100 text-green-800')}>{contract.commission_paid ? 'Đã nhận' : 'Chưa nhận'}</Badge></TableCell></TableRow>)))}</TableBody></Table></CardContent></Card>
+          <Card>
+            <CardHeader><CardTitle>Danh sách hợp đồng trong tháng</CardTitle></CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tên dự án</TableHead>
+                    <TableHead>Giá trị</TableHead>
+                    <TableHead>Đã thanh toán</TableHead>
+                    <TableHead>Còn nợ</TableHead>
+                    <TableHead>Tiến độ</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadingAll ? (
+                    <TableRow><TableCell colSpan={5} className="h-24 text-center">Đang tải...</TableCell></TableRow>
+                  ) : monthlyContracts.length === 0 ? (
+                    <TableRow><TableCell colSpan={5} className="h-24 text-center">Không có hợp đồng nào trong tháng này.</TableCell></TableRow>
+                  ) : (
+                    monthlyContracts.map((contract) => (
+                      <TableRow key={contract.id}>
+                        <TableCell className="font-medium">{contract.project_name}</TableCell>
+                        <TableCell>{formatCurrency(contract.contract_value)}</TableCell>
+                        <TableCell>{formatCurrency(contract.paid_amount)}</TableCell>
+                        <TableCell>{formatCurrency(contract.contract_value - contract.paid_amount)}</TableCell>
+                        <TableCell>
+                          <Badge variant={contract.status === 'completed' ? 'default' : 'secondary'} className={cn(contract.status === 'completed' ? 'bg-green-500 text-white' : 'bg-yellow-100 text-yellow-800')}>
+                            {contract.status === 'completed' ? 'Hoàn thành' : 'Đang chạy'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="contracts" className="space-y-4 pt-4">

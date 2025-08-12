@@ -16,25 +16,15 @@ serve(async (req) => {
   }
 
   try {
-    const { campaign_ids } = await req.json();
-    if (!campaign_ids || !Array.isArray(campaign_ids) || campaign_ids.length === 0) {
-      // Return empty array if no campaigns are selected, not an error
-      return new Response(JSON.stringify([]), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      });
-    }
-
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch from Bao_cao_Facebook
+    // Fetch from Bao_cao_Facebook for all campaigns
     const { data: facebookReports, error: facebookError } = await supabaseAdmin
       .from('Bao_cao_Facebook')
-      .select('id, campaign_id, posted_at, keywords_found, ai_evaluation, sentiment, source_url, scanned_at, content')
-      .in('campaign_id', campaign_ids);
+      .select('id, campaign_id, posted_at, keywords_found, ai_evaluation, sentiment, source_url, scanned_at, content');
 
     if (facebookError) {
       console.error("Error fetching from Bao_cao_Facebook:", facebookError);

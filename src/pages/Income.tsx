@@ -79,7 +79,7 @@ const Income = () => {
   useEffect(() => {
     if (contractValue > 40000000) {
       setCommissionRate(0.10);
-    } else if (contractValue >= 20000000) {
+    } else if (contractValue >= 10000000) {
       setCommissionRate(0.07);
     } else {
       setCommissionRate(0.05);
@@ -287,7 +287,7 @@ const Income = () => {
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-2 col-span-2"><Label htmlFor="project-name">Tên dự án</Label><Input id="project-name" value={projectName} onChange={e => setProjectName(e.target.value)} /></div>
             <div className="space-y-2"><Label htmlFor="contract-value">Giá trị hợp đồng (VND)</Label><Input id="contract-value" type="text" value={formatNumberWithDots(contractValue)} onChange={e => setContractValue(parseFormattedNumber(e.target.value))} /></div>
-            <div className="space-y-2"><Label htmlFor="commission-rate">Tỷ lệ hoa hồng (%)</Label><Input id="commission-rate" type="number" value={commissionRate * 100} readOnly className="bg-gray-100" /></div>
+            <div className="space-y-2"><Label htmlFor="commission-rate">Tỷ lệ hoa hồng (%)</Label><Input id="commission-rate" type="number" value={(commissionRate * 100).toFixed(0)} readOnly className="bg-gray-100" /></div>
             <div className="space-y-2"><Label>Ngày bắt đầu</Label><DatePicker date={startDate} setDate={setStartDate} /></div>
             <div className="space-y-2"><Label>Ngày kết thúc (tùy chọn)</Label><DatePicker date={endDate} setDate={setEndDate} /></div>
             <div className="space-y-2"><Label>Trạng thái</Label><Select value={status} onValueChange={v => setStatus(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ongoing">Đang chạy</SelectItem><SelectItem value="completed">Hoàn thành</SelectItem></SelectContent></Select></div>

@@ -46,6 +46,13 @@ const ApiKeys = () => {
     "success" | "error" | null
   >(null);
 
+  // Firecrawl states
+  const [firecrawlApiKey, setFirecrawlApiKey] = useState("");
+  const [isTestingFirecrawl, setIsTestingFirecrawl] = useState(false);
+  const [firecrawlTestStatus, setFirecrawlTestStatus] = useState<
+    "success" | "error" | null
+  >(null);
+
   // General state
   const [isSaving, setIsSaving] = useState(false);
 
@@ -68,6 +75,7 @@ const ApiKeys = () => {
           data.facebook_api_url || "http://api.akng.io.vn/graph/"
         );
         setFacebookApiToken(data.facebook_api_token || "");
+        setFirecrawlApiKey(data.firecrawl_api_key || "");
       }
     };
 
@@ -87,6 +95,7 @@ const ApiKeys = () => {
         gemini_model: geminiModel,
         facebook_api_url: facebookApiUrl,
         facebook_api_token: facebookApiToken,
+        firecrawl_api_key: firecrawlApiKey,
         updated_at: new Date().toISOString(),
       })
       .select();
@@ -174,6 +183,41 @@ const ApiKeys = () => {
     setIsTestingFacebook(false);
   };
 
+  const handleTestFirecrawlConnection = async () => {
+    if (!firecrawlApiKey) {
+      showError("Please enter a Firecrawl API Key first.");
+      return;
+    }
+    setIsTestingFirecrawl(true);
+    setFirecrawlTestStatus(null);
+    const toastId = showLoading("Testing Firecrawl connection...");
+
+    const { data, error } = await supabase.functions.invoke(
+      "test-ket-noi-firecrawl",
+      {
+        body: { apiKey: firecrawlApiKey },
+      }
+    );
+
+    dismissToast(toastId);
+    if (error) {
+      showError(`Connection test failed: ${error.message}`);
+      setFirecrawlTestStatus("error");
+    } else if (data) {
+      if (data.success) {
+        showSuccess(data.message);
+        setFirecrawlTestStatus("success");
+      } else {
+        showError(`Connection test failed: ${data.message}`);
+        setFirecrawlTestStatus("error");
+      }
+    } else {
+      showError("Connection test failed: An unknown error occurred.");
+      setFirecrawlTestStatus("error");
+    }
+    setIsTestingFirecrawl(false);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -182,18 +226,24 @@ const ApiKeys = () => {
       </div>
 
       <Tabs defaultValue="api-ai" className="w-full">
-        <TabsList className="flex w-full rounded-lg border border-orange-200 p-0 bg-white">
+        <TabsList className="flex w-full rounded-lg border border-orange-200 p-1 bg-white">
           <TabsTrigger
             value="api-ai"
-            className="flex-1 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light rounded-l-md"
+            className="flex-1 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light rounded-md"
           >
             API AI
           </TabsTrigger>
           <TabsTrigger
             value="api-facebook"
-            className="flex-1 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light rounded-r-md"
+            className="flex-1 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light rounded-md"
           >
             API Facebook
+          </TabsTrigger>
+          <TabsTrigger
+            value="api-firecrawl"
+            className="flex-1 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light rounded-md"
+          >
+            API Firecrawl
           </TabsTrigger>
         </TabsList>
         <TabsContent value="api-ai" className="pt-6">
@@ -329,6 +379,64 @@ const ApiKeys = () => {
                     </div>
                   )}
                   {facebookTestStatus === "error" && (
+                    <div className="flex items-center text-sm font-medium text-red-600">
+                      <XCircle className="w-4 h-4 mr-1.5" />
+                      Thất bại
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="api-firecrawl" className="pt-6">
+          <Card className="border-orange-200">
+            <CardHeader>
+              <CardTitle>Firecrawl API</CardTitle>
+              <CardDescription>
+                Integrate with Firecrawl for web scraping and crawling. Get your
+                key from firecrawl.dev.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="firecrawl-api-key">API Key</Label>
+                <Input
+                  id="firecrawl-api-key"
+                  placeholder="Enter your Firecrawl API Key"
+                  value={firecrawlApiKey}
+                  onChange={(e) => {
+                    setFirecrawlApiKey(e.target.value);
+                    setFirecrawlTestStatus(null);
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={handleTestFirecrawlConnection}
+                    disabled={isTestingFirecrawl || isSaving}
+                    variant="secondary"
+                    className="bg-gray-800 text-white hover:bg-gray-700"
+                  >
+                    {isTestingFirecrawl ? "Testing..." : "Test Connection"}
+                  </Button>
+                  <Button
+                    onClick={handleSave}
+                    disabled={isSaving || isTestingFirecrawl}
+                    className="bg-brand-orange hover:bg-brand-orange/90 text-white"
+                  >
+                    {isSaving ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+                <div>
+                  {firecrawlTestStatus === "success" && (
+                    <div className="flex items-center text-sm font-medium text-green-600">
+                      <CheckCircle className="w-4 h-4 mr-1.5" />
+                      Thành công
+                    </div>
+                  )}
+                  {firecrawlTestStatus === "error" && (
                     <div className="flex items-center text-sm font-medium text-red-600">
                       <XCircle className="w-4 h-4 mr-1.5" />
                       Thất bại

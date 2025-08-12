@@ -47,11 +47,10 @@ const findKeywords = (content: string, keywords: string[]): string[] => {
     return found;
 };
 
-const logScan = async (supabaseAdmin: any, campaign_id: string, user_id: string, status: string, message: string, details: any = null, log_type: 'progress' | 'final' = 'final') => {
-    if (!campaign_id || !user_id) return;
+const logScan = async (supabaseAdmin: any, campaign_id: string, status: string, message: string, details: any = null, log_type: 'progress' | 'final' = 'final') => {
+    if (!campaign_id) return;
     await supabaseAdmin.from('scan_logs').insert({
         campaign_id,
-        user_id,
         status,
         message,
         details,
@@ -71,7 +70,6 @@ serve(async (req) => {
   );
   
   let campaign_id_from_req: string | null = null;
-  let user_id_from_req: string | null = null;
   let sinceTimestamp: number | null = null;
   let untilTimestamp: number | null = null;
 
@@ -93,7 +91,6 @@ serve(async (req) => {
     if (!campaign) throw new Error("Không tìm thấy chiến dịch.");
 
     const campaignOwnerId = campaign.user_id;
-    user_id_from_req = campaignOwnerId;
     if (!campaignOwnerId) throw new Error("Chiến dịch không có người sở hữu.");
 
     const { data: apiKeys, error: apiKeyError } = await supabaseAdmin
@@ -114,7 +111,7 @@ serve(async (req) => {
 
     const facebookGroupIds = campaign.sources.filter((s: string) => !s.startsWith('http') && !s.startsWith('www'));
     if (facebookGroupIds.length === 0) {
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', 'Chiến dịch không có nguồn Facebook nào để quét.', { sources: campaign.sources }, 'final');
+        await logScan(supabaseAdmin, campaign.id, 'success', 'Chiến dịch không có nguồn Facebook nào để quét.', { sources: campaign.sources }, 'final');
         return new Response(JSON.stringify({ success: true, message: "Không có nguồn Facebook nào để quét." }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
@@ -132,7 +129,7 @@ serve(async (req) => {
         throw new Error("URL hoặc Token của API Facebook chưa được cấu hình trong cài đặt của người dùng.");
     }
 
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', 'Bắt đầu quét nguồn Facebook...', null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, 'info', 'Bắt đầu quét nguồn Facebook...', null, 'progress');
 
     const reportTable = campaign.type === 'Tổng hợp' ? 'Bao_cao_tong_hop' : 'Bao_cao_Facebook';
     
@@ -165,9 +162,9 @@ serve(async (req) => {
     const allPostsData = [];
     const apiCallDetails = [];
 
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(1/4) Đang lấy bài viết từ ${facebookGroupIds.length} group...`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, 'info', `(1/3) Đang lấy bài viết từ ${facebookGroupIds.length} group...`, null, 'progress');
     for (const groupId of facebookGroupIds) {
-        let url = `${facebook_api_url.replace(/\/$/, '')}/${groupId}/feed?fields=message,created_time,id,permalink_url,from&access_token=${facebook_api_token}&limit=100`;
+        let url = `${facebook_api_url.replace(/\/$/, '')}/${groupId}/feed?fields=message,created_time,id,permalink_url,from&access_token=${facebook_api_token}`;
         if (sinceTimestamp) {
             url += `&since=${sinceTimestamp}`;
         }
@@ -195,25 +192,26 @@ serve(async (req) => {
             continue;
         }
 
+        // Handle both direct Facebook API response and proxy response
         let posts = [];
-        if (responseData.data?.data) {
+        if (responseData.data?.data) { // Proxy structure { success: true, data: { data: [...] } }
             posts = responseData.data.data;
-        } else if (responseData.data) {
+        } else if (responseData.data) { // Direct Facebook API structure { data: [...] }
             posts = responseData.data;
         } else {
             const errorMessage = responseData.message || `API returned malformed data for group ${groupId}`;
             console.error(errorMessage, JSON.stringify(responseData));
-            continue;
+            continue; // Skip to the next group
         }
 
         if (posts.length > 0) {
             allPostsData.push(...posts.map((post: any) => ({ ...post, campaign_id: campaign.id })));
         }
     }
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(1/4) Đã lấy xong ${allPostsData.length} bài viết.`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, 'success', `(1/3) Đã lấy xong ${allPostsData.length} bài viết.`, null, 'progress');
 
     let filteredPosts = [];
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/4) Đang lọc ${allPostsData.length} bài viết...`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, 'info', `(2/3) Đang lọc ${allPostsData.length} bài viết...`, null, 'progress');
     if (keywords.length > 0) {
         for (const post of allPostsData) {
             const foundKeywords = findKeywords(post.message, keywords);
@@ -227,7 +225,7 @@ serve(async (req) => {
 
     let finalResults = [];
     if (campaign.ai_filter_enabled && campaign.ai_prompt && gemini_api_key && gemini_model) {
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/4) AI đang phân tích ${filteredPosts.length} bài viết...`, null, 'progress');
+        await logScan(supabaseAdmin, campaign.id, 'info', `(2/3) AI đang phân tích ${filteredPosts.length} bài viết...`, null, 'progress');
         const genAI = new GoogleGenerativeAI(gemini_api_key);
         const model = genAI.getGenerativeModel({ model: gemini_model });
 
@@ -284,70 +282,36 @@ serve(async (req) => {
             sentiment: null,
         }));
     }
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(2/4) Phân tích và lọc xong.`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, 'success', `(2/3) Phân tích và lọc xong.`, null, 'progress');
 
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(3/4) AI đang tạo comment đề xuất cho ${finalResults.length} bài viết...`, null, 'progress');
-    const commentGenerationPromises = finalResults.map(async (post) => {
-        if (!gemini_api_key || !gemini_model || !post.content) {
-            return { ...post, suggested_comment: null };
-        }
-
-        const prompt = `
-            You are a helpful and professional marketing assistant. 
-            Based on the following Facebook post, write a short, friendly, and natural-sounding comment to introduce a relevant service.
-            The service we offer is related to these keywords: "${post.keywords_found?.join(', ')}".
-            The comment should be engaging and encourage a response. Do not use hashtags.
-
-            Post Content:
-            ---
-            ${post.content}
-            ---
-
-            Your response must be a single string containing only the suggested comment in Vietnamese.
-        `;
-
-        try {
-            const genAI = new GoogleGenerativeAI(gemini_api_key);
-            const model = genAI.getGenerativeModel({ model: gemini_model });
-            const result = await model.generateContent(prompt);
-            const comment = result.response.text().trim();
-            return { ...post, suggested_comment: comment };
-        } catch (e) {
-            console.error("Error generating suggested comment for post:", post.source_url, e);
-            return { ...post, suggested_comment: 'AI comment generation failed.' };
-        }
-    });
-
-    const resultsWithComments = await Promise.all(commentGenerationPromises);
-
-    if (resultsWithComments.length > 0) {
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(4/4) Đang lưu ${resultsWithComments.length} kết quả vào báo cáo...`, null, 'progress');
+    if (finalResults.length > 0) {
+        await logScan(supabaseAdmin, campaign.id, 'info', `(3/3) Đang lưu ${finalResults.length} kết quả vào báo cáo...`, null, 'progress');
         const dataToInsert = campaign.type === 'Tổng hợp' 
-            ? resultsWithComments.map(r => {
+            ? finalResults.map(r => {
                 const { content, ...rest } = r;
                 return { ...rest, description: content, source_type: 'Facebook' };
             })
-            : resultsWithComments;
+            : finalResults;
 
         const { error: insertError } = await supabaseAdmin
             .from(reportTable)
             .insert(dataToInsert);
 
         if (insertError) {
-            await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'error', `(4/4) Lưu kết quả thất bại.`, null, 'final');
+            await logScan(supabaseAdmin, campaign.id, 'error', `(3/3) Lưu kết quả thất bại.`, null, 'final');
             throw new Error(`Thêm dữ liệu báo cáo thất bại: ${insertError.message}`);
         }
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(4/4) Đã lưu ${resultsWithComments.length} kết quả.`, null, 'progress');
+        await logScan(supabaseAdmin, campaign.id, 'success', `(3/3) Đã lưu ${finalResults.length} kết quả.`, null, 'progress');
     }
     
-    const successMessage = `Quét Facebook hoàn tất. Đã tìm thấy và xử lý ${resultsWithComments.length} bài viết.`;
-    await logScan(supabaseAdmin, campaign_id_from_req, user_id_from_req, 'success', successMessage, { 
+    const successMessage = `Quét Facebook hoàn tất. Đã tìm thấy và xử lý ${finalResults.length} bài viết.`;
+    await logScan(supabaseAdmin, campaign_id_from_req, 'success', successMessage, { 
         since: sinceTimestamp,
         "since (readable)": formatTimestampForHumans(sinceTimestamp),
         until: untilTimestamp,
         "until (readable)": formatTimestampForHumans(untilTimestamp),
         api_calls: apiCallDetails, 
-        found_posts: resultsWithComments.length,
+        found_posts: finalResults.length,
     }, 'final');
 
     return new Response(JSON.stringify({ success: true, message: successMessage }), {
@@ -356,7 +320,7 @@ serve(async (req) => {
     })
   } catch (error) {
     console.error(error);
-    await logScan(supabaseAdmin, campaign_id_from_req, user_id_from_req, 'error', error.message, { 
+    await logScan(supabaseAdmin, campaign_id_from_req, 'error', error.message, { 
         stack: error.stack,
         since: sinceTimestamp,
         "since (readable)": formatTimestampForHumans(sinceTimestamp),

@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Loader2, CheckCircle, XCircle, FileClock, Activity, Zap, Bot } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -32,9 +32,10 @@ interface SessionScanStatus {
 interface ScanStatusPopupProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
+  activeTab: string;
 }
 
-const ScanStatusPopup = ({ isOpen, onOpenChange }: ScanStatusPopupProps) => {
+const ScanStatusPopup = ({ isOpen, onOpenChange, activeTab }: ScanStatusPopupProps) => {
   const [scanSessions, setScanSessions] = useState<SessionScanStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,12 +45,20 @@ const ScanStatusPopup = ({ isOpen, onOpenChange }: ScanStatusPopupProps) => {
     const fetchInitialData = async () => {
       setLoading(true);
 
+      const campaignTypeMap: { [key: string]: string } = {
+        facebook: 'Facebook',
+        website: 'Website',
+        combined: 'Tổng hợp'
+      };
+      const currentCampaignType = campaignTypeMap[activeTab];
+
       const { data: campaignsData, error: campaignError } = await supabase
         .from('danh_sach_chien_dich')
-        .select('id, name');
+        .select('id, name')
+        .eq('type', currentCampaignType);
 
       if (campaignError) {
-        console.error("Error fetching campaigns:", campaignError);
+        console.error("Error fetching campaigns for tab:", campaignError);
         setLoading(false);
         return;
       }
@@ -151,7 +160,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange }: ScanStatusPopupProps) => {
       supabase.removeChannel(channel);
     };
 
-  }, [isOpen]);
+  }, [isOpen, activeTab]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -197,7 +206,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange }: ScanStatusPopupProps) => {
                           </div>
                           <p className="text-sm text-gray-600">{session.latestMessage}</p>
                           <p className="text-xs text-gray-400 mt-1">
-                            {format(new Date(session.logs[0].scan_time), 'dd/MM/yyyy, HH:mm:ss', { locale: vi })}
+                            {formatDistanceToNow(new Date(session.logs[0].scan_time), { addSuffix: true, locale: vi })}
                           </p>
                         </div>
                       </div>
@@ -215,7 +224,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange }: ScanStatusPopupProps) => {
                             <div className="flex-1">
                               <p className="text-sm text-gray-700">{log.message}</p>
                               <p className="text-xs text-gray-400">
-                                {format(new Date(log.scan_time), 'HH:mm:ss', { locale: vi })}
+                                {formatDistanceToNow(new Date(log.scan_time), { addSuffix: true, locale: vi })}
                               </p>
                             </div>
                           </div>

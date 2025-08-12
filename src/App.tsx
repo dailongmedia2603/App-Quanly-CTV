@@ -17,6 +17,10 @@ import Guide from "./pages/Guide";
 import Profile from "./pages/Profile";
 import Pricing from "./pages/Pricing";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import FindCustomers from "./pages/FindCustomers";
+import CreatePost from "./pages/CreatePost";
+import CreateComment from "./pages/CreateComment";
+import CreatePlan from "./pages/CreatePlan";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +63,10 @@ const AppContent = () => {
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Index />} />
+          <Route path="/find-customers" element={<FindCustomers />} />
+          <Route path="/create-content/post" element={<CreatePost />} />
+          <Route path="/create-content/comment" element={<CreateComment />} />
+          <Route path="/create-plan" element={<CreatePlan />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/keys" element={<ApiKeys />} />
           <Route path="/data-source/website" element={<DataSourceWebsite />} />

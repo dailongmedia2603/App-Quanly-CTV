@@ -30,6 +30,13 @@ interface Log {
   generated_content: string;
 }
 
+const getPostTitle = (content: string): string => {
+  if (!content) return 'Bài viết không có nội dung';
+  const firstLine = content.split('\n')[0].trim();
+  const cleanTitle = firstLine.replace(/^(#+\s*|\*\*\s*|\s*\*)/, '').replace(/\s*\*\*$/, '').trim();
+  return cleanTitle || 'Bài viết không có tiêu đề';
+};
+
 const PostHistoryView = ({ onBack }: { onBack: () => void }) => {
   const [logs, setLogs] = useState<Log[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,23 +91,23 @@ const PostHistoryView = ({ onBack }: { onBack: () => void }) => {
               <p className="mt-4 font-medium">Chưa có bài viết nào được tạo</p>
             </div>
           ) : (
-            <Accordion type="single" collapsible className="w-full">
+            <Accordion type="single" collapsible className="w-full space-y-3">
               {logs.map(log => (
-                <AccordionItem value={log.id} key={log.id}>
-                  <AccordionTrigger>
-                    <div className="flex justify-between w-full pr-4">
-                      <span>Bài viết tạo lúc</span>
-                      <span className="text-gray-500 font-normal">
+                <AccordionItem value={log.id} key={log.id} className="bg-white border border-orange-200 rounded-lg shadow-sm">
+                  <AccordionTrigger className="p-4 hover:no-underline hover:bg-orange-50/50 rounded-t-lg data-[state=open]:border-b data-[state=open]:border-orange-200">
+                    <div className="flex justify-between items-center w-full">
+                      <span className="font-semibold text-left text-gray-800 truncate pr-4">{getPostTitle(log.generated_content)}</span>
+                      <span className="text-sm text-gray-500 font-normal flex-shrink-0">
                         {format(new Date(log.created_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}
                       </span>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="pt-4">
-                    <div className="prose max-w-none whitespace-pre-wrap relative bg-gray-50 p-4 rounded-md">
+                  <AccordionContent className="p-4 bg-white rounded-b-lg">
+                    <div className="prose max-w-none whitespace-pre-wrap relative bg-orange-50/30 p-4 rounded-md border border-orange-100">
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="absolute top-2 right-2 h-7 w-7"
+                        className="absolute top-2 right-2 h-8 w-8 text-gray-600 hover:bg-orange-100"
                         onClick={() => handleCopy(log.generated_content)}
                       >
                         <Copy className="h-4 w-4" />

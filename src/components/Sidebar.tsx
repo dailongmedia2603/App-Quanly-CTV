@@ -44,15 +44,21 @@ const SubNavLink = ({ to, children }: { to: string; children: React.ReactNode })
   const isActive = location.pathname === to;
 
   return (
-    <Link
-      to={to}
-      className={cn(
-        "block rounded-md px-3 py-2 text-sm text-gray-500 hover:bg-gray-100",
-        isActive && "text-brand-orange font-medium"
-      )}
-    >
-      {children}
-    </Link>
+    <div className="relative">
+      <Link
+        to={to}
+        className={cn(
+          "block rounded-md py-2 pl-4 text-sm text-gray-500 hover:bg-gray-100",
+          isActive && "text-brand-orange font-medium"
+        )}
+      >
+        {children}
+      </Link>
+      <span className={cn(
+        "absolute left-[-3px] top-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full",
+        isActive ? "bg-brand-orange" : "bg-gray-400"
+      )}></span>
+    </div>
   );
 };
 
@@ -110,13 +116,28 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
             {isCollapsed ? (
               <Tooltip><TooltipTrigger className="w-full"><div className="flex items-center justify-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600"><PenSquare className="h-5 w-5 flex-shrink-0" /></div></TooltipTrigger><TooltipContent side="right"><p>Tạo content</p></TooltipContent></Tooltip>
             ) : (
-              <Accordion type="single" collapsible defaultValue={isCreateContentActive ? "item-1" : undefined}><AccordionItem value="item-1" className="border-none"><AccordionTrigger className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline [&[data-state=open]>svg]:rotate-180"><div className="flex items-center space-x-3"><PenSquare className="h-5 w-5" /><span>Tạo content</span></div></AccordionTrigger><AccordionContent className="pl-8 pb-0"><nav className="space-y-1"><SubNavLink to="/create-content/post">Tạo bài viết</SubNavLink><SubNavLink to="/create-content/comment">Tạo comment</SubNavLink></nav></AccordionContent></AccordionItem></Accordion>
+              <Accordion type="single" collapsible defaultValue={isCreateContentActive ? "item-1" : undefined}><AccordionItem value="item-1" className="border-none"><AccordionTrigger className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline [&[data-state=open]>svg]:rotate-180"><div className="flex items-center space-x-3"><PenSquare className="h-5 w-5" /><span>Tạo content</span></div></AccordionTrigger>
+                <AccordionContent className="pl-8 pb-0 pt-1">
+                  <nav className="relative border-l border-gray-200 space-y-1">
+                    <SubNavLink to="/create-content/post">Tạo bài viết</SubNavLink>
+                    <SubNavLink to="/create-content/comment">Tạo comment</SubNavLink>
+                  </nav>
+                </AccordionContent>
+              </AccordionItem></Accordion>
             )}
             <NavLink to="/create-plan" icon={ClipboardList} isCollapsed={isCollapsed}>Tạo Plan</NavLink>
             {isCollapsed ? (
               <Tooltip><TooltipTrigger className="w-full"><div className="flex items-center justify-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600"><Cog className="h-5 w-5 flex-shrink-0" /></div></TooltipTrigger><TooltipContent side="right"><p>Cấu hình</p></TooltipContent></Tooltip>
             ) : (
-              <Accordion type="single" collapsible defaultValue={isConfigActive ? "item-1" : undefined}><AccordionItem value="item-1" className="border-none"><AccordionTrigger className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline [&[data-state=open]>svg]:rotate-180"><div className="flex items-center space-x-3"><Cog className="h-5 w-5" /><span>Cấu hình</span></div></AccordionTrigger><AccordionContent className="pl-8 pb-0"><nav className="space-y-1"><SubNavLink to="/config/scan-post">Quét Post</SubNavLink><SubNavLink to="/config/content-ai">Content AI</SubNavLink><SubNavLink to="/config/create-plan">Tạo plan</SubNavLink></nav></AccordionContent></AccordionItem></Accordion>
+              <Accordion type="single" collapsible defaultValue={isConfigActive ? "item-1" : undefined}><AccordionItem value="item-1" className="border-none"><AccordionTrigger className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline [&[data-state=open]>svg]:rotate-180"><div className="flex items-center space-x-3"><Cog className="h-5 w-5" /><span>Cấu hình</span></div></AccordionTrigger>
+                <AccordionContent className="pl-8 pb-0 pt-1">
+                  <nav className="relative border-l border-gray-200 space-y-1">
+                    <SubNavLink to="/config/scan-post">Quét Post</SubNavLink>
+                    <SubNavLink to="/config/content-ai">Content AI</SubNavLink>
+                    <SubNavLink to="/config/create-plan">Tạo plan</SubNavLink>
+                  </nav>
+                </AccordionContent>
+              </AccordionItem></Accordion>
             )}
             <NavLink to="/reports" icon={FilePieChart} isCollapsed={isCollapsed}>Báo cáo</NavLink>
             <NavLink to="/usage" icon={BarChart2} isCollapsed={isCollapsed}>Usage</NavLink>

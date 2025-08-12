@@ -21,6 +21,7 @@ import ScanStatusPopup from "@/components/ScanStatusPopup";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface Campaign {
   id: string;
@@ -193,6 +194,7 @@ const ListGroupTab = ({ groups, loading, refetch }: { groups: FacebookGroup[], l
 };
 
 const Index = () => {
+  const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
   const [facebookGroupsData, setFacebookGroupsData] = useState<FacebookGroup[]>([]);
@@ -261,6 +263,7 @@ const Index = () => {
   };
 
   const handleCreateCampaign = async () => {
+    if (!user) return showError("Bạn cần đăng nhập để tạo chiến dịch.");
     if (!campaignName.trim()) return showError("Vui lòng nhập tên chiến dịch.");
     if (selectedGroups.length === 0) return showError("Vui lòng chọn ít nhất một group.");
     
@@ -268,6 +271,7 @@ const Index = () => {
     const toastId = showLoading("Đang tạo chiến dịch...");
     
     const payload = {
+      user_id: user.id,
       name: campaignName,
       type: 'Facebook',
       sources: selectedGroups,

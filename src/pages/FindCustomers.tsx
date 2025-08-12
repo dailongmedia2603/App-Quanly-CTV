@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FacebookReportDetailsDialog } from "@/components/FacebookReportDetailsDialog";
-import { showError } from '@/utils/toast';
+import { showError, showSuccess } from '@/utils/toast';
 import { format } from 'date-fns';
 import { ExternalLink, FileText } from 'lucide-react';
 
@@ -67,6 +67,16 @@ const FindCustomers = () => {
     setIsDetailsModalOpen(true);
   };
 
+  const handleCopyComment = (comment: string | null | undefined) => {
+    if (!comment) return;
+    navigator.clipboard.writeText(comment).then(() => {
+      showSuccess("Đã sao chép comment!");
+    }).catch(err => {
+      showError("Không thể sao chép.");
+      console.error('Could not copy text: ', err);
+    });
+  };
+
   return (
     <>
       <div className="space-y-6">
@@ -112,7 +122,10 @@ const FindCustomers = () => {
                         <TableCell className="max-w-md truncate cursor-pointer hover:text-brand-orange" onClick={() => handleViewDetails(item)}>
                           {item.description}
                         </TableCell>
-                        <TableCell className="max-w-sm whitespace-pre-wrap">
+                        <TableCell 
+                          className="max-w-sm whitespace-pre-wrap cursor-pointer hover:bg-orange-50"
+                          onClick={() => handleCopyComment(item.suggested_comment)}
+                        >
                           {item.suggested_comment || <span className="text-gray-400 italic">Chưa có</span>}
                         </TableCell>
                         <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>

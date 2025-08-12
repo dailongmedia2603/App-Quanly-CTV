@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bell, ArrowUpToLine, LogOut, BookOpen, User, Settings } from "lucide-react";
+import { Bell, LogOut, BookOpen, User, Settings } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,10 +30,6 @@ const Header = () => {
         <Button variant="outline" className="space-x-2" onClick={() => navigate('/guide')}>
           <BookOpen className="h-5 w-5" />
           <span>Hướng dẫn</span>
-        </Button>
-        <Button variant="outline" className="space-x-2" onClick={() => navigate('/pricing')}>
-          <ArrowUpToLine className="h-5 w-5" />
-          <span>Nâng cấp</span>
         </Button>
         <Button variant="outline" size="icon">
           <Bell className="h-5 w-5" />

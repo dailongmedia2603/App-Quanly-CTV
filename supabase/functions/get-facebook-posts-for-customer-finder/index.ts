@@ -33,28 +33,19 @@ serve(async (req) => {
     // Fetch from Bao_cao_Facebook
     const { data: facebookReports, error: facebookError } = await supabaseAdmin
       .from('Bao_cao_Facebook')
-      .select('id, campaign_id, posted_at, keywords_found, ai_evaluation, sentiment, source_url, scanned_at, description:content')
+      .select('id, campaign_id, posted_at, keywords_found, ai_evaluation, sentiment, source_url, scanned_at, content')
       .in('campaign_id', campaign_ids);
 
     if (facebookError) {
       console.error("Error fetching from Bao_cao_Facebook:", facebookError);
       throw new Error(`Lỗi khi lấy báo cáo Facebook: ${facebookError.message}`);
     }
-
-    // Fetch from Bao_cao_tong_hop for Facebook source type
-    const { data: combinedReports, error: combinedError } = await supabaseAdmin
-      .from('Bao_cao_tong_hop')
-      .select('*')
-      .in('campaign_id', campaign_ids)
-      .eq('source_type', 'Facebook');
-
-    if (combinedError) {
-      console.error("Error fetching from Bao_cao_tong_hop:", combinedError);
-      throw new Error(`Lỗi khi lấy báo cáo tổng hợp: ${combinedError.message}`);
-    }
     
-    // Combine results
-    const allData = [...(facebookReports || []), ...(combinedReports || [])];
+    // Rename 'content' to 'description' to match the frontend type
+    const allData = (facebookReports || []).map(report => ({
+      ...report,
+      description: report.content
+    }));
 
     // Sort by posted_at descending
     allData.sort((a, b) => new Date(b.posted_at).getTime() - new Date(a.posted_at).getTime());

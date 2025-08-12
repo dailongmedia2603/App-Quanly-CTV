@@ -70,16 +70,6 @@ const Index = () => {
   const [isCreatingWebsite, setIsCreatingWebsite] = useState(false);
   const [websiteScanType, setWebsiteScanType] = useState("/scrape");
 
-  // Combined form state
-  const [combinedCampaignName, setCombinedCampaignName] = useState("");
-  const [combinedSelectedGroups, setCombinedSelectedGroups] = useState<string[]>([]);
-  const [combinedSelectedWebsites, setCombinedSelectedWebsites] = useState<string[]>([]);
-  const [combinedEndDate, setCombinedEndDate] = useState<Date>();
-  const [combinedScanFrequency, setCombinedScanFrequency] = useState<number>(1);
-  const [combinedScanUnit, setCombinedScanUnit] = useState("day");
-  const [isCreatingCombined, setIsCreatingCombined] = useState(false);
-  const [combinedWebsiteScanType, setCombinedWebsiteScanType] = useState("/scrape");
-
   // Edit dialog state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
@@ -164,17 +154,7 @@ const Index = () => {
     setWebsiteScanType("/scrape");
   };
 
-  const resetCombinedForm = () => {
-    setCombinedCampaignName("");
-    setCombinedSelectedGroups([]);
-    setCombinedSelectedWebsites([]);
-    setCombinedEndDate(undefined);
-    setCombinedScanFrequency(1);
-    setCombinedScanUnit("day");
-    setCombinedWebsiteScanType("/scrape");
-  };
-
-  const handleCreateCampaign = async (type: 'Facebook' | 'Website' | 'Tổng hợp') => {
+  const handleCreateCampaign = async (type: 'Facebook' | 'Website') => {
     let name, sources, localEndDate, localScanFrequency, localScanUnit, setIsCreatingState, resetForm;
     let payload: any = {};
 
@@ -194,7 +174,7 @@ const Index = () => {
         ai_filter_enabled: useAiFilter,
         ai_prompt: useAiFilter ? aiPrompt : null,
       };
-    } else if (type === 'Website') {
+    } else { // Website
       if (!websiteCampaignName.trim()) return showError("Vui lòng nhập tên chiến dịch.");
       if (selectedWebsites.length === 0) return showError("Vui lòng chọn ít nhất một website.");
       name = websiteCampaignName;
@@ -206,19 +186,6 @@ const Index = () => {
       resetForm = resetWebsiteForm;
       payload = {
         website_scan_type: websiteScanType,
-      };
-    } else { // Combined
-      if (!combinedCampaignName.trim()) return showError("Vui lòng nhập tên chiến dịch.");
-      if (combinedSelectedGroups.length === 0 && combinedSelectedWebsites.length === 0) return showError("Vui lòng chọn ít nhất một nguồn (Group hoặc Website).");
-      name = combinedCampaignName;
-      sources = [...combinedSelectedGroups, ...combinedSelectedWebsites];
-      localEndDate = combinedEndDate;
-      localScanFrequency = combinedScanFrequency;
-      localScanUnit = combinedScanUnit;
-      setIsCreatingState = setIsCreatingCombined;
-      resetForm = resetCombinedForm;
-      payload = {
-        website_scan_type: combinedWebsiteScanType,
       };
     }
 
@@ -280,7 +247,7 @@ const Index = () => {
     setUpdatedKeywords(campaign.keywords || "");
     setUpdatedUseAiFilter(campaign.ai_filter_enabled || false);
     setUpdatedAiPrompt(campaign.ai_prompt || "");
-    if (campaign.type === 'Website' || campaign.type === 'Tổng hợp') {
+    if (campaign.type === 'Website') {
       setUpdatedWebsiteScanType(campaign.website_scan_type || '/scrape');
     }
     setIsEditDialogOpen(true);
@@ -338,7 +305,7 @@ const Index = () => {
       };
     }
 
-    if (editingCampaign.type === 'Website' || editingCampaign.type === 'Tổng hợp') {
+    if (editingCampaign.type === 'Website') {
       payload.website_scan_type = updatedWebsiteScanType;
     }
 
@@ -408,7 +375,6 @@ const Index = () => {
 
   const facebookCampaigns = filteredCampaigns.filter(c => c.type === 'Facebook');
   const websiteCampaigns = filteredCampaigns.filter(c => c.type === 'Website');
-  const combinedCampaigns = filteredCampaigns.filter(c => c.type === 'Tổng hợp');
 
   const getSourcesForEdit = (campaign: Campaign | null) => {
     if (!campaign) return { groups: [], websites: [] };
@@ -423,7 +389,7 @@ const Index = () => {
 
   const editSources = getSourcesForEdit(editingCampaign);
 
-  const renderCampaignTab = (type: 'Facebook' | 'Website' | 'Tổng hợp', campaignsToShow: Campaign[], formContent: React.ReactNode) => (
+  const renderCampaignTab = (type: 'Facebook' | 'Website', campaignsToShow: Campaign[], formContent: React.ReactNode) => (
     <>
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="item-1" className="border rounded-lg overflow-hidden">
@@ -460,7 +426,6 @@ const Index = () => {
         <TabsList className="inline-flex items-center justify-center rounded-lg border border-orange-200 p-1 bg-white">
           <TabsTrigger value="facebook" className="px-4 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:text-gray-900 rounded-md">Facebook</TabsTrigger>
           <TabsTrigger value="website" className="px-4 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:text-gray-900 rounded-md">Website</TabsTrigger>
-          <TabsTrigger value="combined" className="px-4 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:text-gray-900 rounded-md">Tổng hợp</TabsTrigger>
         </TabsList>
         
         <TabsContent value="facebook" className="pt-6">
@@ -582,73 +547,6 @@ const Index = () => {
             </div>
           ))}
         </TabsContent>
-
-        <TabsContent value="combined" className="pt-6">
-          {renderCampaignTab('Tổng hợp', combinedCampaigns, (
-            <div className="p-6 bg-white">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-end">
-                <div className="space-y-2">
-                  <Label>Tên chiến dịch</Label>
-                  <Input placeholder="VD: Chiến dịch tổng hợp tháng 8" value={combinedCampaignName} onChange={(e) => setCombinedCampaignName(e.target.value)} />
-                </div>
-                <div className="flex items-end space-x-4">
-                  <div className="space-y-2 flex-1">
-                    <Label>Loại chiến dịch</Label>
-                    <Input value="Tổng hợp" disabled />
-                  </div>
-                  <div className="space-y-2 flex-1">
-                    <Label>Loại quét Website</Label>
-                    <Select value={combinedWebsiteScanType} onValueChange={setCombinedWebsiteScanType}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="/scrape">/scrape</SelectItem>
-                        <SelectItem value="/crawl">/crawl</SelectItem>
-                        <SelectItem value="/map">/map</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Label>Chọn Group</Label>
-                    {combinedSelectedGroups.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{combinedSelectedGroups.length}</span>)}
-                  </div>
-                  <MultiSelectCombobox options={facebookGroups} selected={combinedSelectedGroups} onChange={setCombinedSelectedGroups} placeholder="Chọn group (tùy chọn)" searchPlaceholder="Tìm kiếm group..." emptyPlaceholder="Không tìm thấy group." />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Label>Chọn Website</Label>
-                    {combinedSelectedWebsites.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{combinedSelectedWebsites.length}</span>)}
-                  </div>
-                  <MultiSelectCombobox options={websiteSources} selected={combinedSelectedWebsites} onChange={setCombinedSelectedWebsites} placeholder="Chọn website (tùy chọn)" searchPlaceholder="Tìm kiếm website..." emptyPlaceholder="Không tìm thấy website." />
-                </div>
-                <div className="space-y-2">
-                  <Label>Thời gian kết thúc</Label>
-                  <DateTimePicker date={combinedEndDate} setDate={setCombinedEndDate} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Tần suất quét</Label>
-                  <div className="flex items-center space-x-2">
-                    <Input type="number" min="1" value={combinedScanFrequency} onChange={(e) => setCombinedScanFrequency(parseInt(e.target.value, 10))} className="w-20" />
-                    <Select value={combinedScanUnit} onValueChange={setCombinedScanUnit}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="minute">Phút</SelectItem>
-                        <SelectItem value="hour">Giờ</SelectItem>
-                        <SelectItem value="day">Ngày</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="lg:col-span-2 flex justify-end">
-                  <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={() => handleCreateCampaign('Tổng hợp')} disabled={isCreatingCombined}>
-                    {isCreatingCombined ? "Đang tạo..." : "Tạo chiến dịch"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </TabsContent>
       </Tabs>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -658,14 +556,14 @@ const Index = () => {
             <div className="space-y-2"><Label>Tên chiến dịch</Label><Input value={updatedCampaignName} onChange={(e) => setUpdatedCampaignName(e.target.value)} /></div>
             <div className="space-y-2"><Label>Loại chiến dịch</Label><Input value={editingCampaign?.type || ''} disabled /></div>
             
-            {(editingCampaign?.type === 'Facebook' || editingCampaign?.type === 'Tổng hợp') && (
+            {editingCampaign?.type === 'Facebook' && (
               <div className="space-y-2 col-span-2">
                 <div className="flex items-center space-x-2 mb-2"><Label>Chọn Group</Label>{editSources.groups.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{editSources.groups.length}</span>)}</div>
                 <MultiSelectCombobox options={facebookGroups} selected={editSources.groups} onChange={(newGroups) => setUpdatedSelectedSources([...newGroups, ...editSources.websites])} placeholder="Chọn một hoặc nhiều group" searchPlaceholder="Tìm kiếm group..." emptyPlaceholder="Không tìm thấy group." />
               </div>
             )}
 
-            {(editingCampaign?.type === 'Website' || editingCampaign?.type === 'Tổng hợp') && (
+            {editingCampaign?.type === 'Website' && (
               <div className="space-y-2 col-span-2">
                 <div className="flex items-center space-x-2 mb-2"><Label>Chọn Website</Label>{editSources.websites.length > 0 && (<span className="bg-brand-orange-light text-gray-900 text-xs font-semibold px-2.5 py-0.5 rounded-full">{editSources.websites.length}</span>)}</div>
                 <MultiSelectCombobox options={websiteSources} selected={editSources.websites} onChange={(newWebsites) => setUpdatedSelectedSources([...editSources.groups, ...newWebsites])} placeholder="Chọn một hoặc nhiều website" searchPlaceholder="Tìm kiếm website..." emptyPlaceholder="Không tìm thấy website." />
@@ -690,7 +588,7 @@ const Index = () => {
               </>
             )}
 
-            {editingCampaign?.type !== 'Facebook' && (
+            {editingCampaign?.type === 'Website' && (
               <>
                 <div className="space-y-2"><Label>Thời gian kết thúc</Label><DateTimePicker date={updatedEndDate} setDate={setUpdatedEndDate} /></div>
                 <div className="space-y-2">

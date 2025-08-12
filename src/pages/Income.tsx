@@ -12,10 +12,10 @@ import { Wallet, Landmark, Percent, FileText, Handshake, ChevronLeft, ChevronRig
 import { startOfMonth, endOfMonth, format, subMonths, addMonths } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
-import { DatePicker } from '@/components/ui/date-picker';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
@@ -39,16 +39,15 @@ const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 };
 
-const formatNumberWithDots = (value: number | string): string => {
-  if (value === '' || value === null || value === undefined || value === 0) return '';
-  const num = typeof value === 'string' ? value.replace(/\./g, '') : String(value);
+const formatNumberWithDots = (value: number | string) => {
+  if (value === '' || value === null || value === undefined) return '';
+  const num = String(value).replace(/\./g, '');
   if (isNaN(Number(num))) return '';
-  return Number(num).toLocaleString('de-DE');
+  return new Intl.NumberFormat('de-DE').format(Number(num));
 };
 
-const parseFormattedNumber = (value: string): number => {
-  const num = Number(value.replace(/\./g, ''));
-  return isNaN(num) ? 0 : num;
+const parseFormattedNumber = (value: string) => {
+  return Number(String(value).replace(/\./g, ''));
 };
 
 const Income = () => {
@@ -70,20 +69,21 @@ const Income = () => {
   // Form states
   const [projectName, setProjectName] = useState('');
   const [contractValue, setContractValue] = useState(0);
-  const [commissionRate, setCommissionRate] = useState(0);
+  const [commissionRate, setCommissionRate] = useState(0.05);
   const [status, setStatus] = useState<'ongoing' | 'completed'>('ongoing');
   const [paymentStatus, setPaymentStatus] = useState<'unpaid' | 'partially_paid' | 'paid'>('unpaid');
+  const [commissionPaid, setCommissionPaid] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>();
 
   useEffect(() => {
-    let rate = 0.05;
     if (contractValue > 40000000) {
-      rate = 0.10;
+      setCommissionRate(0.10);
     } else if (contractValue >= 20000000) {
-      rate = 0.07;
+      setCommissionRate(0.07);
+    } else {
+      setCommissionRate(0.05);
     }
-    setCommissionRate(rate);
   }, [contractValue]);
 
   const fetchAllContracts = async () => {
@@ -123,7 +123,6 @@ const Income = () => {
 
   const monthlyStats = useMemo(() => {
     const totalContractValue = monthlyContracts.reduce((acc, contract) => acc + contract.contract_value, 0);
-
     let fixedSalary = 0;
     if (totalContractValue > 40000000) {
       fixedSalary = 3000000;
@@ -132,11 +131,9 @@ const Income = () => {
     } else if (totalContractValue > 10000000) {
       fixedSalary = 1000000;
     }
-
     const totalCommission = monthlyContracts.reduce((acc, contract) => acc + (contract.contract_value * contract.commission_rate), 0);
     const totalIncome = fixedSalary + totalCommission;
     const contractCount = monthlyContracts.length;
-
     return { totalIncome, fixedSalary, totalCommission, contractCount };
   }, [monthlyContracts]);
 
@@ -158,7 +155,7 @@ const Income = () => {
 
   const resetForm = () => {
     setProjectName(''); setContractValue(0); setStatus('ongoing');
-    setPaymentStatus('unpaid'); setStartDate(new Date()); setEndDate(undefined);
+    setPaymentStatus('unpaid'); setCommissionPaid(false); setStartDate(new Date()); setEndDate(undefined);
   };
 
   const handleAddNewClick = () => {
@@ -174,6 +171,7 @@ const Income = () => {
     setCommissionRate(contract.commission_rate);
     setStatus(contract.status);
     setPaymentStatus(contract.payment_status);
+    setCommissionPaid(contract.commission_paid);
     setStartDate(new Date(contract.start_date));
     setEndDate(contract.end_date ? new Date(contract.end_date) : undefined);
     setIsContractDialogOpen(true);
@@ -196,6 +194,7 @@ const Income = () => {
       commission_rate: commissionRate,
       status,
       payment_status: paymentStatus,
+      commission_paid: commissionPaid,
       start_date: startDate.toISOString(),
       end_date: endDate?.toISOString() || null,
     };
@@ -282,7 +281,21 @@ const Income = () => {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>{editingContract ? 'Sửa hợp đồng' : 'Tạo hợp đồng mới'}</DialogTitle></DialogHeader><div className="grid grid-cols-2 gap-4 py-4"><div className="space-y-2 col-span-2"><Label htmlFor="project-name">Tên dự án</Label><Input id="project-name" value={projectName} onChange={e => setProjectName(e.target.value)} /></div><div className="space-y-2"><Label htmlFor="contract-value">Giá trị hợp đồng (VND)</Label><Input id="contract-value" type="text" value={formatNumberWithDots(contractValue)} onChange={e => setContractValue(parseFormattedNumber(e.target.value))} /></div><div className="space-y-2"><Label htmlFor="commission-rate">Tỷ lệ hoa hồng (%)</Label><Input id="commission-rate" type="number" value={commissionRate * 100} readOnly className="bg-gray-100" /></div><div className="space-y-2"><Label>Ngày bắt đầu</Label><DatePicker date={startDate} setDate={setStartDate} /></div><div className="space-y-2"><Label>Ngày kết thúc (tùy chọn)</Label><DatePicker date={endDate} setDate={setEndDate} /></div><div className="space-y-2"><Label>Trạng thái</Label><Select value={status} onValueChange={v => setStatus(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ongoing">Đang chạy</SelectItem><SelectItem value="completed">Hoàn thành</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label>Thanh toán</Label><Select value={paymentStatus} onValueChange={v => setPaymentStatus(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unpaid">Chưa thanh toán</SelectItem><SelectItem value="partially_paid">Thanh toán một phần</SelectItem><SelectItem value="paid">Đã thanh toán</SelectItem></SelectContent></Select></div></div><DialogFooter><Button variant="outline" onClick={() => setIsContractDialogOpen(false)}>Hủy</Button><Button onClick={handleSaveContract} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? 'Đang lưu...' : 'Lưu'}</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader><DialogTitle>{editingContract ? 'Sửa hợp đồng' : 'Tạo hợp đồng mới'}</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="space-y-2 col-span-2"><Label htmlFor="project-name">Tên dự án</Label><Input id="project-name" value={projectName} onChange={e => setProjectName(e.target.value)} /></div>
+            <div className="space-y-2"><Label htmlFor="contract-value">Giá trị hợp đồng (VND)</Label><Input id="contract-value" type="text" value={formatNumberWithDots(contractValue)} onChange={e => setContractValue(parseFormattedNumber(e.target.value))} /></div>
+            <div className="space-y-2"><Label htmlFor="commission-rate">Tỷ lệ hoa hồng (%)</Label><Input id="commission-rate" type="number" value={commissionRate * 100} readOnly className="bg-gray-100" /></div>
+            <div className="space-y-2"><Label>Ngày bắt đầu</Label><DatePicker date={startDate} setDate={setStartDate} /></div>
+            <div className="space-y-2"><Label>Ngày kết thúc (tùy chọn)</Label><DatePicker date={endDate} setDate={setEndDate} /></div>
+            <div className="space-y-2"><Label>Trạng thái</Label><Select value={status} onValueChange={v => setStatus(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ongoing">Đang chạy</SelectItem><SelectItem value="completed">Hoàn thành</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>Thanh toán</Label><Select value={paymentStatus} onValueChange={v => setPaymentStatus(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unpaid">Chưa thanh toán</SelectItem><SelectItem value="partially_paid">Thanh toán một phần</SelectItem><SelectItem value="paid">Đã thanh toán</SelectItem></SelectContent></Select></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setIsContractDialogOpen(false)}>Hủy</Button><Button onClick={handleSaveContract} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? 'Đang lưu...' : 'Lưu'}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Xác nhận xóa</AlertDialogTitle><AlertDialogDescription>Bạn có chắc muốn xóa hợp đồng "{contractToDelete?.project_name}" không? Hành động này không thể hoàn tác.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Hủy</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} disabled={isSubmitting} className="bg-red-600 hover:bg-red-700">Xóa</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </div>
   );

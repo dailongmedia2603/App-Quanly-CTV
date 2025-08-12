@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Loader2, CheckCircle, XCircle, FileClock, Activity, Zap, Bot } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -197,7 +197,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange }: ScanStatusPopupProps) => {
                           </div>
                           <p className="text-sm text-gray-600">{session.latestMessage}</p>
                           <p className="text-xs text-gray-400 mt-1">
-                            {formatDistanceToNow(new Date(session.logs[0].scan_time), { addSuffix: true, locale: vi })}
+                            {format(new Date(session.logs[0].scan_time), 'dd/MM/yyyy, HH:mm:ss', { locale: vi })}
                           </p>
                         </div>
                       </div>
@@ -215,7 +215,7 @@ const ScanStatusPopup = ({ isOpen, onOpenChange }: ScanStatusPopupProps) => {
                             <div className="flex-1">
                               <p className="text-sm text-gray-700">{log.message}</p>
                               <p className="text-xs text-gray-400">
-                                {formatDistanceToNow(new Date(log.scan_time), { addSuffix: true, locale: vi })}
+                                {format(new Date(log.scan_time), 'HH:mm:ss', { locale: vi })}
                               </p>
                             </div>
                           </div>

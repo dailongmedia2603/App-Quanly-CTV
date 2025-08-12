@@ -125,7 +125,7 @@ const Income = () => {
     }
 
     let monthlyCommissionRate = 0.05; // Mức mặc định: dưới 20.000.000đ
-    if (totalContractValue > 40000000) {
+    if (totalContractValue >= 40000000) {
       monthlyCommissionRate = 0.10;
     } else if (totalContractValue >= 20000000) {
       monthlyCommissionRate = 0.07;

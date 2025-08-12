@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PromptTemplateEditor from "@/components/settings/PromptTemplateEditor";
+import PromptHistory from "@/components/settings/PromptHistory";
 import { PenSquare, MessageSquare, UserCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,26 +53,29 @@ const ConfigContentAI = () => {
             <span>Prompt Tư vấn</span>
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="post" className="pt-6">
+        <TabsContent value="post" className="pt-6 space-y-6">
           <PromptTemplateEditor
             templateType="post"
             title="Mẫu Prompt cho Tạo Bài viết"
             description="Cấu hình mẫu prompt mặc định cho chức năng 'Tạo bài viết'. Người dùng sẽ sử dụng mẫu này để yêu cầu AI tạo nội dung."
           />
+          <PromptHistory templateType="post" />
         </TabsContent>
-        <TabsContent value="comment" className="pt-6">
+        <TabsContent value="comment" className="pt-6 space-y-6">
           <PromptTemplateEditor
             templateType="comment"
             title="Mẫu Prompt cho Tạo Comment"
             description="Cấu hình mẫu prompt mặc định cho chức năng 'Tạo comment'. Mẫu này sẽ được dùng để tạo các bình luận tương tác."
           />
+          <PromptHistory templateType="comment" />
         </TabsContent>
-        <TabsContent value="consulting" className="pt-6">
+        <TabsContent value="consulting" className="pt-6 space-y-6">
           <PromptTemplateEditor
             templateType="consulting"
             title="Mẫu Prompt cho Tư vấn Khách hàng"
             description="Cấu hình mẫu prompt mặc định cho chức năng 'Tư vấn khách hàng'. AI sẽ sử dụng mẫu này để trả lời các câu hỏi của khách hàng."
           />
+          <PromptHistory templateType="consulting" />
         </TabsContent>
       </Tabs>
     </div>

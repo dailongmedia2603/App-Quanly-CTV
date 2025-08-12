@@ -66,6 +66,19 @@ serve(async (req) => {
     const result = await model.generateContent(finalPrompt);
     const generatedText = result.response.text();
 
+    // Log the generation event
+    const { error: logError } = await supabase.from('ai_generation_logs').insert({
+        user_id: user.id,
+        template_type: 'post',
+        final_prompt: finalPrompt,
+        generated_content: generatedText
+    });
+
+    if (logError) {
+        // Don't fail the whole request, just log the error on the server
+        console.error('Failed to log AI generation:', logError);
+    }
+
     return new Response(JSON.stringify({ post: generatedText }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

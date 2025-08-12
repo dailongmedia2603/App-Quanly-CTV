@@ -167,7 +167,7 @@ serve(async (req) => {
 
     await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(1/3) Đang lấy bài viết từ ${facebookGroupIds.length} group...`, null, 'progress');
     for (const groupId of facebookGroupIds) {
-        let url = `${facebook_api_url.replace(/\/$/, '')}/${groupId}/feed?fields=message,created_time,id,permalink_url,from&access_token=${facebook_api_token}`;
+        let url = `${facebook_api_url.replace(/\/$/, '')}/${groupId}/feed?fields=message,created_time,id,permalink_url,from&access_token=${facebook_api_token}&limit=100`;
         if (sinceTimestamp) {
             url += `&since=${sinceTimestamp}`;
         }

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showLoading, dismissToast, showSuccess, showError } from '@/utils/toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tag } from 'lucide-react';
 
 interface PromptTemplateEditorProps {
   templateType: 'post' | 'comment' | 'consulting';
@@ -12,10 +13,18 @@ interface PromptTemplateEditorProps {
   description: string;
 }
 
+const availableVariables = [
+  { name: 'Dịch vụ', value: '[dịch vụ]' },
+  { name: 'Dạng bài', value: '[dạng bài]' },
+  { name: 'Ngành', value: '[ngành]' },
+  { name: 'Định hướng', value: '[định hướng]' },
+];
+
 const PromptTemplateEditor = ({ templateType, title, description }: PromptTemplateEditorProps) => {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const fetchPrompt = async () => {
@@ -56,6 +65,24 @@ const PromptTemplateEditor = ({ templateType, title, description }: PromptTempla
     setIsSaving(false);
   };
 
+  const handleInsertVariable = (variable: string) => {
+    if (!textareaRef.current) return;
+
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const newText = text.substring(0, start) + ` ${variable} ` + text.substring(end);
+
+    setPrompt(newText);
+
+    // Focus and set cursor position after the inserted variable
+    setTimeout(() => {
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = start + variable.length + 2;
+    }, 0);
+  };
+
   if (loading) {
     return (
       <Card>
@@ -79,12 +106,32 @@ const PromptTemplateEditor = ({ templateType, title, description }: PromptTempla
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <div>
+          <div className="flex items-center space-x-2 mb-2">
+            <Tag className="h-4 w-4 text-gray-500" />
+            <h3 className="text-sm font-medium text-gray-600">Chèn biến</h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {availableVariables.map((variable) => (
+              <Button
+                key={variable.name}
+                variant="outline"
+                size="sm"
+                className="text-xs bg-white hover:bg-gray-50"
+                onClick={() => handleInsertVariable(variable.value)}
+              >
+                {variable.name}
+              </Button>
+            ))}
+          </div>
+        </div>
         <Textarea
+          ref={textareaRef}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="Nhập mẫu prompt của bạn ở đây..."
-          className="min-h-[250px] text-base"
+          className="min-h-[250px] text-base font-mono bg-gray-50"
         />
       </CardContent>
       <CardFooter className="flex justify-end">

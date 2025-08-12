@@ -102,9 +102,22 @@ const Income = () => {
   }, [user, selectedDate]);
 
   const monthlyStats = useMemo(() => {
-    const fixedSalary = 5000000;
+    const totalContractValue = monthlyContracts.reduce((acc, contract) => acc + contract.contract_value, 0);
+
+    let fixedSalary = 0;
+    if (totalContractValue > 40000000) {
+      fixedSalary = 3000000;
+    } else if (totalContractValue >= 20000000) {
+      fixedSalary = 2000000;
+    } else if (totalContractValue > 10000000) {
+      fixedSalary = 1000000;
+    }
+
     const totalCommission = monthlyContracts.reduce((acc, contract) => acc + (contract.contract_value * contract.commission_rate), 0);
-    return { totalIncome: fixedSalary + totalCommission, fixedSalary, totalCommission, contractCount: monthlyContracts.length };
+    const totalIncome = fixedSalary + totalCommission;
+    const contractCount = monthlyContracts.length;
+
+    return { totalIncome, fixedSalary, totalCommission, contractCount };
   }, [monthlyContracts]);
 
   const allContractsStats = useMemo(() => {

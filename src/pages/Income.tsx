@@ -32,6 +32,7 @@ interface Contract {
   start_date: string;
   end_date: string | null;
   created_at: string;
+  paid_amount: number;
 }
 
 // Helper to format currency
@@ -231,6 +232,88 @@ const Income = () => {
     setIsSubmitting(false);
   };
 
+  const handleFieldUpdate = async (contractId: string, updates: Partial<Contract>) => {
+    const toastId = showLoading("Đang cập nhật...");
+    const { error } = await supabase
+      .from('contracts')
+      .update(updates)
+      .eq('id', contractId);
+    
+    dismissToast(toastId);
+    if (error) {
+      showError(`Cập nhật thất bại: ${error.message}`);
+    } else {
+      showSuccess("Cập nhật thành công!");
+      setAllContracts(prev => 
+        prev.map(c => c.id === contractId ? { ...c, ...updates } : c)
+      );
+    }
+  };
+
+  const EditableCurrencyCell = ({ contract, onUpdate }: { contract: Contract; onUpdate: (id: string, updates: Partial<Contract>) => void }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [value, setValue] = useState(contract.paid_amount);
+  
+    const handleSave = () => {
+      if (value !== contract.paid_amount) {
+        onUpdate(contract.id, { paid_amount: value });
+      }
+      setIsEditing(false);
+    };
+  
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        handleSave();
+      } else if (e.key === 'Escape') {
+        setValue(contract.paid_amount);
+        setIsEditing(false);
+      }
+    };
+  
+    if (isEditing) {
+      return (
+        <Input
+          type="text"
+          value={formatNumberWithDots(value)}
+          onChange={(e) => setValue(parseFormattedNumber(e.target.value))}
+          onBlur={handleSave}
+          onKeyDown={handleKeyDown}
+          autoFocus
+          className="h-8"
+        />
+      );
+    }
+  
+    return (
+      <div onClick={() => setIsEditing(true)} className="cursor-pointer p-2 min-h-[40px]">
+        {formatCurrency(value)}
+      </div>
+    );
+  };
+
+  const EditableStatusCell = ({ contract, onUpdate }: { contract: Contract; onUpdate: (id: string, updates: Partial<Contract>) => void }) => {
+    const handleStatusChange = (newStatus: 'ongoing' | 'completed') => {
+      if (newStatus !== contract.status) {
+        onUpdate(contract.id, { status: newStatus });
+      }
+    };
+  
+    return (
+      <Select value={contract.status} onValueChange={handleStatusChange}>
+        <SelectTrigger className={cn(
+          "w-[120px] border-0 focus:ring-0 focus:ring-offset-0",
+          contract.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+        )}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="ongoing">Đang chạy</SelectItem>
+          <SelectItem value="completed">Hoàn thành</SelectItem>
+        </SelectContent>
+      </Select>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -276,7 +359,7 @@ const Income = () => {
                 <Button onClick={handleAddNewClick} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><Plus className="mr-2 h-4 w-4" />Tạo hợp đồng</Button>
               </div>
             </CardHeader>
-            <CardContent><Table><TableHeader><TableRow><TableHead>Tên dự án</TableHead><TableHead>Giá trị</TableHead><TableHead>Hoa hồng</TableHead><TableHead>Đã trả</TableHead><TableHead>Chưa trả</TableHead><TableHead>Tiến độ</TableHead><TableHead className="text-right">Hành động</TableHead></TableRow></TableHeader><TableBody>{loadingAll ? <TableRow><TableCell colSpan={7} className="h-24 text-center">Đang tải...</TableCell></TableRow> : filteredContracts.length === 0 ? <TableRow><TableCell colSpan={7} className="h-24 text-center">Không có hợp đồng nào.</TableCell></TableRow> : (filteredContracts.map((contract) => (<TableRow key={contract.id}><TableCell className="font-medium">{contract.project_name}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell>{formatCurrency(contract.contract_value * contract.commission_rate)}</TableCell><TableCell>{formatCurrency(0)}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell><Badge variant={contract.status === 'completed' ? 'default' : 'secondary'} className={cn(contract.status === 'completed' ? 'bg-green-500 text-white' : 'bg-yellow-100 text-yellow-800')}>{contract.status === 'completed' ? 'Hoàn thành' : 'Đang chạy'}</Badge></TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleEditClick(contract)}><Pencil className="mr-2 h-4 w-4" />Sửa</DropdownMenuItem><DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(contract)}><Trash2 className="mr-2 h-4 w-4" />Xóa</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>)))}</TableBody></Table></CardContent>
+            <CardContent><Table><TableHeader><TableRow><TableHead>Tên dự án</TableHead><TableHead>Giá trị</TableHead><TableHead>Đã thanh toán</TableHead><TableHead>Còn nợ</TableHead><TableHead>Tiến độ</TableHead><TableHead className="text-right">Hành động</TableHead></TableRow></TableHeader><TableBody>{loadingAll ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Đang tải...</TableCell></TableRow> : filteredContracts.length === 0 ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Không có hợp đồng nào.</TableCell></TableRow> : (filteredContracts.map((contract) => (<TableRow key={contract.id}><TableCell className="font-medium">{contract.project_name}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell><EditableCurrencyCell contract={contract} onUpdate={handleFieldUpdate} /></TableCell><TableCell>{formatCurrency(contract.contract_value - contract.paid_amount)}</TableCell><TableCell><EditableStatusCell contract={contract} onUpdate={handleFieldUpdate} /></TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleEditClick(contract)}><Pencil className="mr-2 h-4 w-4" />Sửa</DropdownMenuItem><DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(contract)}><Trash2 className="mr-2 h-4 w-4" />Xóa</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>)))}</TableBody></Table></CardContent>
           </Card>
         </TabsContent>
       </Tabs>

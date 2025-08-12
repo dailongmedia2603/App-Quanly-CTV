@@ -1,0 +1,2 @@
+ALTER TABLE public.contracts
+ADD COLUMN paid_amount NUMERIC NOT NULL DEFAULT 0;

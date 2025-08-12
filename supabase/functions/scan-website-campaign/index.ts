@@ -12,10 +12,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const logScan = async (supabaseAdmin: any, campaign_id: string, status: string, message: string, details: any = null, log_type: 'progress' | 'final' = 'final') => {
-    if (!campaign_id) return;
+const logScan = async (supabaseAdmin: any, campaign_id: string, user_id: string, status: string, message: string, details: any = null, log_type: 'progress' | 'final' = 'final') => {
+    if (!campaign_id || !user_id) return;
     await supabaseAdmin.from('scan_logs').insert({
         campaign_id,
+        user_id,
         status,
         message,
         details,
@@ -36,6 +37,7 @@ serve(async (req) => {
   );
   
   let campaign_id_from_req: string | null = null;
+  let user_id_from_req: string | null = null;
 
   try {
     const { campaign_id } = await req.json();
@@ -44,8 +46,6 @@ serve(async (req) => {
     if (!campaign_id) {
       throw new Error("Cần có ID chiến dịch.");
     }
-
-    await logScan(supabaseAdmin, campaign_id, 'info', '(1/4) Bắt đầu quét website: Đang lấy cấu hình...', null, 'progress');
 
     const { data: campaign, error: campaignError } = await supabaseAdmin
         .from('danh_sach_chien_dich')
@@ -57,7 +57,10 @@ serve(async (req) => {
     if (!campaign) throw new Error("Không tìm thấy chiến dịch.");
 
     const campaignOwnerId = campaign.user_id;
+    user_id_from_req = campaignOwnerId;
     if (!campaignOwnerId) throw new Error("Chiến dịch không có người sở hữu.");
+
+    await logScan(supabaseAdmin, campaign_id, campaignOwnerId, 'info', '(1/4) Bắt đầu quét website: Đang lấy cấu hình...', null, 'progress');
 
     const { data: apiKeys, error: apiKeyError } = await supabaseAdmin
         .from('user_api_keys')
@@ -75,14 +78,14 @@ serve(async (req) => {
 
     const websiteUrls = campaign.sources.filter((s: string) => s.startsWith('http') || s.startsWith('www'));
     if (websiteUrls.length === 0) {
-        await logScan(supabaseAdmin, campaign_id, 'success', 'Hoàn tất: Chiến dịch không có nguồn website nào để quét.', null, 'final');
+        await logScan(supabaseAdmin, campaign_id, campaignOwnerId, 'success', 'Hoàn tất: Chiến dịch không có nguồn website nào để quét.', null, 'final');
         return new Response(JSON.stringify({ success: true, message: "Không có nguồn website nào để quét." }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         });
     }
     
-    await logScan(supabaseAdmin, campaign_id, 'info', `(2/4) Đang thu thập dữ liệu từ ${websiteUrls.length} website...`, null, 'progress');
+    await logScan(supabaseAdmin, campaign_id, campaignOwnerId, 'info', `(2/4) Đang thu thập dữ liệu từ ${websiteUrls.length} website...`, null, 'progress');
 
     const firecrawlPromises = websiteUrls.map(async (url: string) => {
         const firecrawlUrl = `https://api.firecrawl.dev/v0${campaign.website_scan_type || '/scrape'}`;
@@ -108,13 +111,13 @@ serve(async (req) => {
     const failedCrawls = firecrawlResults.filter(r => !r.success);
 
     if (failedCrawls.length > 0) {
-        await logScan(supabaseAdmin, campaign_id, 'error', `Thu thập dữ liệu thất bại cho ${failedCrawls.length} website.`, { failedUrls: failedCrawls }, 'progress');
+        await logScan(supabaseAdmin, campaign_id, campaignOwnerId, 'error', `Thu thập dữ liệu thất bại cho ${failedCrawls.length} website.`, { failedUrls: failedCrawls }, 'progress');
     }
     if (successfulCrawls.length === 0) {
         throw new Error("Không thể thu thập dữ liệu từ bất kỳ website nào.");
     }
 
-    await logScan(supabaseAdmin, campaign_id, 'info', `(3/4) AI đang phân tích nội dung từ ${successfulCrawls.length} website...`, null, 'progress');
+    await logScan(supabaseAdmin, campaign_id, campaignOwnerId, 'info', `(3/4) AI đang phân tích nội dung từ ${successfulCrawls.length} website...`, null, 'progress');
     
     const genAI = new GoogleGenerativeAI(gemini_api_key);
     const aiModel = genAI.getGenerativeModel({ model: gemini_model });
@@ -159,13 +162,14 @@ serve(async (req) => {
     const failedAnalyses = analysisResults.filter(r => !r.success);
 
     if (failedAnalyses.length > 0) {
-        await logScan(supabaseAdmin, campaign_id, 'error', `Phân tích AI thất bại cho ${failedAnalyses.length} website.`, { failedUrls: failedAnalyses }, 'progress');
+        await logScan(supabaseAdmin, campaign_id, campaignOwnerId, 'error', `Phân tích AI thất bại cho ${failedAnalyses.length} website.`, { failedUrls: failedAnalyses }, 'progress');
     }
 
     const allExtractedListings = successfulAnalyses.flatMap(analysis => {
         if (!Array.isArray(analysis.data)) return [];
         return analysis.data.map(item => ({
             campaign_id: campaign.id,
+            user_id: campaignOwnerId,
             title: item.title || null,
             description: item.description || null,
             price: item.price || null,
@@ -179,7 +183,7 @@ serve(async (req) => {
     });
 
     if (allExtractedListings.length > 0) {
-        await logScan(supabaseAdmin, campaign_id, 'info', `(4/4) Đang lưu ${allExtractedListings.length} kết quả vào báo cáo...`, null, 'progress');
+        await logScan(supabaseAdmin, campaign_id, campaignOwnerId, 'info', `(4/4) Đang lưu ${allExtractedListings.length} kết quả vào báo cáo...`, null, 'progress');
         const reportTable = campaign.type === 'Tổng hợp' ? 'Bao_cao_tong_hop' : 'Bao_cao_Website';
         const { error: insertError } = await supabaseAdmin.from(reportTable).insert(allExtractedListings);
 
@@ -189,7 +193,7 @@ serve(async (req) => {
     }
     
     const successMessage = `Quét Website hoàn tất. Đã xử lý ${websiteUrls.length} URL và trích xuất được ${allExtractedListings.length} tin đăng.`;
-    await logScan(supabaseAdmin, campaign_id, 'success', successMessage, { found_items: allExtractedListings.length }, 'final');
+    await logScan(supabaseAdmin, campaign_id, campaignOwnerId, 'success', successMessage, { found_items: allExtractedListings.length }, 'final');
 
     return new Response(JSON.stringify({ success: true, message: successMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -197,7 +201,7 @@ serve(async (req) => {
     })
   } catch (error) {
     console.error(error);
-    await logScan(supabaseAdmin, campaign_id_from_req, 'error', error.message, { stack: error.stack }, 'final');
+    await logScan(supabaseAdmin, campaign_id_from_req, user_id_from_req, 'error', error.message, { stack: error.stack }, 'final');
     return new Response(JSON.stringify({ success: false, message: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,

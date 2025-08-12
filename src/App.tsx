@@ -7,11 +7,13 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 import Settings from "./pages/Settings";
+import ApiKeys from "./pages/ApiKeys";
 import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import Account from "./pages/Account";
 import Guide from "./pages/Guide";
 import Profile from "./pages/Profile";
+import Pricing from "./pages/Pricing";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import FindCustomers from "./pages/FindCustomers";
 import CreatePost from "./pages/CreatePost";
@@ -67,11 +69,13 @@ const AppContent = () => {
           <Route path="/config/content-ai" element={<ConfigContentAI />} />
           <Route path="/config/create-plan" element={<ConfigCreatePlan />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/keys" element={<ApiKeys />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/income" element={<Income />} />
           <Route path="/account" element={<Account />} />
           <Route path="/guide" element={<Guide />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/pricing" element={<Pricing />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

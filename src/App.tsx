@@ -21,6 +21,9 @@ import FindCustomers from "./pages/FindCustomers";
 import CreatePost from "./pages/CreatePost";
 import CreateComment from "./pages/CreateComment";
 import CreatePlan from "./pages/CreatePlan";
+import ConfigScanPost from "./pages/ConfigScanPost";
+import ConfigContentAI from "./pages/ConfigContentAI";
+import ConfigCreatePlan from "./pages/ConfigCreatePlan";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +70,9 @@ const AppContent = () => {
           <Route path="/create-content/post" element={<CreatePost />} />
           <Route path="/create-content/comment" element={<CreateComment />} />
           <Route path="/create-plan" element={<CreatePlan />} />
+          <Route path="/config/scan-post" element={<ConfigScanPost />} />
+          <Route path="/config/content-ai" element={<ConfigContentAI />} />
+          <Route path="/config/create-plan" element={<ConfigCreatePlan />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/keys" element={<ApiKeys />} />
           <Route path="/data-source/website" element={<DataSourceWebsite />} />

@@ -11,6 +11,17 @@ import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast
 import { Briefcase, FileText, Factory, Compass, Wand2, Sparkles, RefreshCw, Copy } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
+// Moved FormInput outside of CreatePost to prevent re-rendering on state change
+const FormInput = ({ icon: Icon, label, children }: { icon: React.ElementType, label: string, children: React.ReactNode }) => (
+  <div className="space-y-2">
+    <Label className="flex items-center space-x-2 text-gray-600">
+      <Icon className="h-4 w-4" />
+      <span>{label}</span>
+    </Label>
+    {children}
+  </div>
+);
+
 const CreatePost = () => {
   // Form state
   const [service, setService] = useState('');
@@ -63,16 +74,6 @@ const CreatePost = () => {
       showError("Không thể sao chép.");
     });
   };
-
-  const FormInput = ({ icon: Icon, label, children }: { icon: React.ElementType, label: string, children: React.ReactNode }) => (
-    <div className="space-y-2">
-      <Label className="flex items-center space-x-2 text-gray-600">
-        <Icon className="h-4 w-4" />
-        <span>{label}</span>
-      </Label>
-      {children}
-    </div>
-  );
 
   return (
     <div className="space-y-6">

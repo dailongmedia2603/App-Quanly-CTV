@@ -30,9 +30,36 @@ interface Log {
   generated_content: string;
 }
 
+const cleanAiResponseForDisplay = (rawText: string): string => {
+  if (!rawText) return '';
+  let text = rawText.trim();
+  text = text.replace(/^```(markdown|md|)\s*\n/i, '');
+  text = text.replace(/\n\s*```$/, '');
+  const lines = text.split('\n');
+  let firstContentLineIndex = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const trimmedLine = lines[i].trim();
+    if (trimmedLine === '') continue;
+    if (trimmedLine.startsWith('#') || trimmedLine.startsWith('*')) {
+      firstContentLineIndex = i;
+      break;
+    }
+    const isPreamble = /^(chắc chắn rồi|dưới đây là|here is|tuyệt vời|tất nhiên|here's a draft|here's the post)/i.test(trimmedLine);
+    if (!isPreamble) {
+      firstContentLineIndex = i;
+      break;
+    }
+  }
+  if (firstContentLineIndex !== -1) {
+    return lines.slice(firstContentLineIndex).join('\n').trim();
+  }
+  return rawText;
+};
+
 const getPostTitle = (content: string): string => {
   if (!content) return 'Bài viết không có nội dung';
-  const firstLine = content.split('\n')[0].trim();
+  const cleanedContent = cleanAiResponseForDisplay(content);
+  const firstLine = cleanedContent.split('\n')[0].trim();
   const cleanTitle = firstLine.replace(/^(#+\s*|\*\*\s*|\s*\*)/, '').replace(/\s*\*\*$/, '').trim();
   return cleanTitle || 'Bài viết không có tiêu đề';
 };
@@ -62,7 +89,7 @@ const PostHistoryView = ({ onBack }: { onBack: () => void }) => {
   }, []);
 
   const handleCopy = (content: string) => {
-    navigator.clipboard.writeText(content).then(() => {
+    navigator.clipboard.writeText(cleanAiResponseForDisplay(content)).then(() => {
       showSuccess("Đã sao chép nội dung!");
     }).catch(err => {
       showError("Không thể sao chép.");
@@ -112,7 +139,7 @@ const PostHistoryView = ({ onBack }: { onBack: () => void }) => {
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
-                      {log.generated_content}
+                      {cleanAiResponseForDisplay(log.generated_content)}
                     </div>
                   </AccordionContent>
                 </AccordionItem>

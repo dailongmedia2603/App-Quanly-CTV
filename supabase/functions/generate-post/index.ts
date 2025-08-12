@@ -12,6 +12,47 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const cleanAiResponse = (rawText: string): string => {
+  if (!rawText) return '';
+  let text = rawText.trim();
+
+  // Remove markdown code block fences if they exist
+  text = text.replace(/^```(markdown|md|)\s*\n/i, '');
+  text = text.replace(/\n\s*```$/, '');
+
+  const lines = text.split('\n');
+  
+  let firstContentLineIndex = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const trimmedLine = lines[i].trim();
+    
+    if (trimmedLine === '') {
+      continue;
+    }
+    
+    // If a line starts with markdown for a heading or bold, it's likely content
+    if (trimmedLine.startsWith('#') || trimmedLine.startsWith('*')) {
+      firstContentLineIndex = i;
+      break;
+    }
+    
+    // If a line is NOT a conversational preamble, it's likely content.
+    const isPreamble = /^(chắc chắn rồi|dưới đây là|here is|tuyệt vời|tất nhiên|here's a draft|here's the post)/i.test(trimmedLine);
+    if (!isPreamble) {
+      firstContentLineIndex = i;
+      break;
+    }
+  }
+
+  if (firstContentLineIndex !== -1) {
+    // If we found a content line, slice the array from that line onwards
+    return lines.slice(firstContentLineIndex).join('\n').trim();
+  }
+
+  // Fallback to original text to avoid returning nothing.
+  return rawText;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -64,22 +105,23 @@ serve(async (req) => {
     const model = genAI.getGenerativeModel({ model: apiKeys.gemini_model });
 
     const result = await model.generateContent(finalPrompt);
-    const generatedText = result.response.text();
+    const rawGeneratedText = result.response.text();
+    
+    const cleanedGeneratedText = cleanAiResponse(rawGeneratedText);
 
-    // Log the generation event
+    // Log the generation event with the RAW text for debugging purposes
     const { error: logError } = await supabase.from('ai_generation_logs').insert({
         user_id: user.id,
         template_type: 'post',
         final_prompt: finalPrompt,
-        generated_content: generatedText
+        generated_content: rawGeneratedText
     });
 
     if (logError) {
-        // Don't fail the whole request, just log the error on the server
         console.error('Failed to log AI generation:', logError);
     }
 
-    return new Response(JSON.stringify({ post: generatedText }), {
+    return new Response(JSON.stringify({ post: cleanedGeneratedText }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
-import { Briefcase, FileText, Factory, Compass, Wand2, Sparkles, RefreshCw, Copy } from 'lucide-react';
+import { Briefcase, FileText, Factory, Compass, Wand2, Sparkles, RefreshCw, Copy, History, ArrowLeft } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
 // Moved FormInput outside of CreatePost to prevent re-rendering on state change
 const FormInput = ({ icon: Icon, label, children }: { icon: React.ElementType, label: string, children: React.ReactNode }) => (
@@ -21,7 +24,102 @@ const FormInput = ({ icon: Icon, label, children }: { icon: React.ElementType, l
   </div>
 );
 
+interface Log {
+  id: string;
+  created_at: string;
+  generated_content: string;
+}
+
+const PostHistoryView = ({ onBack }: { onBack: () => void }) => {
+  const [logs, setLogs] = useState<Log[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('ai_generation_logs')
+        .select('id, created_at, generated_content')
+        .eq('template_type', 'post')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        showError("Không thể tải lịch sử bài viết.");
+        console.error(error);
+      } else {
+        setLogs(data as Log[]);
+      }
+      setLoading(false);
+    };
+    fetchHistory();
+  }, []);
+
+  const handleCopy = (content: string) => {
+    navigator.clipboard.writeText(content).then(() => {
+      showSuccess("Đã sao chép nội dung!");
+    }).catch(err => {
+      showError("Không thể sao chép.");
+    });
+  };
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <div className="space-y-1">
+            <h1 className="text-3xl font-bold">Bài viết đã tạo</h1>
+            <p className="text-gray-500 mt-1">Xem lại các bài viết bạn đã tạo trước đây.</p>
+        </div>
+        <Button onClick={onBack} variant="outline">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Quay lại
+        </Button>
+      </div>
+      <Card className="border-orange-200">
+        <CardContent className="p-6">
+          {loading ? (
+            <div className="text-center text-gray-500 py-10">Đang tải lịch sử...</div>
+          ) : logs.length === 0 ? (
+            <div className="text-center text-gray-500 py-10">
+              <History className="mx-auto h-12 w-12 text-gray-400" />
+              <p className="mt-4 font-medium">Chưa có bài viết nào được tạo</p>
+            </div>
+          ) : (
+            <Accordion type="single" collapsible className="w-full">
+              {logs.map(log => (
+                <AccordionItem value={log.id} key={log.id}>
+                  <AccordionTrigger>
+                    <div className="flex justify-between w-full pr-4">
+                      <span>Bài viết tạo lúc</span>
+                      <span className="text-gray-500 font-normal">
+                        {format(new Date(log.created_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4">
+                    <div className="prose max-w-none whitespace-pre-wrap relative bg-gray-50 p-4 rounded-md">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute top-2 right-2 h-7 w-7"
+                        onClick={() => handleCopy(log.generated_content)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      {log.generated_content}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 const CreatePost = () => {
+  const [view, setView] = useState<'create' | 'history'>('create');
   // Form state
   const [service, setService] = useState('');
   const [postType, setPostType] = useState('');
@@ -74,11 +172,21 @@ const CreatePost = () => {
     });
   };
 
+  if (view === 'history') {
+    return <PostHistoryView onBack={() => setView('create')} />;
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Tạo bài viết</h1>
-        <p className="text-gray-500 mt-1">Sử dụng AI để tạo ra các bài viết hấp dẫn.</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Tạo bài viết</h1>
+          <p className="text-gray-500 mt-1">Sử dụng AI để tạo ra các bài viết hấp dẫn.</p>
+        </div>
+        <Button onClick={() => setView('history')} className="bg-brand-orange hover:bg-brand-orange/90 text-white">
+            <History className="mr-2 h-4 w-4" />
+            Bài viết đã tạo
+        </Button>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Left Column: Configuration */}
@@ -135,7 +243,9 @@ const CreatePost = () => {
                 <Button variant="outline" size="sm" onClick={handleCopy}><Copy className="h-4 w-4 mr-2" />Sao chép</Button>
                 <Dialog open={isRegenerateDialogOpen} onOpenChange={setIsRegenerateDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm"><RefreshCw className="h-4 w-4 mr-2" />Tạo lại</Button>
+                    <Button size="sm" variant="outline" className="bg-brand-orange-light text-brand-orange border-brand-orange hover:bg-orange-200 hover:text-brand-orange">
+                        <RefreshCw className="h-4 w-4 mr-2" />Tạo lại
+                    </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>

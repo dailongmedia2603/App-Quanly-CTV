@@ -8,7 +8,6 @@ import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 import Settings from "./pages/Settings";
 import ApiKeys from "./pages/ApiKeys";
-import DataSourceWebsite from "./pages/DataSourceWebsite";
 import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import Account from "./pages/Account";
@@ -68,7 +67,6 @@ const AppContent = () => {
           <Route path="/config/create-plan" element={<ConfigCreatePlan />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/keys" element={<ApiKeys />} />
-          <Route path="/data-source/website" element={<DataSourceWebsite />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/account" element={<Account />} />
           <Route path="/guide" element={<Guide />} />

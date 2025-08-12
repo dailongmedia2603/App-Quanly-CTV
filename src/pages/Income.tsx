@@ -114,6 +114,7 @@ const Income = () => {
 
   const monthlyStats = useMemo(() => {
     const totalContractValue = monthlyContracts.reduce((acc, contract) => acc + contract.contract_value, 0);
+    
     let fixedSalary = 0;
     if (totalContractValue > 40000000) {
       fixedSalary = 3000000;
@@ -122,7 +123,15 @@ const Income = () => {
     } else if (totalContractValue > 10000000) {
       fixedSalary = 1000000;
     }
-    const totalCommission = monthlyContracts.reduce((acc, contract) => acc + (contract.contract_value * contract.commission_rate), 0);
+
+    let monthlyCommissionRate = 0.05; // Mức mặc định: dưới 20.000.000đ
+    if (totalContractValue > 40000000) {
+      monthlyCommissionRate = 0.10;
+    } else if (totalContractValue >= 20000000) {
+      monthlyCommissionRate = 0.07;
+    }
+    
+    const totalCommission = totalContractValue * monthlyCommissionRate;
     const totalIncome = fixedSalary + totalCommission;
     const contractCount = monthlyContracts.length;
     return { totalIncome, fixedSalary, totalCommission, contractCount };

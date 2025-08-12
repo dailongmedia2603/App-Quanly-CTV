@@ -20,7 +20,6 @@ import FindCustomers from "./pages/FindCustomers";
 import CreatePost from "./pages/CreatePost";
 import CreateComment from "./pages/CreateComment";
 import CreatePlan from "./pages/CreatePlan";
-import ConfigScanPost from "./pages/ConfigScanPost";
 import ConfigContentAI from "./pages/ConfigContentAI";
 import ConfigCreatePlan from "./pages/ConfigCreatePlan";
 
@@ -59,12 +58,12 @@ const AppContent = () => {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<Navigate to="/find-customers" replace />} />
           <Route path="/find-customers" element={<FindCustomers />} />
           <Route path="/create-content/post" element={<CreatePost />} />
           <Route path="/create-content/comment" element={<CreateComment />} />
           <Route path="/create-plan" element={<CreatePlan />} />
-          <Route path="/config/scan-post" element={<ConfigScanPost />} />
+          <Route path="/config/scan-post" element={<Index />} />
           <Route path="/config/content-ai" element={<ConfigContentAI />} />
           <Route path="/config/create-plan" element={<ConfigCreatePlan />} />
           <Route path="/settings" element={<Settings />} />

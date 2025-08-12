@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Home, Target, SlidersHorizontal, FilePieChart, BarChart2, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog } from "lucide-react";
+import { Home, SlidersHorizontal, FilePieChart, BarChart2, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog } from "lucide-react";
 import * as Icons from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -124,7 +124,6 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
             ) : (
               <Accordion type="single" collapsible defaultValue={isDataSourceActive ? "item-1" : undefined}><AccordionItem value="item-1" className="border-none"><AccordionTrigger className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline [&[data-state=open]>svg]:rotate-180"><div className="flex items-center space-x-3"><SlidersHorizontal className="h-5 w-5" /><span>Thiết lập nguồn</span></div></AccordionTrigger><AccordionContent className="pl-8 pb-0"><nav className="space-y-1"><SubNavLink to="/data-source/website">Website</SubNavLink></nav></AccordionContent></AccordionItem></Accordion>
             )}
-            <NavLink to="/" icon={Target} isCollapsed={isCollapsed}>Chiến dịch</NavLink>
             <NavLink to="/reports" icon={FilePieChart} isCollapsed={isCollapsed}>Báo cáo</NavLink>
             <NavLink to="/usage" icon={BarChart2} isCollapsed={isCollapsed}>Usage</NavLink>
             <NavLink to="/keys" icon={KeyRound} isCollapsed={isCollapsed}>API Keys</NavLink>

@@ -27,6 +27,7 @@ serve(async (req) => {
       .from('ai_generation_logs')
       .select('*')
       .eq('template_type', template_type)
+      .eq('is_hidden_in_admin_history', false) // Only get logs that are not hidden
       .order('created_at', { ascending: false })
       .limit(100);
     

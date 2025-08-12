@@ -27,9 +27,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Change from DELETE to UPDATE to perform a "soft delete"
     const { error } = await supabaseAdmin
       .from('ai_generation_logs')
-      .delete()
+      .update({ is_hidden_in_admin_history: true })
       .in('id', log_ids);
 
     if (error) throw error;

@@ -13,18 +13,32 @@ interface PromptTemplateEditorProps {
   description: string;
 }
 
-const availableVariables = [
-  { name: 'Dịch vụ', value: '[dịch vụ]' },
-  { name: 'Dạng bài', value: '[dạng bài]' },
-  { name: 'Ngành', value: '[ngành]' },
-  { name: 'Định hướng', value: '[định hướng]' },
-];
+const variableConfig = {
+  post: [
+    { name: 'Dịch vụ', value: '[dịch vụ]' },
+    { name: 'Dạng bài', value: '[dạng bài]' },
+    { name: 'Ngành', value: '[ngành]' },
+    { name: 'Định hướng', value: '[định hướng]' },
+  ],
+  comment: [
+    { name: 'Nội dung gốc', value: '[nội dung gốc]' },
+    { name: 'Cảm xúc', value: '[cảm xúc]' },
+    { name: 'Mục tiêu comment', value: '[mục tiêu comment]' },
+  ],
+  consulting: [
+    { name: 'Câu hỏi khách hàng', value: '[câu hỏi khách hàng]' },
+    { name: 'Sản phẩm liên quan', value: '[sản phẩm liên quan]' },
+    { name: 'Thông tin thêm', value: '[thông tin thêm]' },
+  ],
+};
 
 const PromptTemplateEditor = ({ templateType, title, description }: PromptTemplateEditorProps) => {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  const availableVariables = variableConfig[templateType];
 
   useEffect(() => {
     const fetchPrompt = async () => {

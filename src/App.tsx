@@ -21,6 +21,7 @@ import ConfigContentAI from "./pages/ConfigContentAI";
 import ConfigCreatePlan from "./pages/ConfigCreatePlan";
 import Income from "./pages/Income";
 import CustomerConsulting from "./pages/CustomerConsulting";
+import Documents from "./pages/Documents";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,7 @@ const AppContent = () => {
           <Route path="/config/scan-post" element={<Index />} />
           <Route path="/config/content-ai" element={<ConfigContentAI />} />
           <Route path="/config/create-plan" element={<ConfigCreatePlan />} />
+          <Route path="/documents" element={<Documents />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/income" element={<Income />} />

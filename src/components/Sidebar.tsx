@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Home, SlidersHorizontal, FilePieChart, CircleDollarSign, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog } from "lucide-react";
+import { Home, SlidersHorizontal, FilePieChart, CircleDollarSign, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog, FolderKanban } from "lucide-react";
 import * as Icons from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -140,6 +140,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
                 </AccordionContent>
               </AccordionItem></Accordion>
             )}
+            <NavLink to="/documents" icon={FolderKanban} isCollapsed={isCollapsed}>Tài liệu</NavLink>
             <NavLink to="/reports" icon={FilePieChart} isCollapsed={isCollapsed}>Báo cáo</NavLink>
             <NavLink to="/income" icon={CircleDollarSign} isCollapsed={isCollapsed}>Thu nhập</NavLink>
             {isSuperAdmin && <NavLink to="/account" icon={Users} isCollapsed={isCollapsed}>Tài khoản</NavLink>}

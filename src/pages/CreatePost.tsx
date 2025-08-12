@@ -12,6 +12,8 @@ import { Briefcase, FileText, Factory, Compass, Wand2, Sparkles, RefreshCw, Copy
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 // Moved FormInput outside of CreatePost to prevent re-rendering on state change
 const FormInput = ({ icon: Icon, label, children }: { icon: React.ElementType, label: string, children: React.ReactNode }) => (
@@ -66,6 +68,15 @@ const cleanAiResponseForDisplay = (rawText: string): string => {
   return text;
 };
 
+const stripMarkdown = (markdown: string): string => {
+  if (!markdown) return '';
+  return markdown
+    .replace(/#+\s/g, '') // Headers
+    .replace(/(\*\*|__)(.*?)\1/g, '$2') // Bold
+    .replace(/(\*|_)(.*?)\1/g, '$2')   // Italic
+    .replace(/~~(.*?)~~/g, '$1'); // Strikethrough
+};
+
 const getPostTitle = (content: string): string => {
   if (!content) return 'Bài viết không có nội dung';
   const cleanedContent = cleanAiResponseForDisplay(content);
@@ -99,7 +110,9 @@ const PostHistoryView = ({ onBack }: { onBack: () => void }) => {
   }, []);
 
   const handleCopy = (content: string) => {
-    navigator.clipboard.writeText(cleanAiResponseForDisplay(content)).then(() => {
+    const cleanedContent = cleanAiResponseForDisplay(content);
+    const plainText = stripMarkdown(cleanedContent);
+    navigator.clipboard.writeText(plainText).then(() => {
       showSuccess("Đã sao chép nội dung!");
     }).catch(err => {
       showError("Không thể sao chép.");
@@ -140,7 +153,7 @@ const PostHistoryView = ({ onBack }: { onBack: () => void }) => {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="p-4 bg-white rounded-b-lg">
-                    <div className="prose max-w-none whitespace-pre-wrap relative bg-orange-50/30 p-4 rounded-md border border-orange-100">
+                    <div className="prose max-w-none relative bg-orange-50/30 p-4 rounded-md border border-orange-100">
                       <Button 
                         variant="ghost" 
                         size="icon" 
@@ -149,7 +162,9 @@ const PostHistoryView = ({ onBack }: { onBack: () => void }) => {
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
-                      {cleanAiResponseForDisplay(log.generated_content)}
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {cleanAiResponseForDisplay(log.generated_content)}
+                      </ReactMarkdown>
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -209,7 +224,8 @@ const CreatePost = () => {
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(generatedPost).then(() => {
+    const plainText = stripMarkdown(generatedPost);
+    navigator.clipboard.writeText(plainText).then(() => {
       showSuccess("Đã sao chép nội dung!");
     }).catch(err => {
       showError("Không thể sao chép.");
@@ -319,7 +335,9 @@ const CreatePost = () => {
                 <p className="text-sm text-gray-500">Quá trình này có thể mất một vài giây, vui lòng chờ.</p>
               </div>
             ) : generatedPost ? (
-              <div className="prose max-w-none whitespace-pre-wrap">{generatedPost}</div>
+              <div className="prose max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{generatedPost}</ReactMarkdown>
+              </div>
             ) : (
               <div className="text-center text-gray-500 py-20">
                 <Sparkles className="mx-auto h-12 w-12 text-gray-400" />

@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import {
   dismissToast,
@@ -27,7 +26,7 @@ import { CheckCircle, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
-const ApiKeys = () => {
+const ApiKeysSettings = () => {
   const { user } = useAuth();
 
   // Gemini states
@@ -77,7 +76,7 @@ const ApiKeys = () => {
   const handleSave = async () => {
     if (!user) return showError("Bạn phải đăng nhập để lưu cài đặt.");
     setIsSaving(true);
-    const toastId = showLoading("Saving settings...");
+    const toastId = showLoading("Đang lưu cài đặt...");
 
     const { error } = await supabase
       .from("user_api_keys")
@@ -93,21 +92,21 @@ const ApiKeys = () => {
 
     dismissToast(toastId);
     if (error) {
-      showError(`Error saving settings: ${error.message}`);
+      showError(`Lỗi khi lưu: ${error.message}`);
     } else {
-      showSuccess("Settings saved successfully!");
+      showSuccess("Đã lưu cài đặt thành công!");
     }
     setIsSaving(false);
   };
 
   const handleTestGeminiConnection = async () => {
     if (!geminiApiKey) {
-      showError("Please enter a Gemini API Key first.");
+      showError("Vui lòng nhập Gemini API Key.");
       return;
     }
     setIsTestingGemini(true);
     setGeminiTestStatus(null);
-    const toastId = showLoading("Testing connection...");
+    const toastId = showLoading("Đang kiểm tra kết nối...");
 
     const { data, error } = await supabase.functions.invoke(
       "test-ket-noi-gemini",
@@ -118,18 +117,18 @@ const ApiKeys = () => {
 
     dismissToast(toastId);
     if (error) {
-      showError(`Connection test failed: ${error.message}`);
+      showError(`Kiểm tra thất bại: ${error.message}`);
       setGeminiTestStatus("error");
     } else if (data) {
       if (data.success) {
         showSuccess(data.message);
         setGeminiTestStatus("success");
       } else {
-        showError(`Connection test failed: ${data.message}`);
+        showError(`Kiểm tra thất bại: ${data.message}`);
         setGeminiTestStatus("error");
       }
     } else {
-      showError("Connection test failed: An unknown error occurred.");
+      showError("Kiểm tra thất bại: Lỗi không xác định.");
       setGeminiTestStatus("error");
     }
     setIsTestingGemini(false);
@@ -137,16 +136,16 @@ const ApiKeys = () => {
 
   const handleTestFacebookConnection = async () => {
     if (!facebookApiUrl) {
-      showError("Please enter a Facebook API URL first.");
+      showError("Vui lòng nhập Facebook API URL.");
       return;
     }
     if (!facebookApiToken) {
-      showError("Please enter a Facebook API Token first.");
+      showError("Vui lòng nhập Facebook API Token.");
       return;
     }
     setIsTestingFacebook(true);
     setFacebookTestStatus(null);
-    const toastId = showLoading("Testing Facebook connection...");
+    const toastId = showLoading("Đang kiểm tra kết nối Facebook...");
 
     const { data, error } = await supabase.functions.invoke(
       "test-ket-noi-facebook",
@@ -157,51 +156,30 @@ const ApiKeys = () => {
 
     dismissToast(toastId);
     if (error) {
-      showError(`Connection test failed: ${error.message}`);
+      showError(`Kiểm tra thất bại: ${error.message}`);
       setFacebookTestStatus("error");
     } else if (data) {
       if (data.success) {
         showSuccess(data.message);
         setFacebookTestStatus("success");
       } else {
-        showError(`Connection test failed: ${data.message}`);
+        showError(`Kiểm tra thất bại: ${data.message}`);
         setFacebookTestStatus("error");
       }
     } else {
-      showError("Connection test failed: An unknown error occurred.");
+      showError("Kiểm tra thất bại: Lỗi không xác định.");
       setFacebookTestStatus("error");
     }
     setIsTestingFacebook(false);
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">API Keys</h1>
-        <p className="text-gray-500 mt-1">Manage your API integrations.</p>
-      </div>
-
-      <Tabs defaultValue="api-ai" className="w-full">
-        <TabsList className="flex w-full rounded-lg border border-orange-200 p-0 bg-white">
-          <TabsTrigger
-            value="api-ai"
-            className="flex-1 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light rounded-l-md"
-          >
-            API AI
-          </TabsTrigger>
-          <TabsTrigger
-            value="api-facebook"
-            className="flex-1 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light rounded-r-md"
-          >
-            API Facebook
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="api-ai" className="pt-6">
-          <Card className="border-orange-200">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-orange-200">
             <CardHeader>
               <CardTitle>Gemini API</CardTitle>
               <CardDescription>
-                Integrate with Google's Gemini API. Get your key from
+                Tích hợp với Gemini API của Google. Lấy key của bạn từ
                 aistudio.google.com.
               </CardDescription>
             </CardHeader>
@@ -210,7 +188,7 @@ const ApiKeys = () => {
                 <Label htmlFor="gemini-api-key">API Key</Label>
                 <Input
                   id="gemini-api-key"
-                  placeholder="Enter your Gemini API Key"
+                  placeholder="Nhập Gemini API Key của bạn"
                   value={geminiApiKey}
                   onChange={(e) => {
                     setGeminiApiKey(e.target.value);
@@ -222,7 +200,7 @@ const ApiKeys = () => {
                 <Label htmlFor="gemini-model">Model</Label>
                 <Select value={geminiModel} onValueChange={setGeminiModel}>
                   <SelectTrigger id="gemini-model">
-                    <SelectValue placeholder="Select a model" />
+                    <SelectValue placeholder="Chọn một model" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="gemini-2.5-pro">
@@ -235,23 +213,14 @@ const ApiKeys = () => {
                 </Select>
               </div>
               <div className="flex items-center justify-between">
-                <div className="flex space-x-2">
-                  <Button
+                <Button
                     onClick={handleTestGeminiConnection}
                     disabled={isTestingGemini || isSaving}
                     variant="secondary"
                     className="bg-gray-800 text-white hover:bg-gray-700"
-                  >
-                    {isTestingGemini ? "Testing..." : "Test Connection"}
-                  </Button>
-                  <Button
-                    onClick={handleSave}
-                    disabled={isSaving || isTestingGemini}
-                    className="bg-brand-orange hover:bg-brand-orange/90 text-white"
-                  >
-                    {isSaving ? "Saving..." : "Save"}
-                  </Button>
-                </div>
+                >
+                    {isTestingGemini ? "Đang kiểm tra..." : "Kiểm tra kết nối"}
+                </Button>
                 <div>
                   {geminiTestStatus === "success" && (
                     <div className="flex items-center text-sm font-medium text-green-600">
@@ -268,15 +237,12 @@ const ApiKeys = () => {
                 </div>
               </div>
             </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="api-facebook" className="pt-6">
-          <Card className="border-orange-200">
+        </Card>
+        <Card className="border-orange-200">
             <CardHeader>
               <CardTitle>Facebook API</CardTitle>
               <CardDescription>
-                Configure the Facebook API integration using the provided
-                third-party URL.
+                Cấu hình tích hợp Facebook API sử dụng URL của bên thứ ba được cung cấp.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -295,7 +261,7 @@ const ApiKeys = () => {
                 <Label htmlFor="facebook-api-token">API Token</Label>
                 <Input
                   id="facebook-api-token"
-                  placeholder="Enter your Facebook API Token"
+                  placeholder="Nhập API Token của bạn"
                   value={facebookApiToken}
                   onChange={(e) => {
                     setFacebookApiToken(e.target.value);
@@ -304,23 +270,14 @@ const ApiKeys = () => {
                 />
               </div>
               <div className="flex items-center justify-between">
-                <div className="flex space-x-2">
-                  <Button
+                <Button
                     onClick={handleTestFacebookConnection}
                     disabled={isTestingFacebook || isSaving}
                     variant="secondary"
                     className="bg-gray-800 text-white hover:bg-gray-700"
-                  >
-                    {isTestingFacebook ? "Testing..." : "Test Connection"}
-                  </Button>
-                  <Button
-                    onClick={handleSave}
-                    disabled={isSaving || isTestingFacebook}
-                    className="bg-brand-orange hover:bg-brand-orange/90 text-white"
-                  >
-                    {isSaving ? "Saving..." : "Save"}
-                  </Button>
-                </div>
+                >
+                    {isTestingFacebook ? "Đang kiểm tra..." : "Kiểm tra kết nối"}
+                </Button>
                 <div>
                   {facebookTestStatus === "success" && (
                     <div className="flex items-center text-sm font-medium text-green-600">
@@ -337,11 +294,18 @@ const ApiKeys = () => {
                 </div>
               </div>
             </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        </Card>
+        <div className="lg:col-span-2 flex justify-end">
+            <Button
+                onClick={handleSave}
+                disabled={isSaving || isTestingFacebook || isTestingGemini}
+                className="bg-brand-orange hover:bg-brand-orange/90 text-white"
+            >
+                {isSaving ? "Đang lưu..." : "Lưu tất cả thay đổi"}
+            </Button>
+        </div>
     </div>
   );
 };
 
-export default ApiKeys;
+export default ApiKeysSettings;

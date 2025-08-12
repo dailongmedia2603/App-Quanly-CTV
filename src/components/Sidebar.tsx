@@ -142,7 +142,6 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
             )}
             <NavLink to="/reports" icon={FilePieChart} isCollapsed={isCollapsed}>Báo cáo</NavLink>
             <NavLink to="/income" icon={CircleDollarSign} isCollapsed={isCollapsed}>Thu nhập</NavLink>
-            <NavLink to="/keys" icon={KeyRound} isCollapsed={isCollapsed}>API Keys</NavLink>
             {isSuperAdmin && <NavLink to="/account" icon={Users} isCollapsed={isCollapsed}>Tài khoản</NavLink>}
             {isSuperAdmin && <NavLink to="/settings" icon={Settings} isCollapsed={isCollapsed}>Settings</NavLink>}
           </nav>

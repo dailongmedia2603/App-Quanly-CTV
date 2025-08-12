@@ -22,6 +22,7 @@ import CreatePlan from "./pages/CreatePlan";
 import ConfigContentAI from "./pages/ConfigContentAI";
 import ConfigCreatePlan from "./pages/ConfigCreatePlan";
 import Income from "./pages/Income";
+import CustomerConsulting from "./pages/CustomerConsulting";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ const AppContent = () => {
           <Route path="/find-customers" element={<FindCustomers />} />
           <Route path="/create-content/post" element={<CreatePost />} />
           <Route path="/create-content/comment" element={<CreateComment />} />
+          <Route path="/create-content/customer-consulting" element={<CustomerConsulting />} />
           <Route path="/create-plan" element={<CreatePlan />} />
           <Route path="/config/scan-post" element={<Index />} />
           <Route path="/config/content-ai" element={<ConfigContentAI />} />

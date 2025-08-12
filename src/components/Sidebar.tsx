@@ -121,6 +121,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
                   <nav className="relative border-l border-gray-200 space-y-1">
                     <SubNavLink to="/create-content/post">Tạo bài viết</SubNavLink>
                     <SubNavLink to="/create-content/comment">Tạo comment</SubNavLink>
+                    <SubNavLink to="/create-content/customer-consulting">Tư vấn khách hàng</SubNavLink>
                   </nav>
                 </AccordionContent>
               </AccordionItem></Accordion>

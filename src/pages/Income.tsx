@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import ReportWidget from '@/components/ReportWidget';
-import { Wallet, Landmark, Percent, FileText, Handshake, ChevronLeft, ChevronRight, Plus, Search, MoreHorizontal, Pencil, Trash2, Loader, CheckCircle, CalendarPlus } from 'lucide-react';
+import { Wallet, Landmark, Percent, FileText, Handshake, ChevronLeft, ChevronRight, Plus, Search, MoreHorizontal, Pencil, Trash2, Loader, CheckCircle, CalendarPlus, Link as LinkIcon } from 'lucide-react';
 import { startOfMonth, endOfMonth, format, subMonths, addMonths } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -366,9 +366,10 @@ const Income = () => {
                         <TableCell className="font-medium">{contract.project_name}</TableCell>
                         <TableCell>
                           {contract.contract_link ? (
-                            <Button variant="link" asChild className="p-0 h-auto">
-                              <a href={contract.contract_link} target="_blank" rel="noopener noreferrer">
-                                Xem
+                            <Button variant="link" asChild className="p-0 h-auto text-brand-orange hover:text-brand-orange/80">
+                              <a href={contract.contract_link} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1">
+                                <LinkIcon className="h-4 w-4" />
+                                <span>Xem</span>
                               </a>
                             </Button>
                           ) : (
@@ -407,7 +408,7 @@ const Income = () => {
                 <Button onClick={handleAddNewClick} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><Plus className="mr-2 h-4 w-4" />Tạo hợp đồng</Button>
               </div>
             </CardHeader>
-            <CardContent><Table><TableHeader><TableRow><TableHead>Tên dự án</TableHead><TableHead>Link hợp đồng</TableHead><TableHead>Giá trị</TableHead><TableHead>Đã thanh toán</TableHead><TableHead>Còn nợ</TableHead><TableHead>Tiến độ</TableHead><TableHead className="text-right">Hành động</TableHead></TableRow></TableHeader><TableBody>{loadingAll ? <TableRow><TableCell colSpan={7} className="h-24 text-center">Đang tải...</TableCell></TableRow> : filteredContracts.length === 0 ? <TableRow><TableCell colSpan={7} className="h-24 text-center">Không có hợp đồng nào.</TableCell></TableRow> : (filteredContracts.map((contract) => (<TableRow key={contract.id}><TableCell className="font-medium">{contract.project_name}</TableCell><TableCell>{contract.contract_link ? (<Button variant="link" asChild className="p-0 h-auto"><a href={contract.contract_link} target="_blank" rel="noopener noreferrer">Xem</a></Button>) : (<span className="text-gray-400">N/A</span>)}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell><EditableCurrencyCell contract={contract} onUpdate={handleFieldUpdate} /></TableCell><TableCell>{formatCurrency(contract.contract_value - contract.paid_amount)}</TableCell><TableCell><EditableStatusCell contract={contract} onUpdate={handleFieldUpdate} /></TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleEditClick(contract)}><Pencil className="mr-2 h-4 w-4" />Sửa</DropdownMenuItem><DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(contract)}><Trash2 className="mr-2 h-4 w-4" />Xóa</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>)))}</TableBody></Table></CardContent>
+            <CardContent><Table><TableHeader><TableRow><TableHead>Tên dự án</TableHead><TableHead>Link hợp đồng</TableHead><TableHead>Giá trị</TableHead><TableHead>Đã thanh toán</TableHead><TableHead>Còn nợ</TableHead><TableHead>Tiến độ</TableHead><TableHead className="text-right">Hành động</TableHead></TableRow></TableHeader><TableBody>{loadingAll ? <TableRow><TableCell colSpan={7} className="h-24 text-center">Đang tải...</TableCell></TableRow> : filteredContracts.length === 0 ? <TableRow><TableCell colSpan={7} className="h-24 text-center">Không có hợp đồng nào.</TableCell></TableRow> : (filteredContracts.map((contract) => (<TableRow key={contract.id}><TableCell className="font-medium">{contract.project_name}</TableCell><TableCell>{contract.contract_link ? (<Button variant="link" asChild className="p-0 h-auto text-brand-orange hover:text-brand-orange/80"><a href={contract.contract_link} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1"><LinkIcon className="h-4 w-4" /><span>Xem</span></a></Button>) : (<span className="text-gray-400">N/A</span>)}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell><EditableCurrencyCell contract={contract} onUpdate={handleFieldUpdate} /></TableCell><TableCell>{formatCurrency(contract.contract_value - contract.paid_amount)}</TableCell><TableCell><EditableStatusCell contract={contract} onUpdate={handleFieldUpdate} /></TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleEditClick(contract)}><Pencil className="mr-2 h-4 w-4" />Sửa</DropdownMenuItem><DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(contract)}><Trash2 className="mr-2 h-4 w-4" />Xóa</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>)))}</TableBody></Table></CardContent>
           </Card>
         </TabsContent>
       </Tabs>

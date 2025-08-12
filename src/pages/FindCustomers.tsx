@@ -18,6 +18,7 @@ interface ReportData {
   source_url: string | null;
   posted_at: string | null;
   sentiment: 'positive' | 'negative' | 'neutral' | null;
+  suggested_comment?: string | null;
   // Properties required by FacebookReportDetailsDialog
   title: string | null;
   price: string | null;
@@ -87,6 +88,7 @@ const FindCustomers = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nội dung bài viết</TableHead>
+                    <TableHead>Comment đề xuất</TableHead>
                     <TableHead>Thời gian đăng</TableHead>
                     <TableHead>Dịch vụ</TableHead>
                     <TableHead className="text-right">Link</TableHead>
@@ -94,10 +96,10 @@ const FindCustomers = () => {
                 </TableHeader>
                 <TableBody>
                   {loadingReports ? (
-                    <TableRow><TableCell colSpan={4} className="h-24 text-center">Đang tải kết quả...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="h-24 text-center">Đang tải kết quả...</TableCell></TableRow>
                   ) : paginatedData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="h-24 text-center">
+                      <TableCell colSpan={5} className="h-24 text-center">
                         <div className="flex flex-col items-center justify-center text-gray-500">
                           <FileText className="h-10 w-10 mb-2" />
                           Không tìm thấy kết quả nào.
@@ -109,6 +111,9 @@ const FindCustomers = () => {
                       <TableRow key={item.id}>
                         <TableCell className="max-w-md truncate cursor-pointer hover:text-brand-orange" onClick={() => handleViewDetails(item)}>
                           {item.description}
+                        </TableCell>
+                        <TableCell className="max-w-sm whitespace-pre-wrap">
+                          {item.suggested_comment || <span className="text-gray-400 italic">Chưa có</span>}
                         </TableCell>
                         <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
                         <TableCell>

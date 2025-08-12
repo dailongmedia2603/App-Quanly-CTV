@@ -165,7 +165,7 @@ serve(async (req) => {
     const allPostsData = [];
     const apiCallDetails = [];
 
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(1/3) Đang lấy bài viết từ ${facebookGroupIds.length} group...`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(1/4) Đang lấy bài viết từ ${facebookGroupIds.length} group...`, null, 'progress');
     for (const groupId of facebookGroupIds) {
         let url = `${facebook_api_url.replace(/\/$/, '')}/${groupId}/feed?fields=message,created_time,id,permalink_url,from&access_token=${facebook_api_token}&limit=100`;
         if (sinceTimestamp) {
@@ -210,10 +210,10 @@ serve(async (req) => {
             allPostsData.push(...posts.map((post: any) => ({ ...post, campaign_id: campaign.id })));
         }
     }
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(1/3) Đã lấy xong ${allPostsData.length} bài viết.`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(1/4) Đã lấy xong ${allPostsData.length} bài viết.`, null, 'progress');
 
     let filteredPosts = [];
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/3) Đang lọc ${allPostsData.length} bài viết...`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/4) Đang lọc ${allPostsData.length} bài viết...`, null, 'progress');
     if (keywords.length > 0) {
         for (const post of allPostsData) {
             const foundKeywords = findKeywords(post.message, keywords);
@@ -227,7 +227,7 @@ serve(async (req) => {
 
     let finalResults = [];
     if (campaign.ai_filter_enabled && campaign.ai_prompt && gemini_api_key && gemini_model) {
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/3) AI đang phân tích ${filteredPosts.length} bài viết...`, null, 'progress');
+        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/4) AI đang phân tích ${filteredPosts.length} bài viết...`, null, 'progress');
         const genAI = new GoogleGenerativeAI(gemini_api_key);
         const model = genAI.getGenerativeModel({ model: gemini_model });
 
@@ -284,36 +284,70 @@ serve(async (req) => {
             sentiment: null,
         }));
     }
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(2/3) Phân tích và lọc xong.`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(2/4) Phân tích và lọc xong.`, null, 'progress');
 
-    if (finalResults.length > 0) {
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(3/3) Đang lưu ${finalResults.length} kết quả vào báo cáo...`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(3/4) AI đang tạo comment đề xuất cho ${finalResults.length} bài viết...`, null, 'progress');
+    const commentGenerationPromises = finalResults.map(async (post) => {
+        if (!gemini_api_key || !gemini_model || !post.content) {
+            return { ...post, suggested_comment: null };
+        }
+
+        const prompt = `
+            You are a helpful and professional marketing assistant. 
+            Based on the following Facebook post, write a short, friendly, and natural-sounding comment to introduce a relevant service.
+            The service we offer is related to these keywords: "${post.keywords_found?.join(', ')}".
+            The comment should be engaging and encourage a response. Do not use hashtags.
+
+            Post Content:
+            ---
+            ${post.content}
+            ---
+
+            Your response must be a single string containing only the suggested comment in Vietnamese.
+        `;
+
+        try {
+            const genAI = new GoogleGenerativeAI(gemini_api_key);
+            const model = genAI.getGenerativeModel({ model: gemini_model });
+            const result = await model.generateContent(prompt);
+            const comment = result.response.text().trim();
+            return { ...post, suggested_comment: comment };
+        } catch (e) {
+            console.error("Error generating suggested comment for post:", post.source_url, e);
+            return { ...post, suggested_comment: 'AI comment generation failed.' };
+        }
+    });
+
+    const resultsWithComments = await Promise.all(commentGenerationPromises);
+
+    if (resultsWithComments.length > 0) {
+        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(4/4) Đang lưu ${resultsWithComments.length} kết quả vào báo cáo...`, null, 'progress');
         const dataToInsert = campaign.type === 'Tổng hợp' 
-            ? finalResults.map(r => {
+            ? resultsWithComments.map(r => {
                 const { content, ...rest } = r;
                 return { ...rest, description: content, source_type: 'Facebook' };
             })
-            : finalResults;
+            : resultsWithComments;
 
         const { error: insertError } = await supabaseAdmin
             .from(reportTable)
             .insert(dataToInsert);
 
         if (insertError) {
-            await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'error', `(3/3) Lưu kết quả thất bại.`, null, 'final');
+            await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'error', `(4/4) Lưu kết quả thất bại.`, null, 'final');
             throw new Error(`Thêm dữ liệu báo cáo thất bại: ${insertError.message}`);
         }
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(3/3) Đã lưu ${finalResults.length} kết quả.`, null, 'progress');
+        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(4/4) Đã lưu ${resultsWithComments.length} kết quả.`, null, 'progress');
     }
     
-    const successMessage = `Quét Facebook hoàn tất. Đã tìm thấy và xử lý ${finalResults.length} bài viết.`;
+    const successMessage = `Quét Facebook hoàn tất. Đã tìm thấy và xử lý ${resultsWithComments.length} bài viết.`;
     await logScan(supabaseAdmin, campaign_id_from_req, user_id_from_req, 'success', successMessage, { 
         since: sinceTimestamp,
         "since (readable)": formatTimestampForHumans(sinceTimestamp),
         until: untilTimestamp,
         "until (readable)": formatTimestampForHumans(untilTimestamp),
         api_calls: apiCallDetails, 
-        found_posts: finalResults.length,
+        found_posts: resultsWithComments.length,
     }, 'final');
 
     return new Response(JSON.stringify({ success: true, message: successMessage }), {

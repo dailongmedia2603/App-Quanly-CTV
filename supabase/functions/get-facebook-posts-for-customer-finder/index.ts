@@ -24,7 +24,7 @@ serve(async (req) => {
     // Fetch from Bao_cao_Facebook for all campaigns
     const { data: facebookReports, error: facebookError } = await supabaseAdmin
       .from('Bao_cao_Facebook')
-      .select('id, campaign_id, posted_at, keywords_found, ai_evaluation, sentiment, source_url, scanned_at, content');
+      .select('id, campaign_id, posted_at, keywords_found, ai_evaluation, sentiment, source_url, scanned_at, content, suggested_comment');
 
     if (facebookError) {
       console.error("Error fetching from Bao_cao_Facebook:", facebookError);

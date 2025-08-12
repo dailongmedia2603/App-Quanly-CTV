@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import ReportWidget from '@/components/ReportWidget';
-import { Wallet, Landmark, Percent, FileText, Calendar as CalendarIcon, Handshake } from 'lucide-react';
+import { Wallet, Landmark, Percent, FileText, Handshake, ChevronLeft, ChevronRight } from 'lucide-react';
 import { startOfMonth, endOfMonth, format, subMonths, addMonths } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -88,34 +88,38 @@ const Income = () => {
       </div>
 
       <Tabs defaultValue="income">
-        <TabsList className="flex w-full max-w-md rounded-lg border border-orange-200 p-0 bg-white">
-          <TabsTrigger
-            value="income"
-            className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-l-md"
-          >
-            <Wallet className="h-4 w-4" />
-            <span>Thu nhập</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="contracts"
-            className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-r-md"
-          >
-            <Handshake className="h-4 w-4" />
-            <span>Hợp đồng</span>
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="income" className="space-y-4 pt-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" onClick={() => handleMonthChange('prev')}>Tháng trước</Button>
-              <Button variant="outline" onClick={() => handleMonthChange('next')}>Tháng sau</Button>
-            </div>
-            <div className="text-lg font-semibold flex items-center space-x-2">
-              <CalendarIcon className="h-5 w-5 text-gray-600" />
-              <span>{format(selectedDate, 'MMMM yyyy', { locale: vi })}</span>
-            </div>
-          </div>
+        <div className="flex justify-between items-center">
+          <TabsList className="flex w-full max-w-md rounded-lg border border-orange-200 p-0 bg-white">
+            <TabsTrigger
+              value="income"
+              className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-l-md"
+            >
+              <Wallet className="h-4 w-4" />
+              <span>Thu nhập</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="contracts"
+              className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-r-md"
+            >
+              <Handshake className="h-4 w-4" />
+              <span>Hợp đồng</span>
+            </TabsTrigger>
+          </TabsList>
 
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="icon" onClick={() => handleMonthChange('prev')}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-lg font-semibold w-32 text-center capitalize">
+              {format(selectedDate, 'MMMM yyyy', { locale: vi })}
+            </span>
+            <Button variant="outline" size="icon" onClick={() => handleMonthChange('next')}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <TabsContent value="income" className="space-y-4 pt-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <ReportWidget icon={<Wallet className="h-5 w-5" />} title="Tổng thu nhập" value={formatCurrency(stats.totalIncome)} />
             <ReportWidget icon={<Landmark className="h-5 w-5" />} title="Lương cứng" value={formatCurrency(stats.fixedSalary)} />

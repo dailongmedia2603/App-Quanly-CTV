@@ -1,6 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
 import SupportWidgetSettings from "@/components/settings/SupportWidgetSettings";
-import PricingPlanSettings from "@/components/settings/PricingPlanSettings";
 import BankInfoSettings from "@/components/settings/BankInfoSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,14 +36,10 @@ const Settings = () => {
       <Tabs defaultValue="support-widget" className="w-full">
         <TabsList className="inline-flex items-center justify-center rounded-lg border border-orange-200 p-1 bg-white">
           <TabsTrigger value="support-widget" className="px-4 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:text-gray-900 rounded-md">Widget Hỗ trợ</TabsTrigger>
-          <TabsTrigger value="pricing" className="px-4 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:text-gray-900 rounded-md">Bảng giá</TabsTrigger>
           <TabsTrigger value="payment" className="px-4 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:text-gray-900 rounded-md">Thông tin TT</TabsTrigger>
         </TabsList>
         <TabsContent value="support-widget" className="pt-6">
           <SupportWidgetSettings />
-        </TabsContent>
-        <TabsContent value="pricing" className="pt-6">
-          <PricingPlanSettings />
         </TabsContent>
         <TabsContent value="payment" className="pt-6">
           <BankInfoSettings />

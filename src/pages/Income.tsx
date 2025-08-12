@@ -1,16 +1,25 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import ReportWidget from '@/components/ReportWidget';
-import { Wallet, Landmark, Percent, FileText, Handshake, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Wallet, Landmark, Percent, FileText, Handshake, ChevronLeft, ChevronRight, Plus, Search, MoreHorizontal, Pencil, Trash2, Loader, CheckCircle, CalendarPlus } from 'lucide-react';
 import { startOfMonth, endOfMonth, format, subMonths, addMonths } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Label } from '@/components/ui/label';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
 
 // Define the contract type
 interface Contract {
@@ -21,6 +30,9 @@ interface Contract {
   status: 'ongoing' | 'completed';
   payment_status: 'unpaid' | 'partially_paid' | 'paid';
   commission_paid: boolean;
+  start_date: string;
+  end_date: string | null;
+  created_at: string;
 }
 
 // Helper to format currency
@@ -30,158 +42,217 @@ const formatCurrency = (value: number) => {
 
 const Income = () => {
   const { user } = useAuth();
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [monthlyContracts, setMonthlyContracts] = useState<Contract[]>([]);
+  const [allContracts, setAllContracts] = useState<Contract[]>([]);
+  const [loadingMonthly, setLoadingMonthly] = useState(true);
+  const [loadingAll, setLoadingAll] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Dialog states
+  const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
+  const [editingContract, setEditingContract] = useState<Contract | null>(null);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [contractToDelete, setContractToDelete] = useState<Contract | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form states
+  const [projectName, setProjectName] = useState('');
+  const [contractValue, setContractValue] = useState(0);
+  const [commissionRate, setCommissionRate] = useState(0);
+  const [status, setStatus] = useState<'ongoing' | 'completed'>('ongoing');
+  const [paymentStatus, setPaymentStatus] = useState<'unpaid' | 'partially_paid' | 'paid'>('unpaid');
+  const [commissionPaid, setCommissionPaid] = useState(false);
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
+  const [endDate, setEndDate] = useState<Date | undefined>();
+
+  const fetchAllContracts = async () => {
+    if (!user) return;
+    setLoadingAll(true);
+    const { data, error } = await supabase.from('contracts').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+    if (error) {
+      showError("Không thể tải danh sách hợp đồng.");
+      setAllContracts([]);
+    } else {
+      setAllContracts(data as Contract[]);
+    }
+    setLoadingAll(false);
+  };
 
   useEffect(() => {
-    const fetchContracts = async () => {
-      if (!user) return;
-      setLoading(true);
+    fetchAllContracts();
+  }, [user]);
 
+  useEffect(() => {
+    const fetchMonthlyContracts = async () => {
+      if (!user) return;
+      setLoadingMonthly(true);
       const from = startOfMonth(selectedDate).toISOString();
       const to = endOfMonth(selectedDate).toISOString();
-
-      const { data, error } = await supabase
-        .from('contracts')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('start_date', from)
-        .lte('start_date', to);
-
+      const { data, error } = await supabase.from('contracts').select('*').eq('user_id', user.id).gte('start_date', from).lte('start_date', to);
       if (error) {
-        console.error("Error fetching contracts:", error);
-        setContracts([]);
+        console.error("Error fetching monthly contracts:", error);
+        setMonthlyContracts([]);
       } else {
-        setContracts(data as Contract[]);
+        setMonthlyContracts(data as Contract[]);
       }
-      setLoading(false);
+      setLoadingMonthly(false);
     };
-
-    fetchContracts();
+    fetchMonthlyContracts();
   }, [user, selectedDate]);
 
-  const stats = useMemo(() => {
-    const fixedSalary = 5000000; // Hardcoded for now
-    const totalCommission = contracts.reduce((acc, contract) => {
-      return acc + (contract.contract_value * contract.commission_rate);
-    }, 0);
-    const totalIncome = fixedSalary + totalCommission;
-    const contractCount = contracts.length;
+  const monthlyStats = useMemo(() => {
+    const fixedSalary = 5000000;
+    const totalCommission = monthlyContracts.reduce((acc, contract) => acc + (contract.contract_value * contract.commission_rate), 0);
+    return { totalIncome: fixedSalary + totalCommission, fixedSalary, totalCommission, contractCount: monthlyContracts.length };
+  }, [monthlyContracts]);
 
-    return { totalIncome, fixedSalary, totalCommission, contractCount };
-  }, [contracts]);
+  const allContractsStats = useMemo(() => {
+    const total = allContracts.length;
+    const ongoing = allContracts.filter(c => c.status === 'ongoing').length;
+    const completed = allContracts.filter(c => c.status === 'completed').length;
+    const thisMonth = allContracts.filter(c => new Date(c.created_at) >= startOfMonth(new Date())).length;
+    return { total, ongoing, completed, thisMonth };
+  }, [allContracts]);
+
+  const filteredContracts = useMemo(() => {
+    return allContracts.filter(c => c.project_name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [allContracts, searchTerm]);
 
   const handleMonthChange = (direction: 'prev' | 'next') => {
-    setSelectedDate(currentDate => {
-      return direction === 'prev' ? subMonths(currentDate, 1) : addMonths(currentDate, 1);
-    });
+    setSelectedDate(currentDate => direction === 'prev' ? subMonths(currentDate, 1) : addMonths(currentDate, 1));
+  };
+
+  const resetForm = () => {
+    setProjectName(''); setContractValue(0); setCommissionRate(0); setStatus('ongoing');
+    setPaymentStatus('unpaid'); setCommissionPaid(false); setStartDate(new Date()); setEndDate(undefined);
+  };
+
+  const handleAddNewClick = () => {
+    resetForm();
+    setEditingContract(null);
+    setIsContractDialogOpen(true);
+  };
+
+  const handleEditClick = (contract: Contract) => {
+    setEditingContract(contract);
+    setProjectName(contract.project_name);
+    setContractValue(contract.contract_value);
+    setCommissionRate(contract.commission_rate);
+    setStatus(contract.status);
+    setPaymentStatus(contract.payment_status);
+    setCommissionPaid(contract.commission_paid);
+    setStartDate(new Date(contract.start_date));
+    setEndDate(contract.end_date ? new Date(contract.end_date) : undefined);
+    setIsContractDialogOpen(true);
+  };
+
+  const handleDeleteClick = (contract: Contract) => {
+    setContractToDelete(contract);
+    setIsDeleteAlertOpen(true);
+  };
+
+  const handleSaveContract = async () => {
+    if (!user || !projectName || !startDate) return showError("Vui lòng điền đầy đủ thông tin bắt buộc.");
+    setIsSubmitting(true);
+    const toastId = showLoading(editingContract ? "Đang cập nhật..." : "Đang tạo...");
+    
+    const payload = {
+      user_id: user.id,
+      project_name: projectName,
+      contract_value: contractValue,
+      commission_rate: commissionRate,
+      status,
+      payment_status: paymentStatus,
+      commission_paid: commissionPaid,
+      start_date: startDate.toISOString(),
+      end_date: endDate?.toISOString() || null,
+    };
+
+    const query = editingContract
+      ? supabase.from('contracts').update(payload).eq('id', editingContract.id)
+      : supabase.from('contracts').insert(payload);
+
+    const { error } = await query;
+    dismissToast(toastId);
+    if (error) {
+      showError(`Lưu thất bại: ${error.message}`);
+    } else {
+      showSuccess("Lưu hợp đồng thành công!");
+      setIsContractDialogOpen(false);
+      fetchAllContracts();
+    }
+    setIsSubmitting(false);
+  };
+
+  const confirmDelete = async () => {
+    if (!contractToDelete) return;
+    setIsSubmitting(true);
+    const toastId = showLoading("Đang xóa...");
+    const { error } = await supabase.from('contracts').delete().eq('id', contractToDelete.id);
+    dismissToast(toastId);
+    if (error) {
+      showError(`Xóa thất bại: ${error.message}`);
+    } else {
+      showSuccess("Xóa hợp đồng thành công!");
+      fetchAllContracts();
+    }
+    setIsDeleteAlertOpen(false);
+    setIsSubmitting(false);
   };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Thu nhập</h1>
-        <p className="text-gray-500 mt-1">
-          Theo dõi và quản lý thu nhập của bạn.
-        </p>
+        <p className="text-gray-500 mt-1">Theo dõi và quản lý thu nhập của bạn.</p>
       </div>
 
       <Tabs defaultValue="income">
         <div className="flex justify-between items-center">
           <TabsList className="flex w-full max-w-md rounded-lg border border-orange-200 p-0 bg-white">
-            <TabsTrigger
-              value="income"
-              className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-l-md"
-            >
-              <Wallet className="h-4 w-4" />
-              <span>Thu nhập</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="contracts"
-              className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-r-md"
-            >
-              <Handshake className="h-4 w-4" />
-              <span>Hợp đồng</span>
-            </TabsTrigger>
+            <TabsTrigger value="income" className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-l-md"><Wallet className="h-4 w-4" /><span>Thu nhập</span></TabsTrigger>
+            <TabsTrigger value="contracts" className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-r-md"><Handshake className="h-4 w-4" /><span>Hợp đồng</span></TabsTrigger>
           </TabsList>
-
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="icon" onClick={() => handleMonthChange('prev')}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-lg font-semibold w-32 text-center capitalize">
-              {format(selectedDate, 'MMMM yyyy', { locale: vi })}
-            </span>
-            <Button variant="outline" size="icon" onClick={() => handleMonthChange('next')}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <Button variant="outline" size="icon" onClick={() => handleMonthChange('prev')}><ChevronLeft className="h-4 w-4" /></Button>
+            <span className="text-lg font-semibold w-32 text-center capitalize">{format(selectedDate, 'MMMM yyyy', { locale: vi })}</span>
+            <Button variant="outline" size="icon" onClick={() => handleMonthChange('next')}><ChevronRight className="h-4 w-4" /></Button>
           </div>
         </div>
 
         <TabsContent value="income" className="space-y-4 pt-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <ReportWidget icon={<Wallet className="h-5 w-5" />} title="Tổng thu nhập" value={formatCurrency(stats.totalIncome)} />
-            <ReportWidget icon={<Landmark className="h-5 w-5" />} title="Lương cứng" value={formatCurrency(stats.fixedSalary)} />
-            <ReportWidget icon={<Percent className="h-5 w-5" />} title="Hoa hồng" value={formatCurrency(stats.totalCommission)} />
-            <ReportWidget icon={<FileText className="h-5 w-5" />} title="Hợp đồng" value={stats.contractCount.toString()} />
+            <ReportWidget icon={<Wallet className="h-5 w-5" />} title="Tổng thu nhập" value={formatCurrency(monthlyStats.totalIncome)} />
+            <ReportWidget icon={<Landmark className="h-5 w-5" />} title="Lương cứng" value={formatCurrency(monthlyStats.fixedSalary)} />
+            <ReportWidget icon={<Percent className="h-5 w-5" />} title="Hoa hồng" value={formatCurrency(monthlyStats.totalCommission)} />
+            <ReportWidget icon={<FileText className="h-5 w-5" />} title="Hợp đồng" value={monthlyStats.contractCount.toString()} />
           </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Danh sách hợp đồng trong tháng</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tên dự án</TableHead>
-                    <TableHead>Giá trị hợp đồng</TableHead>
-                    <TableHead>Hoa hồng</TableHead>
-                    <TableHead>Tiến độ</TableHead>
-                    <TableHead>Đã thanh toán</TableHead>
-                    <TableHead>Hoa hồng đã nhận</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow><TableCell colSpan={6} className="h-24 text-center">Đang tải...</TableCell></TableRow>
-                  ) : contracts.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="h-24 text-center">Không có hợp đồng nào trong tháng này.</TableCell></TableRow>
-                  ) : (
-                    contracts.map((contract) => (
-                      <TableRow key={contract.id}>
-                        <TableCell className="font-medium">{contract.project_name}</TableCell>
-                        <TableCell>{formatCurrency(contract.contract_value)}</TableCell>
-                        <TableCell>{formatCurrency(contract.contract_value * contract.commission_rate)}</TableCell>
-                        <TableCell>
-                          <Badge variant={contract.status === 'completed' ? 'default' : 'secondary'} className={cn(contract.status === 'completed' && 'bg-green-500 text-white')}>{contract.status === 'completed' ? 'Hoàn thành' : 'Đang chạy'}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={contract.payment_status === 'paid' ? 'default' : 'outline'} className={cn(contract.payment_status === 'paid' && 'bg-blue-500 text-white')}>{contract.payment_status}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={contract.commission_paid ? 'default' : 'destructive'} className={cn(contract.commission_paid && 'bg-green-100 text-green-800')}>{contract.commission_paid ? 'Đã nhận' : 'Chưa nhận'}</Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <Card><CardHeader><CardTitle>Danh sách hợp đồng trong tháng</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Tên dự án</TableHead><TableHead>Giá trị hợp đồng</TableHead><TableHead>Hoa hồng</TableHead><TableHead>Tiến độ</TableHead><TableHead>Đã thanh toán</TableHead><TableHead>Hoa hồng đã nhận</TableHead></TableRow></TableHeader><TableBody>{loadingMonthly ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Đang tải...</TableCell></TableRow> : monthlyContracts.length === 0 ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Không có hợp đồng nào trong tháng này.</TableCell></TableRow> : (monthlyContracts.map((contract) => (<TableRow key={contract.id}><TableCell className="font-medium">{contract.project_name}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell>{formatCurrency(contract.contract_value * contract.commission_rate)}</TableCell><TableCell><Badge variant={contract.status === 'completed' ? 'default' : 'secondary'} className={cn(contract.status === 'completed' && 'bg-green-500 text-white')}>{contract.status === 'completed' ? 'Hoàn thành' : 'Đang chạy'}</Badge></TableCell><TableCell><Badge variant={contract.payment_status === 'paid' ? 'default' : 'outline'} className={cn(contract.payment_status === 'paid' && 'bg-blue-500 text-white')}>{contract.payment_status}</Badge></TableCell><TableCell><Badge variant={contract.commission_paid ? 'default' : 'destructive'} className={cn(contract.commission_paid && 'bg-green-100 text-green-800')}>{contract.commission_paid ? 'Đã nhận' : 'Chưa nhận'}</Badge></TableCell></TableRow>)))}</TableBody></Table></CardContent></Card>
         </TabsContent>
-        <TabsContent value="contracts">
+        
+        <TabsContent value="contracts" className="space-y-4 pt-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <ReportWidget icon={<Handshake className="h-5 w-5" />} title="Tổng Hợp đồng" value={allContractsStats.total.toString()} />
+            <ReportWidget icon={<Loader className="h-5 w-5" />} title="Đang chạy" value={allContractsStats.ongoing.toString()} />
+            <ReportWidget icon={<CheckCircle className="h-5 w-5" />} title="Hoàn thành" value={allContractsStats.completed.toString()} />
+            <ReportWidget icon={<CalendarPlus className="h-5 w-5" />} title="HĐ trong tháng" value={allContractsStats.thisMonth.toString()} />
+          </div>
           <Card>
-            <CardHeader>
-              <CardTitle>Quản lý Hợp đồng</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div><CardTitle>Quản lý Hợp đồng</CardTitle><CardDescription>Thêm mới, chỉnh sửa và theo dõi tất cả hợp đồng của bạn.</CardDescription></div>
+              <div className="flex items-center space-x-2">
+                <div className="relative w-full max-w-sm"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /><Input placeholder="Tìm theo tên dự án..." className="pl-10" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
+                <Button onClick={handleAddNewClick} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><Plus className="mr-2 h-4 w-4" />Tạo hợp đồng</Button>
+              </div>
             </CardHeader>
-            <CardContent>
-              <p>Tính năng đang được phát triển. Vui lòng quay lại sau.</p>
-            </CardContent>
+            <CardContent><Table><TableHeader><TableRow><TableHead>Tên dự án</TableHead><TableHead>Giá trị</TableHead><TableHead>Hoa hồng</TableHead><TableHead>Đã trả</TableHead><TableHead>Chưa trả</TableHead><TableHead className="text-right">Hành động</TableHead></TableRow></TableHeader><TableBody>{loadingAll ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Đang tải...</TableCell></TableRow> : filteredContracts.length === 0 ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Không có hợp đồng nào.</TableCell></TableRow> : (filteredContracts.map((contract) => (<TableRow key={contract.id}><TableCell className="font-medium">{contract.project_name}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell>{formatCurrency(contract.contract_value * contract.commission_rate)}</TableCell><TableCell>{formatCurrency(0)}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleEditClick(contract)}><Pencil className="mr-2 h-4 w-4" />Sửa</DropdownMenuItem><DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(contract)}><Trash2 className="mr-2 h-4 w-4" />Xóa</DropdownMenuItem></DropdownMenuContent></DropdownMenu></TableCell></TableRow>)))}</TableBody></Table></CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>{editingContract ? 'Sửa hợp đồng' : 'Tạo hợp đồng mới'}</DialogTitle></DialogHeader><div className="grid grid-cols-2 gap-4 py-4"><div className="space-y-2 col-span-2"><Label htmlFor="project-name">Tên dự án</Label><Input id="project-name" value={projectName} onChange={e => setProjectName(e.target.value)} /></div><div className="space-y-2"><Label htmlFor="contract-value">Giá trị hợp đồng (VND)</Label><Input id="contract-value" type="number" value={contractValue} onChange={e => setContractValue(Number(e.target.value))} /></div><div className="space-y-2"><Label htmlFor="commission-rate">Tỷ lệ hoa hồng (%)</Label><Input id="commission-rate" type="number" value={commissionRate * 100} onChange={e => setCommissionRate(Number(e.target.value) / 100)} /></div><div className="space-y-2"><Label>Ngày bắt đầu</Label><DateTimePicker date={startDate} setDate={setStartDate} /></div><div className="space-y-2"><Label>Ngày kết thúc (tùy chọn)</Label><DateTimePicker date={endDate} setDate={setEndDate} /></div><div className="space-y-2"><Label>Trạng thái</Label><Select value={status} onValueChange={v => setStatus(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ongoing">Đang chạy</SelectItem><SelectItem value="completed">Hoàn thành</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label>Thanh toán</Label><Select value={paymentStatus} onValueChange={v => setPaymentStatus(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unpaid">Chưa thanh toán</SelectItem><SelectItem value="partially_paid">Thanh toán một phần</SelectItem><SelectItem value="paid">Đã thanh toán</SelectItem></SelectContent></Select></div><div className="flex items-center space-x-2 pt-6"><Checkbox id="commission-paid" checked={commissionPaid} onCheckedChange={c => setCommissionPaid(c as boolean)} /><Label htmlFor="commission-paid">Đã nhận hoa hồng</Label></div></div><DialogFooter><Button variant="outline" onClick={() => setIsContractDialogOpen(false)}>Hủy</Button><Button onClick={handleSaveContract} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? 'Đang lưu...' : 'Lưu'}</Button></DialogFooter></DialogContent></Dialog>
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Xác nhận xóa</AlertDialogTitle><AlertDialogDescription>Bạn có chắc muốn xóa hợp đồng "{contractToDelete?.project_name}" không? Hành động này không thể hoàn tác.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Hủy</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} disabled={isSubmitting} className="bg-red-600 hover:bg-red-700">Xóa</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </div>
   );
 };

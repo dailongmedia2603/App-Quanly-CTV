@@ -9,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
 import { Briefcase, FileText, Factory, Compass, Wand2, Sparkles, RefreshCw, Copy } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
 
 // Moved FormInput outside of CreatePost to prevent re-rendering on state change
 const FormInput = ({ icon: Icon, label, children }: { icon: React.ElementType, label: string, children: React.ReactNode }) => (
@@ -157,11 +156,13 @@ const CreatePost = () => {
           </CardHeader>
           <CardContent>
             {isGenerating ? (
-              <div className="space-y-4">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-1/2" />
+              <div className="flex flex-col items-center justify-center text-center text-gray-500 py-20">
+                <div className="relative flex items-center justify-center h-24 w-24">
+                  <div className="absolute h-full w-full rounded-full bg-brand-orange-light animate-pulse-orange" style={{ animationDuration: '2s' }}></div>
+                  <Sparkles className="h-12 w-12 text-brand-orange" />
+                </div>
+                <p className="mt-6 font-semibold text-lg text-gray-700">AI đang sáng tạo...</p>
+                <p className="text-sm text-gray-500">Quá trình này có thể mất một vài giây, vui lòng chờ.</p>
               </div>
             ) : generatedPost ? (
               <div className="prose max-w-none whitespace-pre-wrap">{generatedPost}</div>

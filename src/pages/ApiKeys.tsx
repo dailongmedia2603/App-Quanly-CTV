@@ -182,16 +182,16 @@ const ApiKeys = () => {
       </div>
 
       <Tabs defaultValue="api-ai" className="w-full">
-        <TabsList className="flex w-full rounded-lg border border-orange-200 p-1 bg-white">
+        <TabsList className="flex w-full rounded-lg border border-orange-200 p-0 bg-white">
           <TabsTrigger
             value="api-ai"
-            className="flex-1 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light rounded-md"
+            className="flex-1 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light rounded-l-md"
           >
             API AI
           </TabsTrigger>
           <TabsTrigger
             value="api-facebook"
-            className="flex-1 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light rounded-md"
+            className="flex-1 py-2 font-bold text-brand-orange data-[state=active]:bg-brand-orange-light rounded-r-md"
           >
             API Facebook
           </TabsTrigger>

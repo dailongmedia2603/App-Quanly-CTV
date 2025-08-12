@@ -33,27 +33,37 @@ interface Log {
 const cleanAiResponseForDisplay = (rawText: string): string => {
   if (!rawText) return '';
   let text = rawText.trim();
+
+  const contentMarker = "**[NỘI DUNG BÀI ĐĂNG]**";
+  const markerIndex = text.indexOf(contentMarker);
+
+  if (markerIndex !== -1) {
+    text = text.substring(markerIndex + contentMarker.length).trim();
+  } else {
+    const lines = text.split('\n');
+    let firstContentLineIndex = -1;
+    for (let i = 0; i < lines.length; i++) {
+      const trimmedLine = lines[i].trim();
+      if (trimmedLine === '') continue;
+      if (trimmedLine.startsWith('#') || trimmedLine.startsWith('*')) {
+        firstContentLineIndex = i;
+        break;
+      }
+      const isPreamble = /^(chắc chắn rồi|dưới đây là|here is|tuyệt vời|tất nhiên|here's a draft|here's the post)/i.test(trimmedLine);
+      if (!isPreamble) {
+        firstContentLineIndex = i;
+        break;
+      }
+    }
+    if (firstContentLineIndex !== -1) {
+      text = lines.slice(firstContentLineIndex).join('\n').trim();
+    }
+  }
+
   text = text.replace(/^```(markdown|md|)\s*\n/i, '');
   text = text.replace(/\n\s*```$/, '');
-  const lines = text.split('\n');
-  let firstContentLineIndex = -1;
-  for (let i = 0; i < lines.length; i++) {
-    const trimmedLine = lines[i].trim();
-    if (trimmedLine === '') continue;
-    if (trimmedLine.startsWith('#') || trimmedLine.startsWith('*')) {
-      firstContentLineIndex = i;
-      break;
-    }
-    const isPreamble = /^(chắc chắn rồi|dưới đây là|here is|tuyệt vời|tất nhiên|here's a draft|here's the post)/i.test(trimmedLine);
-    if (!isPreamble) {
-      firstContentLineIndex = i;
-      break;
-    }
-  }
-  if (firstContentLineIndex !== -1) {
-    return lines.slice(firstContentLineIndex).join('\n').trim();
-  }
-  return rawText;
+
+  return text;
 };
 
 const getPostTitle = (content: string): string => {

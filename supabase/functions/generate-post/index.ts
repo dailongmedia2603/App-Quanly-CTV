@@ -16,41 +16,40 @@ const cleanAiResponse = (rawText: string): string => {
   if (!rawText) return '';
   let text = rawText.trim();
 
-  // Remove markdown code block fences if they exist
+  // New logic: Look for a specific marker for the main content
+  const contentMarker = "**[NỘI DUNG BÀI ĐĂNG]**";
+  const markerIndex = text.indexOf(contentMarker);
+
+  if (markerIndex !== -1) {
+    // If marker is found, take everything after it and trim
+    text = text.substring(markerIndex + contentMarker.length).trim();
+  } else {
+    // Fallback to old logic if marker is not found
+    const lines = text.split('\n');
+    let firstContentLineIndex = -1;
+    for (let i = 0; i < lines.length; i++) {
+      const trimmedLine = lines[i].trim();
+      if (trimmedLine === '') continue;
+      if (trimmedLine.startsWith('#') || trimmedLine.startsWith('*')) {
+        firstContentLineIndex = i;
+        break;
+      }
+      const isPreamble = /^(chắc chắn rồi|dưới đây là|here is|tuyệt vời|tất nhiên|here's a draft|here's the post)/i.test(trimmedLine);
+      if (!isPreamble) {
+        firstContentLineIndex = i;
+        break;
+      }
+    }
+    if (firstContentLineIndex !== -1) {
+      text = lines.slice(firstContentLineIndex).join('\n').trim();
+    }
+  }
+
+  // Remove markdown code block fences from the final text
   text = text.replace(/^```(markdown|md|)\s*\n/i, '');
   text = text.replace(/\n\s*```$/, '');
 
-  const lines = text.split('\n');
-  
-  let firstContentLineIndex = -1;
-  for (let i = 0; i < lines.length; i++) {
-    const trimmedLine = lines[i].trim();
-    
-    if (trimmedLine === '') {
-      continue;
-    }
-    
-    // If a line starts with markdown for a heading or bold, it's likely content
-    if (trimmedLine.startsWith('#') || trimmedLine.startsWith('*')) {
-      firstContentLineIndex = i;
-      break;
-    }
-    
-    // If a line is NOT a conversational preamble, it's likely content.
-    const isPreamble = /^(chắc chắn rồi|dưới đây là|here is|tuyệt vời|tất nhiên|here's a draft|here's the post)/i.test(trimmedLine);
-    if (!isPreamble) {
-      firstContentLineIndex = i;
-      break;
-    }
-  }
-
-  if (firstContentLineIndex !== -1) {
-    // If we found a content line, slice the array from that line onwards
-    return lines.slice(firstContentLineIndex).join('\n').trim();
-  }
-
-  // Fallback to original text to avoid returning nothing.
-  return rawText;
+  return text;
 };
 
 serve(async (req) => {
@@ -100,6 +99,16 @@ serve(async (req) => {
     if (regenerateDirection) {
         finalPrompt = `Dựa trên bài viết gốc sau:\n---\n${originalPost}\n---\nHãy tạo lại bài viết theo định hướng mới này: "${regenerateDirection}".\n\n${finalPrompt}`;
     }
+
+    // Add instructions for structured output
+    finalPrompt += `\n\n---
+    QUAN TRỌNG: Vui lòng trả lời theo cấu trúc sau, sử dụng chính xác các đánh dấu này:
+    **[GỢI Ý HÌNH ẢNH ĐI KÈM]**
+    (Gợi ý hình ảnh của bạn ở đây)
+    ---
+    **[NỘI DUNG BÀI ĐĂNG]**
+    (Toàn bộ nội dung bài đăng của bạn ở đây, sẵn sàng để sao chép và sử dụng)
+    `;
 
     const genAI = new GoogleGenerativeAI(apiKeys.gemini_api_key);
     const model = genAI.getGenerativeModel({ model: apiKeys.gemini_model });

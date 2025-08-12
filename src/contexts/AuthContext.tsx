@@ -35,8 +35,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (rolesError) {
           console.error("Error fetching user roles:", rolesError);
           setRoles([]);
-        } else {
+        } else if (userRoles) {
           setRoles(userRoles.map((r: { role_name: string }) => r.role_name));
+        } else {
+          setRoles([]);
         }
       } else {
         setRoles([]);

@@ -88,12 +88,18 @@ const Income = () => {
       </div>
 
       <Tabs defaultValue="income">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="income" className="flex items-center space-x-2">
+        <TabsList className="flex w-full max-w-md rounded-lg border border-orange-200 p-1 bg-white">
+          <TabsTrigger
+            value="income"
+            className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-md"
+          >
             <Wallet className="h-4 w-4" />
             <span>Thu nhập</span>
           </TabsTrigger>
-          <TabsTrigger value="contracts" className="flex items-center space-x-2">
+          <TabsTrigger
+            value="contracts"
+            className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-md"
+          >
             <Handshake className="h-4 w-4" />
             <span>Hợp đồng</span>
           </TabsTrigger>

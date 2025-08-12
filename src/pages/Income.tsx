@@ -27,12 +27,12 @@ interface Contract {
   contract_value: number;
   commission_rate: number;
   status: 'ongoing' | 'completed';
-  payment_status: 'unpaid' | 'partially_paid' | 'paid';
   commission_paid: boolean;
   start_date: string;
   end_date: string | null;
   created_at: string;
   paid_amount: number;
+  contract_link: string | null;
 }
 
 // Helper to format currency
@@ -70,10 +70,10 @@ const Income = () => {
   const [contractValue, setContractValue] = useState(0);
   const [commissionRate, setCommissionRate] = useState(0.05);
   const [status, setStatus] = useState<'ongoing' | 'completed'>('ongoing');
-  const [paymentStatus, setPaymentStatus] = useState<'unpaid' | 'partially_paid' | 'paid'>('unpaid');
   const [commissionPaid, setCommissionPaid] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>();
+  const [contractLink, setContractLink] = useState('');
 
   useEffect(() => {
     if (contractValue > 40000000) {
@@ -155,7 +155,8 @@ const Income = () => {
 
   const resetForm = () => {
     setProjectName(''); setContractValue(0); setStatus('ongoing');
-    setPaymentStatus('unpaid'); setCommissionPaid(false); setStartDate(new Date()); setEndDate(undefined);
+    setCommissionPaid(false); setStartDate(new Date()); setEndDate(undefined);
+    setContractLink('');
   };
 
   const handleAddNewClick = () => {
@@ -170,10 +171,10 @@ const Income = () => {
     setContractValue(contract.contract_value);
     setCommissionRate(contract.commission_rate);
     setStatus(contract.status);
-    setPaymentStatus(contract.payment_status);
     setCommissionPaid(contract.commission_paid);
     setStartDate(new Date(contract.start_date));
     setEndDate(contract.end_date ? new Date(contract.end_date) : undefined);
+    setContractLink(contract.contract_link || '');
     setIsContractDialogOpen(true);
   };
 
@@ -193,10 +194,10 @@ const Income = () => {
       contract_value: contractValue,
       commission_rate: commissionRate,
       status,
-      payment_status: paymentStatus,
       commission_paid: commissionPaid,
       start_date: startDate.toISOString(),
       end_date: endDate?.toISOString() || null,
+      contract_link: contractLink,
     };
 
     const query = editingContract
@@ -404,12 +405,11 @@ const Income = () => {
           <DialogHeader><DialogTitle>{editingContract ? 'Sửa hợp đồng' : 'Tạo hợp đồng mới'}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-2 col-span-2"><Label htmlFor="project-name">Tên dự án</Label><Input id="project-name" value={projectName} onChange={e => setProjectName(e.target.value)} /></div>
+            <div className="space-y-2 col-span-2"><Label htmlFor="contract-link">Link hợp đồng</Label><Input id="contract-link" value={contractLink} onChange={e => setContractLink(e.target.value)} placeholder="https://..." /></div>
             <div className="space-y-2"><Label htmlFor="contract-value">Giá trị hợp đồng (VND)</Label><Input id="contract-value" type="text" value={formatNumberWithDots(contractValue)} onChange={e => setContractValue(parseFormattedNumber(e.target.value))} /></div>
-            <div className="space-y-2"><Label htmlFor="commission-rate">Tỷ lệ hoa hồng (%)</Label><Input id="commission-rate" type="number" value={(commissionRate * 100).toFixed(0)} readOnly className="bg-gray-100" /></div>
+            <div className="space-y-2"><Label>Trạng thái</Label><Select value={status} onValueChange={v => setStatus(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ongoing">Đang chạy</SelectItem><SelectItem value="completed">Hoàn thành</SelectItem></SelectContent></Select></div>
             <div className="space-y-2"><Label>Ngày bắt đầu</Label><DatePicker date={startDate} setDate={setStartDate} /></div>
             <div className="space-y-2"><Label>Ngày kết thúc (tùy chọn)</Label><DatePicker date={endDate} setDate={setEndDate} /></div>
-            <div className="space-y-2"><Label>Trạng thái</Label><Select value={status} onValueChange={v => setStatus(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ongoing">Đang chạy</SelectItem><SelectItem value="completed">Hoàn thành</SelectItem></SelectContent></Select></div>
-            <div className="space-y-2"><Label>Thanh toán</Label><Select value={paymentStatus} onValueChange={v => setPaymentStatus(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unpaid">Chưa thanh toán</SelectItem><SelectItem value="partially_paid">Thanh toán một phần</SelectItem><SelectItem value="paid">Đã thanh toán</SelectItem></SelectContent></Select></div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setIsContractDialogOpen(false)}>Hủy</Button><Button onClick={handleSaveContract} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? 'Đang lưu...' : 'Lưu'}</Button></DialogFooter>
         </DialogContent>

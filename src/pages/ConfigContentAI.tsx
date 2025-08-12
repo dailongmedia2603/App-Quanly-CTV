@@ -38,8 +38,8 @@ const ConfigContentAI = () => {
         </p>
       </div>
       <Tabs defaultValue="post" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-2xl rounded-lg border border-orange-200 p-0 bg-white">
-          <TabsTrigger value="post" className="flex-1 flex items-center justify-center space-x-2 py-2.5 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-l-md">
+        <TabsList className="grid w-full grid-cols-3 max-w-2xl rounded-lg border border-orange-200 p-0 bg-white overflow-hidden">
+          <TabsTrigger value="post" className="flex-1 flex items-center justify-center space-x-2 py-2.5 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold">
             <PenSquare className="h-5 w-5" />
             <span>Prompt Post</span>
           </TabsTrigger>
@@ -47,7 +47,7 @@ const ConfigContentAI = () => {
             <MessageSquare className="h-5 w-5" />
             <span>Prompt Comment</span>
           </TabsTrigger>
-          <TabsTrigger value="consulting" className="flex-1 flex items-center justify-center space-x-2 py-2.5 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-r-md">
+          <TabsTrigger value="consulting" className="flex-1 flex items-center justify-center space-x-2 py-2.5 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold">
             <UserCheck className="h-5 w-5" />
             <span>Prompt Tư vấn</span>
           </TabsTrigger>

@@ -79,7 +79,7 @@ const Income = () => {
   useEffect(() => {
     if (contractValue > 40000000) {
       setCommissionRate(0.10);
-    } else if (contractValue >= 10000000) {
+    } else if (contractValue >= 20000000) {
       setCommissionRate(0.07);
     } else {
       setCommissionRate(0.05);

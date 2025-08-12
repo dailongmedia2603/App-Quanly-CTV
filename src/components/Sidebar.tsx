@@ -56,7 +56,6 @@ const SubNavLink = ({ to, children }: { to: string; children: React.ReactNode })
   );
 };
 
-// Define a map of allowed icons for type safety
 const iconMap: Record<string, React.ElementType> = {
   LifeBuoy: Icons.LifeBuoy,
   HelpCircle: Icons.HelpCircle,
@@ -66,7 +65,7 @@ const iconMap: Record<string, React.ElementType> = {
 };
 
 interface SupportWidgetData {
-  support_widget_icon: string; // The DB stores a string
+  support_widget_icon: string;
   support_widget_title: string;
   support_widget_description: string;
   support_widget_link: string;
@@ -102,106 +101,29 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
         "flex-shrink-0 border-r border-gray-200 bg-sidebar flex flex-col transition-all duration-300",
         isCollapsed ? "w-20" : "w-64"
       )}>
-        <div className={cn(
-          "flex h-16 flex-shrink-0 items-center justify-center border-b border-gray-200 px-4"
-        )}>
-          <Link to="/">
-            <img src="/logolistenpro.png" alt="Listen Pro Logo" className="h-14 object-contain" />
-          </Link>
+        <div className={cn("flex h-16 flex-shrink-0 items-center justify-center border-b border-gray-200 px-4")}>
+          <Link to="/"><img src="/logolistenpro.png" alt="Listen Pro Logo" className="h-14 object-contain" /></Link>
         </div>
         <div className="flex-1 overflow-y-auto p-4">
           <nav className="space-y-1">
             <NavLink to="/overview" icon={Home} isCollapsed={isCollapsed}>Overview</NavLink>
-            
             <NavLink to="/find-customers" icon={Search} isCollapsed={isCollapsed}>Tìm khách hàng</NavLink>
-
             {isCollapsed ? (
-              <Tooltip>
-                <TooltipTrigger className="w-full">
-                  <div className="flex items-center justify-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600">
-                    <PenSquare className="h-5 w-5 flex-shrink-0" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right"><p>Tạo content</p></TooltipContent>
-              </Tooltip>
+              <Tooltip><TooltipTrigger className="w-full"><div className="flex items-center justify-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600"><PenSquare className="h-5 w-5 flex-shrink-0" /></div></TooltipTrigger><TooltipContent side="right"><p>Tạo content</p></TooltipContent></Tooltip>
             ) : (
-              <Accordion type="single" collapsible defaultValue={isCreateContentActive ? "item-1" : undefined}>
-                <AccordionItem value="item-1" className="border-none">
-                  <AccordionTrigger className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline [&[data-state=open]>svg]:rotate-180">
-                    <div className="flex items-center space-x-3">
-                      <PenSquare className="h-5 w-5" />
-                      <span>Tạo content</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="pl-8 pb-0">
-                    <nav className="space-y-1">
-                      <SubNavLink to="/create-content/post">Tạo bài viết</SubNavLink>
-                      <SubNavLink to="/create-content/comment">Tạo comment</SubNavLink>
-                    </nav>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
+              <Accordion type="single" collapsible defaultValue={isCreateContentActive ? "item-1" : undefined}><AccordionItem value="item-1" className="border-none"><AccordionTrigger className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline [&[data-state=open]>svg]:rotate-180"><div className="flex items-center space-x-3"><PenSquare className="h-5 w-5" /><span>Tạo content</span></div></AccordionTrigger><AccordionContent className="pl-8 pb-0"><nav className="space-y-1"><SubNavLink to="/create-content/post">Tạo bài viết</SubNavLink><SubNavLink to="/create-content/comment">Tạo comment</SubNavLink></nav></AccordionContent></AccordionItem></Accordion>
             )}
-
             <NavLink to="/create-plan" icon={ClipboardList} isCollapsed={isCollapsed}>Tạo Plan</NavLink>
-            
             {isCollapsed ? (
-              <Tooltip>
-                <TooltipTrigger className="w-full">
-                  <div className="flex items-center justify-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600">
-                    <Cog className="h-5 w-5 flex-shrink-0" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right"><p>Cấu hình</p></TooltipContent>
-              </Tooltip>
+              <Tooltip><TooltipTrigger className="w-full"><div className="flex items-center justify-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600"><Cog className="h-5 w-5 flex-shrink-0" /></div></TooltipTrigger><TooltipContent side="right"><p>Cấu hình</p></TooltipContent></Tooltip>
             ) : (
-              <Accordion type="single" collapsible defaultValue={isConfigActive ? "item-1" : undefined}>
-                <AccordionItem value="item-1" className="border-none">
-                  <AccordionTrigger className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline [&[data-state=open]>svg]:rotate-180">
-                    <div className="flex items-center space-x-3">
-                      <Cog className="h-5 w-5" />
-                      <span>Cấu hình</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="pl-8 pb-0">
-                    <nav className="space-y-1">
-                      <SubNavLink to="/config/scan-post">Quét Post</SubNavLink>
-                      <SubNavLink to="/config/content-ai">Content AI</SubNavLink>
-                      <SubNavLink to="/config/create-plan">Tạo plan</SubNavLink>
-                    </nav>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
+              <Accordion type="single" collapsible defaultValue={isConfigActive ? "item-1" : undefined}><AccordionItem value="item-1" className="border-none"><AccordionTrigger className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline [&[data-state=open]>svg]:rotate-180"><div className="flex items-center space-x-3"><Cog className="h-5 w-5" /><span>Cấu hình</span></div></AccordionTrigger><AccordionContent className="pl-8 pb-0"><nav className="space-y-1"><SubNavLink to="/config/scan-post">Quét Post</SubNavLink><SubNavLink to="/config/content-ai">Content AI</SubNavLink><SubNavLink to="/config/create-plan">Tạo plan</SubNavLink></nav></AccordionContent></AccordionItem></Accordion>
             )}
-
             {isCollapsed ? (
-              <Tooltip>
-                <TooltipTrigger className="w-full">
-                  <div className="flex items-center justify-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600">
-                    <SlidersHorizontal className="h-5 w-5 flex-shrink-0" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right"><p>Thiết lập nguồn</p></TooltipContent>
-              </Tooltip>
+              <Tooltip><TooltipTrigger className="w-full"><div className="flex items-center justify-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600"><SlidersHorizontal className="h-5 w-5 flex-shrink-0" /></div></TooltipTrigger><TooltipContent side="right"><p>Thiết lập nguồn</p></TooltipContent></Tooltip>
             ) : (
-              <Accordion type="single" collapsible defaultValue={isDataSourceActive ? "item-1" : undefined}>
-                <AccordionItem value="item-1" className="border-none">
-                  <AccordionTrigger className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline [&[data-state=open]>svg]:rotate-180">
-                    <div className="flex items-center space-x-3">
-                      <SlidersHorizontal className="h-5 w-5" />
-                      <span>Thiết lập nguồn</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="pl-8 pb-0">
-                    <nav className="space-y-1">
-                      <SubNavLink to="/data-source/website">Website</SubNavLink>
-                      <SubNavLink to="/data-source/facebook">Group Facebook</SubNavLink>
-                    </nav>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
+              <Accordion type="single" collapsible defaultValue={isDataSourceActive ? "item-1" : undefined}><AccordionItem value="item-1" className="border-none"><AccordionTrigger className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline [&[data-state=open]>svg]:rotate-180"><div className="flex items-center space-x-3"><SlidersHorizontal className="h-5 w-5" /><span>Thiết lập nguồn</span></div></AccordionTrigger><AccordionContent className="pl-8 pb-0"><nav className="space-y-1"><SubNavLink to="/data-source/website">Website</SubNavLink></nav></AccordionContent></AccordionItem></Accordion>
             )}
-
             <NavLink to="/" icon={Target} isCollapsed={isCollapsed}>Chiến dịch</NavLink>
             <NavLink to="/reports" icon={FilePieChart} isCollapsed={isCollapsed}>Báo cáo</NavLink>
             <NavLink to="/usage" icon={BarChart2} isCollapsed={isCollapsed}>Usage</NavLink>
@@ -212,25 +134,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
         </div>
         <div className="border-t border-gray-200 p-4">
           {isCollapsed ? (
-            <div className="flex justify-center">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleSidebar}>
-                <PanelRightClose className="h-5 w-5" />
-              </Button>
-            </div>
+            <div className="flex justify-center"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleSidebar}><PanelRightClose className="h-5 w-5" /></Button></div>
           ) : (
             <div className="flex items-center space-x-2">
               <a href={supportWidgetData?.support_widget_link || '#'} target="_blank" rel="noopener noreferrer" className="flex-1 rounded-lg border border-orange-200 bg-brand-orange-light p-3 cursor-pointer hover:bg-orange-100 no-underline text-current">
-                <div className="flex items-center space-x-2">
-                  <SupportIcon className="h-5 w-5 text-brand-orange" />
-                  <div>
-                    <p className="font-semibold text-sm leading-tight">{supportWidgetData?.support_widget_title || 'Hỗ trợ'}</p>
-                    <p className="text-xs text-gray-600 leading-tight">{supportWidgetData?.support_widget_description || 'Liên hệ hỗ trợ'}</p>
-                  </div>
-                </div>
+                <div className="flex items-center space-x-2"><SupportIcon className="h-5 w-5 text-brand-orange" /><div><p className="font-semibold text-sm leading-tight">{supportWidgetData?.support_widget_title || 'Hỗ trợ'}</p><p className="text-xs text-gray-600 leading-tight">{supportWidgetData?.support_widget_description || 'Liên hệ hỗ trợ'}</p></div></div>
               </a>
-              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={toggleSidebar}>
-                <PanelLeftClose className="h-5 w-5" />
-              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={toggleSidebar}><PanelLeftClose className="h-5 w-5" /></Button>
             </div>
           )}
         </div>

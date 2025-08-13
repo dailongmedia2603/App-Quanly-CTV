@@ -6,7 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
-import { Briefcase, MessageSquare, Wand2, Sparkles, Copy } from 'lucide-react';
+import { Briefcase, MessageSquare, Wand2, Sparkles, Copy, History, ArrowLeft } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -20,12 +23,119 @@ const FormInput = ({ icon: Icon, label, children }: { icon: React.ElementType, l
   </div>
 );
 
+interface Log {
+  id: string;
+  created_at: string;
+  generated_content: string;
+}
+
 interface Service {
   id: string;
   name: string;
 }
 
+const getCommentSnippet = (content: string): string => {
+  if (!content) return 'Comment không có nội dung';
+  const firstLine = content.split('\n')[0].trim();
+  if (firstLine.length > 100) {
+    return firstLine.substring(0, 100) + '...';
+  }
+  return firstLine || 'Comment không có nội dung';
+};
+
+const CommentHistoryView = ({ onBack }: { onBack: () => void }) => {
+  const [logs, setLogs] = useState<Log[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('ai_generation_logs')
+        .select('id, created_at, generated_content')
+        .eq('template_type', 'comment')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        showError("Không thể tải lịch sử comment.");
+        console.error(error);
+      } else {
+        setLogs(data as Log[]);
+      }
+      setLoading(false);
+    };
+    fetchHistory();
+  }, []);
+
+  const handleCopy = (content: string) => {
+    if (!content) return;
+    navigator.clipboard.writeText(content).then(() => {
+      showSuccess("Đã sao chép comment!");
+    }).catch(err => {
+      showError("Không thể sao chép.");
+    });
+  };
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <div className="space-y-1">
+            <h1 className="text-3xl font-bold">Comment đã tạo</h1>
+            <p className="text-gray-500 mt-1">Xem lại các comment bạn đã tạo trước đây.</p>
+        </div>
+        <Button onClick={onBack} variant="outline">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Quay lại
+        </Button>
+      </div>
+      <Card className="border-orange-200">
+        <CardContent className="p-6">
+          {loading ? (
+            <div className="text-center text-gray-500 py-10">Đang tải lịch sử...</div>
+          ) : logs.length === 0 ? (
+            <div className="text-center text-gray-500 py-10">
+              <History className="mx-auto h-12 w-12 text-gray-400" />
+              <p className="mt-4 font-medium">Chưa có comment nào được tạo</p>
+            </div>
+          ) : (
+            <Accordion type="single" collapsible className="w-full space-y-3">
+              {logs.map(log => (
+                <AccordionItem value={log.id} key={log.id} className="bg-white border border-orange-200 rounded-lg shadow-sm">
+                  <AccordionTrigger className="p-4 hover:no-underline hover:bg-orange-50/50 rounded-t-lg data-[state=open]:border-b data-[state=open]:border-orange-200">
+                    <div className="flex justify-between items-center w-full min-w-0 gap-4">
+                      <span className="font-medium text-left text-gray-800 truncate">{getCommentSnippet(log.generated_content)}</span>
+                      <span className="text-sm text-gray-500 font-normal flex-shrink-0">
+                        {format(new Date(log.created_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="p-4 bg-white rounded-b-lg">
+                    <div className="prose max-w-none relative bg-orange-50/30 p-4 rounded-md border border-orange-100">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute top-2 right-2 h-8 w-8 text-gray-600 hover:bg-orange-100"
+                        onClick={() => handleCopy(log.generated_content)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {log.generated_content}
+                      </ReactMarkdown>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 const CreateComment = () => {
+  const [view, setView] = useState<'create' | 'history'>('create');
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [selectedServiceId, setSelectedServiceId] = useState('');
@@ -85,11 +195,21 @@ const CreateComment = () => {
     });
   };
 
+  if (view === 'history') {
+    return <CommentHistoryView onBack={() => setView('create')} />;
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Tạo Comment</h1>
-        <p className="text-gray-500 mt-1">Sử dụng AI để tạo các bình luận quảng bá dịch vụ một cách tự nhiên.</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Tạo Comment</h1>
+          <p className="text-gray-500 mt-1">Sử dụng AI để tạo các bình luận quảng bá dịch vụ một cách tự nhiên.</p>
+        </div>
+        <Button onClick={() => setView('history')} className="bg-brand-orange hover:bg-brand-orange/90 text-white">
+            <History className="mr-2 h-4 w-4" />
+            Comment đã tạo
+        </Button>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         <Card className="lg:col-span-1 border-orange-200 sticky top-8">

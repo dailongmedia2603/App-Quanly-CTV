@@ -29,6 +29,7 @@ const variableConfig = {
   consulting: [
     { name: 'Dịch vụ', value: '[dịch vụ]' },
     { name: 'Lịch sử trò chuyện', value: '[lịch sử trò chuyện]' },
+    { name: 'Tin nhắn cần trả lời', value: '[tin nhắn cần trả lời]' },
     { name: 'Biên tài liệu', value: '[biên tài liệu]' },
   ],
 };

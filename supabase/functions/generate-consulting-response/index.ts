@@ -24,7 +24,7 @@ serve(async (req) => {
 
   try {
     const { sessionId, serviceId, messages } = await req.json();
-    if (!sessionId || !serviceId || !messages) {
+    if (!sessionId || !serviceId || !messages || messages.length === 0) {
       throw new Error("Yêu cầu thiếu thông tin cần thiết.");
     }
 
@@ -78,7 +78,11 @@ serve(async (req) => {
             .join('\n\n---\n\n');
     }
 
-    const chatHistory = messages.map((msg: Message) => 
+    // Tách tin nhắn cuối cùng của người dùng ra
+    const latestUserMessage = messages[messages.length - 1].content;
+    const historyMessages = messages.slice(0, -1);
+
+    const chatHistory = historyMessages.map((msg: Message) => 
         `${msg.role === 'user' ? 'Khách hàng nhắn' : 'Bạn sẽ trả lời'}: ${msg.content}`
     ).join('\n');
 
@@ -91,7 +95,8 @@ serve(async (req) => {
 
     let finalPrompt = promptText
         .replace(/\[dịch vụ\]/gi, serviceForPrompt)
-        .replace(/\[lịch sử trò chuyện\]/gi, chatHistory)
+        .replace(/\[lịch sử trò chuyện\]/gi, chatHistory || 'Đây là tin nhắn đầu tiên trong cuộc trò chuyện.')
+        .replace(/\[tin nhắn cần trả lời\]/gi, latestUserMessage)
         .replace(/\[biên tài liệu\]/gi, documentContent);
 
     const genAI = new GoogleGenerativeAI(apiKeys.gemini_api_key);

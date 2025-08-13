@@ -10,7 +10,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const PROTECTED_ROLES = ['Super Admin'];
+const PROTECTED_ROLES = ['Super Admin', 'Admin', 'User'];
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -38,47 +38,34 @@ serve(async (req) => {
     
     const isSuperAdmin = userRoles.some((r: { role_name: string }) => r.role_name === 'Super Admin');
     if (!isSuperAdmin) {
-      throw new Error("Only Super Admins can update roles.");
+      throw new Error("Only Super Admins can delete roles.");
     }
 
-    // Proceed with updating the role
-    const { role_id, name, description, permissions } = await req.json();
+    const { role_id } = await req.json();
     if (!role_id) {
         throw new Error("Role ID is required.");
     }
 
-    // Check if trying to rename a protected role
-    if (name) {
-        const { data: roleToUpdate, error: fetchError } = await supabaseAdmin
-            .from('roles')
-            .select('name')
-            .eq('id', role_id)
-            .single();
-        if (fetchError) throw fetchError;
-        if (PROTECTED_ROLES.includes(roleToUpdate.name)) {
-            throw new Error(`Cannot rename protected role: ${roleToUpdate.name}`);
-        }
-    }
-
-    const updates: { name?: string; description?: string; permissions?: any } = {};
-    if (name !== undefined) updates.name = name;
-    if (description !== undefined) updates.description = description;
-    if (permissions !== undefined) updates.permissions = permissions;
-
-    if (Object.keys(updates).length === 0) {
-        throw new Error("No updates provided.");
-    }
-
-    const { data, error } = await supabaseAdmin
+    // Check if the role is protected
+    const { data: roleToDelete, error: fetchError } = await supabaseAdmin
       .from('roles')
-      .update(updates)
+      .select('name')
       .eq('id', role_id)
-      .select()
       .single();
+    
+    if (fetchError) throw fetchError;
+    if (PROTECTED_ROLES.includes(roleToDelete.name)) {
+        throw new Error(`Cannot delete protected role: ${roleToDelete.name}`);
+    }
+
+    const { error } = await supabaseAdmin
+      .from('roles')
+      .delete()
+      .eq('id', role_id);
 
     if (error) throw error;
 
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

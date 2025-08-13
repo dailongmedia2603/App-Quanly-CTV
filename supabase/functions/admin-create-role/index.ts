@@ -10,8 +10,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const PROTECTED_ROLES = ['Super Admin'];
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -38,41 +36,17 @@ serve(async (req) => {
     
     const isSuperAdmin = userRoles.some((r: { role_name: string }) => r.role_name === 'Super Admin');
     if (!isSuperAdmin) {
-      throw new Error("Only Super Admins can update roles.");
+      throw new Error("Only Super Admins can create roles.");
     }
 
-    // Proceed with updating the role
-    const { role_id, name, description, permissions } = await req.json();
-    if (!role_id) {
-        throw new Error("Role ID is required.");
-    }
-
-    // Check if trying to rename a protected role
-    if (name) {
-        const { data: roleToUpdate, error: fetchError } = await supabaseAdmin
-            .from('roles')
-            .select('name')
-            .eq('id', role_id)
-            .single();
-        if (fetchError) throw fetchError;
-        if (PROTECTED_ROLES.includes(roleToUpdate.name)) {
-            throw new Error(`Cannot rename protected role: ${roleToUpdate.name}`);
-        }
-    }
-
-    const updates: { name?: string; description?: string; permissions?: any } = {};
-    if (name !== undefined) updates.name = name;
-    if (description !== undefined) updates.description = description;
-    if (permissions !== undefined) updates.permissions = permissions;
-
-    if (Object.keys(updates).length === 0) {
-        throw new Error("No updates provided.");
+    const { name, description } = await req.json();
+    if (!name) {
+        throw new Error("Role name is required.");
     }
 
     const { data, error } = await supabaseAdmin
       .from('roles')
-      .update(updates)
-      .eq('id', role_id)
+      .insert({ name, description, permissions: {} })
       .select()
       .single();
 

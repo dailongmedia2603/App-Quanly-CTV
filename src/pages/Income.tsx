@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import ReportWidget from '@/components/ReportWidget';
-import { Wallet, Landmark, Percent, FileText, Handshake, ChevronLeft, ChevronRight, Plus, Search, MoreHorizontal, Pencil, Trash2, Loader, CheckCircle, CalendarPlus, Link as LinkIcon } from 'lucide-react';
+import { Wallet, Landmark, Percent, FileText, Handshake, ChevronLeft, ChevronRight, Plus, Search, MoreHorizontal, Pencil, Trash2, Loader, CheckCircle, CalendarPlus, Link as LinkIcon, Users as UsersIcon } from 'lucide-react';
 import { startOfMonth, endOfMonth, format, subMonths, addMonths } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,8 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
+import { User } from '@supabase/supabase-js';
+import { SingleSelectCombobox } from '@/components/ui/single-select-combobox';
 
 // Define the contract type
 interface Contract {
@@ -33,6 +35,8 @@ interface Contract {
   created_at: string;
   paid_amount: number;
   contract_link: string | null;
+  user_id: string;
+  collaborator_email?: string;
 }
 
 // Helper to format currency
@@ -116,8 +120,10 @@ const EditableStatusCell = ({ contract, onUpdate, canEdit }: { contract: Contrac
 };
 
 const Income = () => {
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, roles } = useAuth();
+  const isSuperAdmin = roles.includes('Super Admin');
   const [allContracts, setAllContracts] = useState<Contract[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loadingAll, setLoadingAll] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [searchTerm, setSearchTerm] = useState('');
@@ -138,6 +144,7 @@ const Income = () => {
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [contractLink, setContractLink] = useState('');
+  const [collaboratorId, setCollaboratorId] = useState<string | undefined>();
 
   const canCreate = hasPermission('income', 'create');
   const canUpdate = hasPermission('income', 'update');
@@ -153,22 +160,44 @@ const Income = () => {
     }
   }, [contractValue]);
 
-  const fetchAllContracts = async () => {
+  const fetchAllContractsAndUsers = async () => {
     if (!user) return;
     setLoadingAll(true);
-    const { data, error } = await supabase.from('contracts').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+
+    let users: User[] = [];
+    if (isSuperAdmin) {
+        const { data: usersData, error: usersError } = await supabase.functions.invoke("admin-get-users");
+        if (usersError) {
+            showError("Không thể tải danh sách cộng tác viên.");
+        } else {
+            users = usersData || [];
+            setAllUsers(users);
+        }
+    }
+
+    const { data, error } = await supabase.from('contracts').select('*').order('created_at', { ascending: false });
+    
     if (error) {
-      showError("Không thể tải danh sách hợp đồng.");
-      setAllContracts([]);
+        showError("Không thể tải danh sách hợp đồng.");
+        setAllContracts([]);
     } else {
-      setAllContracts(data as Contract[]);
+        if (isSuperAdmin) {
+            const userMap = new Map(users.map(u => [u.id, u.email]));
+            const contractsWithCollaborator = data.map(c => ({
+                ...c,
+                collaborator_email: userMap.get(c.user_id) || 'Không rõ'
+            }));
+            setAllContracts(contractsWithCollaborator as Contract[]);
+        } else {
+            setAllContracts(data as Contract[]);
+        }
     }
     setLoadingAll(false);
   };
 
   useEffect(() => {
-    fetchAllContracts();
-  }, [user]);
+    fetchAllContractsAndUsers();
+  }, [user, isSuperAdmin]);
 
   const monthlyContracts = useMemo(() => {
     if (!allContracts) return [];
@@ -224,7 +253,7 @@ const Income = () => {
   const resetForm = () => {
     setProjectName(''); setContractValue(0); setStatus('ongoing');
     setCommissionPaid(false); setStartDate(new Date()); setEndDate(undefined);
-    setContractLink('');
+    setContractLink(''); setCollaboratorId(isSuperAdmin ? undefined : user!.id);
   };
 
   const handleAddNewClick = () => {
@@ -243,6 +272,7 @@ const Income = () => {
     setStartDate(new Date(contract.start_date));
     setEndDate(contract.end_date ? new Date(contract.end_date) : undefined);
     setContractLink(contract.contract_link || '');
+    setCollaboratorId(contract.user_id);
     setIsContractDialogOpen(true);
   };
 
@@ -253,11 +283,17 @@ const Income = () => {
 
   const handleSaveContract = async () => {
     if (!user || !projectName || !startDate) return showError("Vui lòng điền đầy đủ thông tin bắt buộc.");
+    
+    const assignedUserId = isSuperAdmin ? collaboratorId : user!.id;
+    if (!assignedUserId) {
+        return showError("Vui lòng chọn một cộng tác viên.");
+    }
+
     setIsSubmitting(true);
     const toastId = showLoading(editingContract ? "Đang cập nhật..." : "Đang tạo...");
     
     const payload = {
-      user_id: user.id,
+      user_id: assignedUserId,
       project_name: projectName,
       contract_value: contractValue,
       commission_rate: commissionRate,
@@ -279,7 +315,7 @@ const Income = () => {
     } else {
       showSuccess("Lưu hợp đồng thành công!");
       setIsContractDialogOpen(false);
-      fetchAllContracts();
+      fetchAllContractsAndUsers();
     }
     setIsSubmitting(false);
   };
@@ -294,7 +330,7 @@ const Income = () => {
       showError(`Xóa thất bại: ${error.message}`);
     } else {
       showSuccess("Xóa hợp đồng thành công!");
-      fetchAllContracts();
+      fetchAllContractsAndUsers();
     }
     setIsDeleteAlertOpen(false);
     setIsSubmitting(false);
@@ -357,13 +393,14 @@ const Income = () => {
                     <TableHead>Đã thanh toán</TableHead>
                     <TableHead>Còn nợ</TableHead>
                     <TableHead>Tiến độ</TableHead>
+                    {isSuperAdmin && <TableHead>Cộng tác viên</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loadingAll ? (
-                    <TableRow><TableCell colSpan={6} className="h-24 text-center">Đang tải...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={isSuperAdmin ? 7 : 6} className="h-24 text-center">Đang tải...</TableCell></TableRow>
                   ) : monthlyContracts.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="h-24 text-center">Không có hợp đồng nào trong tháng này.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={isSuperAdmin ? 7 : 6} className="h-24 text-center">Không có hợp đồng nào trong tháng này.</TableCell></TableRow>
                   ) : (
                     monthlyContracts.map((contract) => (
                       <TableRow key={contract.id}>
@@ -388,6 +425,7 @@ const Income = () => {
                             {contract.status === 'completed' ? 'Hoàn thành' : 'Đang chạy'}
                           </Badge>
                         </TableCell>
+                        {isSuperAdmin && <TableCell>{contract.collaborator_email}</TableCell>}
                       </TableRow>
                     ))
                   )}
@@ -412,7 +450,7 @@ const Income = () => {
                 {canCreate && <Button onClick={handleAddNewClick} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><Plus className="mr-2 h-4 w-4" />Tạo hợp đồng</Button>}
               </div>
             </CardHeader>
-            <CardContent><Table><TableHeader><TableRow><TableHead>Tên dự án</TableHead><TableHead>Link hợp đồng</TableHead><TableHead>Giá trị</TableHead><TableHead>Đã thanh toán</TableHead><TableHead>Còn nợ</TableHead><TableHead>Tiến độ</TableHead>{(canUpdate || canDelete) && <TableHead className="text-right">Hành động</TableHead>}</TableRow></TableHeader><TableBody>{loadingAll ? <TableRow><TableCell colSpan={7} className="h-24 text-center">Đang tải...</TableCell></TableRow> : filteredContracts.length === 0 ? <TableRow><TableCell colSpan={7} className="h-24 text-center">Không có hợp đồng nào.</TableCell></TableRow> : (filteredContracts.map((contract) => (<TableRow key={contract.id}><TableCell className="font-medium">{contract.project_name}</TableCell><TableCell>{contract.contract_link ? (<Button variant="link" asChild className="p-0 h-auto text-brand-orange hover:text-brand-orange/80"><a href={contract.contract_link} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1"><LinkIcon className="h-4 w-4" /><span>Xem</span></a></Button>) : (<span className="text-gray-400">N/A</span>)}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell><EditableCurrencyCell contract={contract} onUpdate={handleFieldUpdate} canEdit={canUpdate} /></TableCell><TableCell>{formatCurrency(contract.contract_value - contract.paid_amount)}</TableCell><TableCell><EditableStatusCell contract={contract} onUpdate={handleFieldUpdate} canEdit={canUpdate} /></TableCell>{(canUpdate || canDelete) && <TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">{canUpdate && <DropdownMenuItem onClick={() => handleEditClick(contract)}><Pencil className="mr-2 h-4 w-4" />Sửa</DropdownMenuItem>}{canDelete && <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(contract)}><Trash2 className="mr-2 h-4 w-4" />Xóa</DropdownMenuItem>}</DropdownMenuContent></DropdownMenu></TableCell>}</TableRow>)))}</TableBody></Table></CardContent>
+            <CardContent><Table><TableHeader><TableRow><TableHead>Tên dự án</TableHead><TableHead>Link hợp đồng</TableHead><TableHead>Giá trị</TableHead><TableHead>Đã thanh toán</TableHead><TableHead>Còn nợ</TableHead><TableHead>Tiến độ</TableHead>{isSuperAdmin && <TableHead>Cộng tác viên</TableHead>}{(canUpdate || canDelete) && <TableHead className="text-right">Hành động</TableHead>}</TableRow></TableHeader><TableBody>{loadingAll ? <TableRow><TableCell colSpan={isSuperAdmin ? 8 : 7} className="h-24 text-center">Đang tải...</TableCell></TableRow> : filteredContracts.length === 0 ? <TableRow><TableCell colSpan={isSuperAdmin ? 8 : 7} className="h-24 text-center">Không có hợp đồng nào.</TableCell></TableRow> : (filteredContracts.map((contract) => (<TableRow key={contract.id}><TableCell className="font-medium">{contract.project_name}</TableCell><TableCell>{contract.contract_link ? (<Button variant="link" asChild className="p-0 h-auto text-brand-orange hover:text-brand-orange/80"><a href={contract.contract_link} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1"><LinkIcon className="h-4 w-4" /><span>Xem</span></a></Button>) : (<span className="text-gray-400">N/A</span>)}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell><EditableCurrencyCell contract={contract} onUpdate={handleFieldUpdate} canEdit={canUpdate} /></TableCell><TableCell>{formatCurrency(contract.contract_value - contract.paid_amount)}</TableCell><TableCell><EditableStatusCell contract={contract} onUpdate={handleFieldUpdate} canEdit={canUpdate} /></TableCell>{isSuperAdmin && <TableCell>{contract.collaborator_email}</TableCell>}{(canUpdate || canDelete) && <TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">{canUpdate && <DropdownMenuItem onClick={() => handleEditClick(contract)}><Pencil className="mr-2 h-4 w-4" />Sửa</DropdownMenuItem>}{canDelete && <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(contract)}><Trash2 className="mr-2 h-4 w-4" />Xóa</DropdownMenuItem>}</DropdownMenuContent></DropdownMenu></TableCell>}</TableRow>)))}</TableBody></Table></CardContent>
           </Card>
         </TabsContent>
       </Tabs>
@@ -422,6 +460,19 @@ const Income = () => {
           <DialogHeader><DialogTitle>{editingContract ? 'Sửa hợp đồng' : 'Tạo hợp đồng mới'}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-2 col-span-2"><Label htmlFor="project-name">Tên dự án</Label><Input id="project-name" value={projectName} onChange={e => setProjectName(e.target.value)} /></div>
+            {isSuperAdmin && (
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="collaborator" className="flex items-center"><UsersIcon className="h-4 w-4 mr-2" />Cộng tác viên</Label>
+                <SingleSelectCombobox
+                  options={allUsers.map(u => ({ value: u.id, label: u.email || u.id }))}
+                  selected={collaboratorId}
+                  onChange={setCollaboratorId}
+                  placeholder="Chọn cộng tác viên..."
+                  searchPlaceholder="Tìm kiếm..."
+                  emptyPlaceholder="Không tìm thấy."
+                />
+              </div>
+            )}
             <div className="space-y-2 col-span-2"><Label htmlFor="contract-link">Link hợp đồng</Label><Input id="contract-link" value={contractLink} onChange={e => setContractLink(e.target.value)} placeholder="https://..." /></div>
             <div className="space-y-2"><Label htmlFor="contract-value">Giá trị hợp đồng (VND)</Label><Input id="contract-value" type="text" value={formatNumberWithDots(contractValue)} onChange={e => setContractValue(parseFormattedNumber(e.target.value))} /></div>
             <div className="space-y-2"><Label>Trạng thái</Label><Select value={status} onValueChange={v => setStatus(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ongoing">Đang chạy</SelectItem><SelectItem value="completed">Hoàn thành</SelectItem></SelectContent></Select></div>

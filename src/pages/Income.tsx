@@ -377,18 +377,19 @@ const Income = () => {
           </TabsList>
           <div className="flex items-center space-x-4">
             {isSuperAdmin && (
-              <Select value={selectedCollaboratorId} onValueChange={setSelectedCollaboratorId}>
-                <SelectTrigger className="w-[220px]">
-                  <UsersIcon className="h-4 w-4 mr-2 text-gray-500" />
-                  <SelectValue placeholder="Lọc theo cộng tác viên" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả cộng tác viên</SelectItem>
-                  {allUsers.map(user => (
-                    <SelectItem key={user.id} value={user.id}>{user.email}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="w-[220px]">
+                <SingleSelectCombobox
+                  options={[
+                    { value: 'all', label: 'Tất cả cộng tác viên' },
+                    ...allUsers.map(u => ({ value: u.id, label: u.email || u.id }))
+                  ]}
+                  selected={selectedCollaboratorId}
+                  onChange={(value) => setSelectedCollaboratorId(value || 'all')}
+                  placeholder="Lọc theo cộng tác viên"
+                  searchPlaceholder="Tìm cộng tác viên..."
+                  emptyPlaceholder="Không tìm thấy."
+                />
+              </div>
             )}
             <div className="flex items-center space-x-2">
               <Button variant="outline" size="icon" onClick={() => handleMonthChange('prev')}><ChevronLeft className="h-4 w-4" /></Button>

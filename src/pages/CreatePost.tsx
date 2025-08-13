@@ -396,7 +396,7 @@ const CreatePost = () => {
                     </div>
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setIsRegenerateDialogOpen(false)}>Hủy</Button>
-                      <Button onClick={() => handleGeneratePost(true)}>Tạo lại</Button>
+                      <Button onClick={() => handleGeneratePost(true)} className="bg-brand-orange hover:bg-brand-orange/90 text-white">Tạo lại</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>

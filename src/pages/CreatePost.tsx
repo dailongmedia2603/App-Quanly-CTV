@@ -42,6 +42,7 @@ interface PostType {
   id: string;
   name: string;
   description: string | null;
+  word_count: number | null;
 }
 
 const cleanAiResponseForDisplay = (rawText: string): string => {
@@ -231,7 +232,7 @@ const CreatePost = () => {
       setLoadingPostTypes(true);
       const { data, error } = await supabase
         .from('document_post_types')
-        .select('id, name, description')
+        .select('id, name, description, word_count')
         .order('name', { ascending: true });
       
       if (error) {
@@ -265,6 +266,7 @@ const CreatePost = () => {
       body: {
         service: serviceForPrompt,
         postType: postTypeForPrompt,
+        wordCount: selectedPostType.word_count,
         industry,
         direction,
         ...(isRegeneration && { originalPost: generatedPost, regenerateDirection })

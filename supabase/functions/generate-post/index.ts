@@ -58,7 +58,7 @@ serve(async (req) => {
   }
 
   try {
-    const { service, postType, industry, direction, originalPost, regenerateDirection } = await req.json();
+    const { service, postType, industry, direction, originalPost, regenerateDirection, wordCount } = await req.json();
 
     const authHeader = req.headers.get('Authorization')!
     const supabase = createClient(
@@ -98,6 +98,10 @@ serve(async (req) => {
 
     if (regenerateDirection) {
         finalPrompt = `Dựa trên bài viết gốc sau:\n---\n${originalPost}\n---\nHãy tạo lại bài viết theo định hướng mới này: "${regenerateDirection}".\n\n${finalPrompt}`;
+    }
+
+    if (wordCount && typeof wordCount === 'number' && wordCount > 0) {
+        finalPrompt += `\n\nYêu cầu về độ dài: Bài viết nên có khoảng ${wordCount} từ.`;
     }
 
     // Add instructions for structured output

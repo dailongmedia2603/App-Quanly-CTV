@@ -117,12 +117,36 @@ serve(async (req) => {
     const genAI = new GoogleGenerativeAI(apiKeys.gemini_api_key);
     const model = genAI.getGenerativeModel({ model: apiKeys.gemini_model });
 
-    const result = await model.generateContent(finalPrompt);
-    const rawGeneratedText = result.response.text();
+    const MAX_RETRIES = 3;
+    let attempt = 0;
+    let rawGeneratedText = '';
+    let success = false;
+
+    while (attempt < MAX_RETRIES && !success) {
+        attempt++;
+        try {
+            const result = await model.generateContent(finalPrompt);
+            const responseText = result.response.text();
+            
+            if (responseText && responseText.trim().length > 20) {
+                rawGeneratedText = responseText;
+                success = true;
+            } else {
+                console.log(`Attempt ${attempt} failed: AI returned empty or too short response.`);
+                if (attempt >= MAX_RETRIES) {
+                    throw new Error("AI không thể tạo nội dung sau nhiều lần thử.");
+                }
+            }
+        } catch (e) {
+            console.error(`Attempt ${attempt} failed with error:`, e.message);
+            if (attempt >= MAX_RETRIES) {
+                throw new Error(`Tạo nội dung thất bại sau ${MAX_RETRIES} lần thử. Lỗi cuối cùng: ${e.message}`);
+            }
+        }
+    }
     
     const cleanedGeneratedText = cleanAiResponse(rawGeneratedText);
 
-    // Log the generation event with the RAW text for debugging purposes
     const { error: logError } = await supabase.from('ai_generation_logs').insert({
         user_id: user.id,
         template_type: 'post',

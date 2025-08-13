@@ -80,17 +80,38 @@ serve(async (req) => {
         .replace(/\[nội dung gốc\]/gi, originalPostContent)
         .replace(/\[biên tài liệu\]/gi, documentContent);
 
-    // Add a strict instruction for the output format
     finalPrompt += "\n\nQUAN TRỌNG: Chỉ trả về nội dung của comment, không thêm bất kỳ lời dẫn hay giải thích nào khác.";
 
     const genAI = new GoogleGenerativeAI(apiKeys.gemini_api_key);
     const model = genAI.getGenerativeModel({ model: apiKeys.gemini_model });
 
-    const result = await model.generateContent(finalPrompt);
-    let generatedComment = result.response.text().trim();
+    const MAX_RETRIES = 3;
+    let attempt = 0;
+    let generatedComment = '';
+    let success = false;
 
-    // Clean up potential markdown code blocks
-    generatedComment = generatedComment.replace(/^```(markdown|md|)\s*\n/i, '').replace(/\n\s*```$/, '');
+    while (attempt < MAX_RETRIES && !success) {
+        attempt++;
+        try {
+            const result = await model.generateContent(finalPrompt);
+            const responseText = result.response.text().trim();
+            
+            if (responseText) {
+                generatedComment = responseText.replace(/^```(markdown|md|)\s*\n/i, '').replace(/\n\s*```$/, '');
+                success = true;
+            } else {
+                console.log(`Attempt ${attempt} failed: AI returned empty response.`);
+                if (attempt >= MAX_RETRIES) {
+                    throw new Error("AI không thể tạo comment sau nhiều lần thử.");
+                }
+            }
+        } catch (e) {
+            console.error(`Attempt ${attempt} failed with error:`, e.message);
+            if (attempt >= MAX_RETRIES) {
+                throw new Error(`Tạo comment thất bại sau ${MAX_RETRIES} lần thử. Lỗi cuối cùng: ${e.message}`);
+            }
+        }
+    }
 
     await supabase.from('ai_generation_logs').insert({
         user_id: user.id,

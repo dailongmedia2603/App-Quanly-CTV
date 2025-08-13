@@ -18,6 +18,7 @@ interface PostType {
   name: string;
   description: string | null;
   created_at: string;
+  word_count: number | null;
 }
 
 const PostTypesTab = () => {
@@ -35,6 +36,7 @@ const PostTypesTab = () => {
   // Form states
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [wordCount, setWordCount] = useState<number | ''>('');
 
   const fetchPostTypes = async () => {
     setLoading(true);
@@ -62,6 +64,7 @@ const PostTypesTab = () => {
   const resetForm = () => {
     setName('');
     setDescription('');
+    setWordCount('');
   };
 
   const handleAddNewClick = () => {
@@ -74,6 +77,7 @@ const PostTypesTab = () => {
     setEditingPostType(postType);
     setName(postType.name);
     setDescription(postType.description || '');
+    setWordCount(postType.word_count || '');
     setIsDialogOpen(true);
   };
 
@@ -87,7 +91,11 @@ const PostTypesTab = () => {
     setIsSubmitting(true);
     const toastId = showLoading(editingPostType ? "Đang cập nhật..." : "Đang thêm...");
 
-    const payload = { name, description };
+    const payload = { 
+      name, 
+      description,
+      word_count: wordCount === '' ? null : wordCount
+    };
 
     const query = editingPostType
       ? supabase.from('document_post_types').update(payload).eq('id', editingPostType.id)
@@ -144,6 +152,7 @@ const PostTypesTab = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Tên dạng bài</TableHead>
+                <TableHead>Số lượng từ</TableHead>
                 <TableHead>Mô tả</TableHead>
                 <TableHead>Ngày tạo</TableHead>
                 <TableHead className="text-right">Thao tác</TableHead>
@@ -151,13 +160,14 @@ const PostTypesTab = () => {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center">Đang tải...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="h-24 text-center">Đang tải...</TableCell></TableRow>
               ) : filteredPostTypes.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center">Không có dạng bài nào.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="h-24 text-center">Không có dạng bài nào.</TableCell></TableRow>
               ) : (
                 filteredPostTypes.map((postType) => (
                   <TableRow key={postType.id}>
                     <TableCell className="font-medium">{postType.name}</TableCell>
+                    <TableCell>{postType.word_count || 'N/A'}</TableCell>
                     <TableCell className="max-w-md truncate">{postType.description || <span className="text-gray-400">Không có mô tả</span>}</TableCell>
                     <TableCell>{format(new Date(postType.created_at), 'dd/MM/yyyy')}</TableCell>
                     <TableCell className="text-right">
@@ -194,6 +204,10 @@ const PostTypesTab = () => {
             <div className="space-y-2">
               <Label htmlFor="post-type-name">Tên dạng bài</Label>
               <Input id="post-type-name" value={name} onChange={e => setName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="post-type-word-count">Số lượng từ</Label>
+              <Input id="post-type-word-count" type="number" value={wordCount} onChange={e => setWordCount(e.target.value === '' ? '' : Number(e.target.value))} placeholder="VD: 300" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="post-type-description">Mô tả</Label>

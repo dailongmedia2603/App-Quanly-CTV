@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
 import { format } from 'date-fns';
-import { Search, Plus, Trash2, FileText, BrainCircuit, Briefcase } from 'lucide-react';
+import { Search, Plus, Trash2, FileText, BrainCircuit, Briefcase, Pencil } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface Service {
@@ -189,9 +189,9 @@ const DocumentsTab = () => {
       <CardContent>
         {loading ? (
           <div className="space-y-2">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
           </div>
         ) : filteredDocuments.length === 0 ? (
           <div className="text-center text-gray-500 py-10">
@@ -200,34 +200,52 @@ const DocumentsTab = () => {
             <p className="text-sm">Hãy thêm tài liệu mới để bắt đầu.</p>
           </div>
         ) : (
-          <div className="border rounded-lg">
-            <div className="flex items-center p-4 border-b">
+          <div className="space-y-2">
+            <div className="flex items-center p-4 border rounded-lg bg-gray-50">
               <Checkbox id="select-all" checked={isAllFilteredSelected} onCheckedChange={handleSelectAll} />
               <label htmlFor="select-all" className="ml-3 text-sm font-medium">Chọn tất cả ({filteredDocuments.length})</label>
             </div>
-            <Accordion type="multiple" className="w-full">
+            <Accordion type="multiple" className="w-full space-y-2">
               {filteredDocuments.map(doc => (
-                <AccordionItem value={doc.id} key={doc.id} className="border-b last:border-b-0">
-                  <div className="flex items-center pr-4 hover:bg-gray-50">
-                    <div className="p-4">
-                      <Checkbox checked={selectedIds.includes(doc.id)} onCheckedChange={(c) => handleSelect(doc.id, c as boolean)} onClick={e => e.stopPropagation()} />
-                    </div>
-                    <AccordionTrigger className="flex-1 hover:no-underline p-0">
-                      <div className="flex justify-between items-center w-full">
-                        <div className="flex flex-col items-start text-left">
-                          <span className="font-semibold text-gray-800">{doc.title}</span>
-                          <span className="text-xs text-gray-500">{format(new Date(doc.created_at), 'dd/MM/yyyy')}</span>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          {doc.document_services?.name && <Badge variant="secondary">{doc.document_services.name}</Badge>}
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleEditClick(doc); }}>Sửa</Button>
-                        </div>
+                <AccordionItem value={doc.id} key={doc.id} className="border border-orange-200 rounded-lg bg-white shadow-sm overflow-hidden">
+                  <AccordionTrigger className="p-4 hover:no-underline hover:bg-gray-50/50 w-full text-left data-[state=open]:border-b data-[state=open]:border-orange-200">
+                    <div className="flex items-center w-full gap-4">
+                      <Checkbox
+                        checked={selectedIds.includes(doc.id)}
+                        onCheckedChange={(c) => handleSelect(doc.id, c as boolean)}
+                        onClick={e => e.stopPropagation()}
+                        className="flex-shrink-0"
+                      />
+                      <div className="flex-grow min-w-0">
+                        <p className="font-semibold text-gray-800 truncate">{doc.title}</p>
+                        <p className="text-xs text-gray-500">{format(new Date(doc.created_at), 'dd/MM/yyyy')}</p>
                       </div>
-                    </AccordionTrigger>
-                  </div>
-                  <AccordionContent className="px-4 pb-4">
-                    <div className="prose max-w-none bg-gray-50 p-4 rounded-md border text-sm">
-                      <pre className="font-sans whitespace-pre-wrap">{doc.content || <em>Không có nội dung.</em>}</pre>
+                      {doc.document_services?.name && (
+                        <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700 flex-shrink-0">
+                          {doc.document_services.name}
+                        </Badge>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); handleEditClick(doc); }}
+                        className="flex-shrink-0 text-gray-600 hover:text-brand-orange"
+                      >
+                        <Pencil className="h-4 w-4 mr-2" /> Sửa
+                      </Button>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="p-4 bg-brand-orange-light/30">
+                    <div className="space-y-4 bg-white/50 p-4 rounded-md border border-orange-100 text-sm">
+                      <div>
+                        <h4 className="font-semibold text-sm mb-2 flex items-center"><BrainCircuit className="h-4 w-4 mr-2 text-brand-orange"/>Yêu cầu AI khi đọc</h4>
+                        <p className="text-gray-700 italic">{doc.ai_prompt || 'Không có yêu cầu.'}</p>
+                      </div>
+                      <hr className="border-orange-100"/>
+                      <div>
+                        <h4 className="font-semibold text-sm mb-2 flex items-center"><FileText className="h-4 w-4 mr-2 text-brand-orange"/>Nội dung chi tiết</h4>
+                        <pre className="font-sans whitespace-pre-wrap text-gray-800">{doc.content || <em>Không có nội dung.</em>}</pre>
+                      </div>
                     </div>
                   </AccordionContent>
                 </AccordionItem>

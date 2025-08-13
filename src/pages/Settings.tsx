@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
-import SupportWidgetSettings from "@/components/settings/SupportWidgetSettings";
+import GeneralSettings from "@/components/settings/GeneralSettings";
 import ApiKeysSettings from "@/components/settings/ApiKeysSettings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,7 +46,7 @@ const Settings = () => {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="general" className="pt-6">
-          <SupportWidgetSettings />
+          <GeneralSettings />
         </TabsContent>
         <TabsContent value="api-keys" className="pt-6">
           <ApiKeysSettings />

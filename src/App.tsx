@@ -23,6 +23,8 @@ import Income from "./pages/Income";
 import CustomerConsulting from "./pages/CustomerConsulting";
 import Documents from "./pages/Documents";
 import PermissionGuard from "./components/PermissionGuard";
+import { AppSettingsProvider, useAppSettings } from "./contexts/AppSettingsContext";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient();
 
@@ -41,7 +43,6 @@ const ProtectedRoute = () => {
 const HomeRedirect = () => {
   const { hasPermission } = useAuth();
   
-  // Xác định trang chủ mặc định dựa trên quyền của người dùng
   const orderedRoutes = [
     { path: '/find-customers', feature: 'find_customers' },
     { path: '/create-content/post', feature: 'create_post' },
@@ -55,8 +56,19 @@ const HomeRedirect = () => {
     }
   }
 
-  // Trang dự phòng nếu không có quyền truy cập các trang chính
   return <Navigate to="/profile" replace />;
+};
+
+const PageTitleUpdater = () => {
+  const { settings, loading } = useAppSettings();
+
+  useEffect(() => {
+    if (!loading && settings?.page_title) {
+      document.title = settings.page_title;
+    }
+  }, [settings, loading]);
+
+  return null;
 };
 
 const AppContent = () => {
@@ -68,6 +80,7 @@ const AppContent = () => {
 
   return (
     <BrowserRouter>
+      <PageTitleUpdater />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
@@ -99,9 +112,11 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <Toaster />
-          <Sonner position="bottom-right" toastOptions={{ classNames: { success: "bg-brand-orange-light text-brand-orange border-orange-200", error: "bg-red-100 text-red-600 border-red-200", loading: "bg-brand-orange-light text-brand-orange border-orange-200" } }} />
-          <AppContent />
+          <AppSettingsProvider>
+            <Toaster />
+            <Sonner position="bottom-right" toastOptions={{ classNames: { success: "bg-brand-orange-light text-brand-orange border-orange-200", error: "bg-red-100 text-red-600 border-red-200", loading: "bg-brand-orange-light text-brand-orange border-orange-200" } }} />
+            <AppContent />
+          </AppSettingsProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

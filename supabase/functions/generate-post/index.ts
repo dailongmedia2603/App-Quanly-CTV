@@ -58,7 +58,9 @@ serve(async (req) => {
   }
 
   try {
-    const { service, postType, industry, direction, originalPost, regenerateDirection, wordCount } = await req.json();
+    const { serviceId, postType, industry, direction, originalPost, regenerateDirection, wordCount } = await req.json();
+
+    if (!serviceId) throw new Error("Service ID is required.");
 
     const authHeader = req.headers.get('Authorization')!
     const supabase = createClient(
@@ -90,11 +92,37 @@ serve(async (req) => {
         throw new Error("Không tìm thấy mẫu prompt cho việc tạo bài viết.");
     }
 
+    // Fetch service details for the [dịch vụ] variable
+    const { data: serviceData, error: serviceError } = await supabase
+        .from('document_services')
+        .select('name, description')
+        .eq('id', serviceId)
+        .single();
+    if (serviceError || !serviceData) throw new Error(`Could not find service with ID: ${serviceId}`);
+    const serviceForPrompt = `${serviceData.name}${serviceData.description ? ` (Mô tả: ${serviceData.description})` : ''}`;
+
+    // Fetch related documents for the [biên tài liệu] variable
+    let documentContent = "Không có tài liệu tham khảo.";
+    const { data: documents, error: documentsError } = await supabase
+        .from('documents')
+        .select('content')
+        .eq('service_id', serviceId);
+    
+    if (documentsError) {
+        console.error("Error fetching documents for prompt:", documentsError);
+    } else if (documents && documents.length > 0) {
+        documentContent = documents
+            .map(doc => doc.content)
+            .filter(Boolean)
+            .join('\n\n---\n\n');
+    }
+
     let finalPrompt = templateData.prompt
-        .replace(/\[dịch vụ\]/gi, service)
+        .replace(/\[dịch vụ\]/gi, serviceForPrompt)
         .replace(/\[dạng bài\]/gi, postType)
         .replace(/\[ngành\]/gi, industry)
-        .replace(/\[định hướng\]/gi, direction || 'Không có');
+        .replace(/\[định hướng\]/gi, direction || 'Không có')
+        .replace(/\[biên tài liệu\]/gi, documentContent);
 
     if (regenerateDirection) {
         finalPrompt = `Dựa trên bài viết gốc sau:\n---\n${originalPost}\n---\nHãy tạo lại bài viết theo định hướng mới này: "${regenerateDirection}".\n\n${finalPrompt}`;

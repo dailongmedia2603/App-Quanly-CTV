@@ -19,16 +19,19 @@ const variableConfig = {
     { name: 'Dạng bài', value: '[dạng bài]' },
     { name: 'Ngành', value: '[ngành]' },
     { name: 'Định hướng', value: '[định hướng]' },
+    { name: 'Biên tài liệu', value: '[biên tài liệu]' },
   ],
   comment: [
     { name: 'Nội dung gốc', value: '[nội dung gốc]' },
     { name: 'Cảm xúc', value: '[cảm xúc]' },
     { name: 'Mục tiêu comment', value: '[mục tiêu comment]' },
+    { name: 'Biên tài liệu', value: '[biên tài liệu]' },
   ],
   consulting: [
     { name: 'Câu hỏi khách hàng', value: '[câu hỏi khách hàng]' },
     { name: 'Sản phẩm liên quan', value: '[sản phẩm liên quan]' },
     { name: 'Thông tin thêm', value: '[thông tin thêm]' },
+    { name: 'Biên tài liệu', value: '[biên tài liệu]' },
   ],
 };
 

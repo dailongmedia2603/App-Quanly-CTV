@@ -248,10 +248,9 @@ const CreatePost = () => {
   }, []);
 
   const handleGeneratePost = async (isRegeneration = false) => {
-    const selectedService = services.find(s => s.id === selectedServiceId);
     const selectedPostType = postTypes.find(pt => pt.id === selectedPostTypeId);
 
-    if (!selectedService || !selectedPostType || !industry) {
+    if (!selectedServiceId || !selectedPostType || !industry) {
       showError("Vui lòng điền đầy đủ các trường Dịch vụ, Dạng bài và Ngành.");
       return;
     }
@@ -259,12 +258,11 @@ const CreatePost = () => {
     if (isRegeneration) setIsRegenerateDialogOpen(false);
     const toastId = showLoading(isRegeneration ? "Đang tạo lại bài viết..." : "AI đang sáng tạo, vui lòng chờ...");
 
-    const serviceForPrompt = `${selectedService.name}${selectedService.description ? ` (Mô tả: ${selectedService.description})` : ''}`;
     const postTypeForPrompt = `${selectedPostType.name}${selectedPostType.description ? ` (Mô tả: ${selectedPostType.description})` : ''}`;
 
     const { data, error } = await supabase.functions.invoke('generate-post', {
       body: {
-        service: serviceForPrompt,
+        serviceId: selectedServiceId,
         postType: postTypeForPrompt,
         wordCount: selectedPostType.word_count,
         industry,

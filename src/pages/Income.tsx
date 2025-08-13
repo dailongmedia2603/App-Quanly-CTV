@@ -167,11 +167,11 @@ const Income = () => {
 
     let users: User[] = [];
     if (isSuperAdmin) {
-        const { data: usersData, error: usersError } = await supabase.functions.invoke("admin-get-users");
+        const { data, error: usersError } = await supabase.functions.invoke("admin-get-users-with-roles");
         if (usersError) {
             showError("Không thể tải danh sách cộng tác viên.");
         } else {
-            users = usersData || [];
+            users = data.users || [];
             setAllUsers(users);
         }
     }

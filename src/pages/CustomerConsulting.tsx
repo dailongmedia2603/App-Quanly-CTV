@@ -9,13 +9,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
-import { Plus, MessageSquare, Send, Bot, User as UserIcon, Trash2, Pencil, Check, History } from 'lucide-react';
+import { Plus, MessageSquare, Send, Bot, User as UserIcon, Trash2, Pencil, Check, History, Copy, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 interface Service {
   id: string;
@@ -49,6 +51,10 @@ const CustomerConsulting = () => {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
+  const [regenerateDirection, setRegenerateDirection] = useState('');
+  const [messageToRegenerate, setMessageToRegenerate] = useState<Message | null>(null);
 
   const fetchServicesAndSessions = async () => {
     const [servicesRes, sessionsRes] = await Promise.all([
@@ -185,6 +191,53 @@ const CustomerConsulting = () => {
     setSessionToDelete(null);
   };
 
+  const handleCopy = (content: string) => {
+    navigator.clipboard.writeText(content).then(() => {
+        showSuccess("Đã sao chép nội dung!");
+    }).catch(err => {
+        showError("Không thể sao chép.");
+    });
+  };
+
+  const handleRegenerateClick = (message: Message) => {
+      setMessageToRegenerate(message);
+      setIsRegenerateDialogOpen(true);
+  };
+
+  const handleRegenerateMessage = async () => {
+      if (!messageToRegenerate || !activeSession) return;
+
+      setIsReplying(true);
+      setIsRegenerateDialogOpen(false);
+      const toastId = showLoading("AI đang viết lại câu trả lời...");
+
+      const messageIndex = messages.findIndex(m => m.id === messageToRegenerate.id);
+      const historyForPrompt = messages.slice(0, messageIndex);
+
+      const { data, error } = await supabase.functions.invoke('regenerate-consulting-response', {
+          body: {
+              messageId: messageToRegenerate.id,
+              sessionId: activeSession.id,
+              serviceId: activeSession.service_id,
+              messages: historyForPrompt.map(({ role, content }) => ({ role, content })),
+              regenerateDirection: regenerateDirection,
+          }
+      });
+
+      dismissToast(toastId);
+      if (error) {
+          showError(`Tạo lại thất bại: ${error.message}`);
+      } else {
+          showSuccess("Đã tạo lại câu trả lời!");
+          setMessages(prev => prev.map(msg => 
+              msg.id === messageToRegenerate.id ? { ...msg, content: data.reply } : msg
+          ));
+          setRegenerateDirection('');
+          setMessageToRegenerate(null);
+      }
+      setIsReplying(false);
+  };
+
   return (
     <>
       <div className="space-y-6 h-[calc(100vh-10rem)] flex flex-col">
@@ -255,8 +308,18 @@ const CustomerConsulting = () => {
                           <p className="text-xs text-gray-500 px-1">{msg.role === 'user' ? 'Khách hàng nhắn' : 'Bạn sẽ trả lời'}</p>
                           <div className={cn("flex items-start gap-3 w-full", msg.role === 'user' ? 'justify-end' : '')}>
                             {msg.role === 'assistant' && <div className="flex-shrink-0 h-8 w-8 rounded-full bg-brand-orange flex items-center justify-center text-white"><Bot className="h-5 w-5" /></div>}
-                            <div className={cn("max-w-lg p-3 rounded-lg", msg.role === 'user' ? 'bg-brand-orange-light text-gray-800' : 'bg-white border')}>
+                            <div className={cn("max-w-lg p-3 rounded-lg group relative", msg.role === 'user' ? 'bg-brand-orange-light text-gray-800' : 'bg-white border')}>
                               <div className="prose prose-sm max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown></div>
+                              {msg.role === 'assistant' && (
+                                <div className="absolute top-1 right-1 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleCopy(msg.content)}>
+                                        <Copy className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRegenerateClick(msg)}>
+                                        <RefreshCw className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                              )}
                             </div>
                             {msg.role === 'user' && <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center"><UserIcon className="h-5 w-5" /></div>}
                           </div>
@@ -303,6 +366,27 @@ const CustomerConsulting = () => {
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <Dialog open={isRegenerateDialogOpen} onOpenChange={setIsRegenerateDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Tạo lại câu trả lời</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+                <Label htmlFor="regenerate-direction">Nội dung cần chỉnh sửa (nếu có)</Label>
+                <Textarea 
+                    id="regenerate-direction" 
+                    placeholder="VD: Viết ngắn gọn hơn, thêm yếu tố hài hước..." 
+                    value={regenerateDirection} 
+                    onChange={e => setRegenerateDirection(e.target.value)} 
+                    className="mt-2" 
+                />
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsRegenerateDialogOpen(false)}>Hủy</Button>
+                <Button onClick={handleRegenerateMessage} className="bg-brand-orange hover:bg-brand-orange/90 text-white">Tạo lại</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
     </>
   );
 };

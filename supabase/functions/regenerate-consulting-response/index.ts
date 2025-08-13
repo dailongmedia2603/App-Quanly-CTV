@@ -1,0 +1,133 @@
+// @ts-ignore
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
+// @ts-ignore
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
+// @ts-ignore
+import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.15.0";
+
+declare const Deno: any;
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
+  try {
+    const { messageId, sessionId, serviceId, messages, regenerateDirection } = await req.json();
+    if (!messageId || !sessionId || !serviceId || !messages) {
+      throw new Error("Yêu cầu thiếu thông tin cần thiết.");
+    }
+
+    const authHeader = req.headers.get('Authorization')!
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    )
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Không tìm thấy người dùng.");
+
+    const { data: apiKeys, error: apiKeyError } = await supabase
+        .from('user_api_keys')
+        .select('gemini_api_key, gemini_model')
+        .eq('user_id', user.id)
+        .single();
+
+    if (apiKeyError || !apiKeys?.gemini_api_key || !apiKeys?.gemini_model) {
+        throw new Error("Chưa cấu hình API Key cho Gemini.");
+    }
+
+    const { data: templateData, error: templateError } = await supabase
+        .from('ai_prompt_templates')
+        .select('prompt')
+        .eq('template_type', 'consulting')
+        .single();
+
+    if (templateError || !templateData?.prompt) {
+        throw new Error("Không tìm thấy mẫu prompt cho việc tư vấn.");
+    }
+
+    const { data: serviceData, error: serviceError } = await supabase
+        .from('document_services')
+        .select('name, description')
+        .eq('id', serviceId)
+        .single();
+    if (serviceError || !serviceData) throw new Error(`Could not find service with ID: ${serviceId}`);
+    const serviceForPrompt = `${serviceData.name}${serviceData.description ? ` (Mô tả: ${serviceData.description})` : ''}`;
+
+    let documentContent = "Không có tài liệu tham khảo.";
+    const { data: documents } = await supabase
+        .from('documents')
+        .select('title, ai_prompt, content')
+        .eq('service_id', serviceId);
+    
+    if (documents && documents.length > 0) {
+        documentContent = documents
+            .map(doc => `Tên tài liệu: ${doc.title}\nYêu cầu AI khi đọc: ${doc.ai_prompt || 'Không có'}\nNội dung chi tiết:\n${doc.content || 'Không có'}`)
+            .join('\n\n---\n\n');
+    }
+
+    const latestUserMessage = messages.length > 0 ? messages[messages.length - 1].content : '';
+    const historyMessages = messages.slice(0, -1);
+
+    const chatHistory = historyMessages.map((msg: Message) => 
+        `${msg.role === 'user' ? 'Khách hàng nhắn' : 'Bạn sẽ trả lời'}: ${msg.content}`
+    ).join('\n');
+
+    let promptText = templateData.prompt;
+
+    promptText = promptText.replace(/\[câu hỏi khách hàng\]/gi, '');
+    promptText = promptText.replace(/\[sản phẩm liên quan\]/gi, '');
+    promptText = promptText.replace(/\[thông tin thêm\]/gi, '');
+
+    let finalPrompt = promptText
+        .replace(/\[dịch vụ\]/gi, serviceForPrompt)
+        .replace(/\[lịch sử trò chuyện\]/gi, chatHistory || 'Đây là tin nhắn đầu tiên trong cuộc trò chuyện.')
+        .replace(/\[tin nhắn cần trả lời\]/gi, latestUserMessage)
+        .replace(/\[biên tài liệu\]/gi, documentContent);
+
+    finalPrompt = `Hãy viết lại câu trả lời của bạn dựa trên định hướng mới sau: "${regenerateDirection || 'Hãy viết lại theo một cách khác.'}".\n\n${finalPrompt}`;
+
+    const genAI = new GoogleGenerativeAI(apiKeys.gemini_api_key);
+    const model = genAI.getGenerativeModel({ model: apiKeys.gemini_model });
+
+    const result = await model.generateContent(finalPrompt);
+    const aiResponse = result.response.text();
+
+    // UPDATE the existing message in the database
+    const { error: updateMsgError } = await supabase.from('consulting_messages')
+        .update({ content: aiResponse })
+        .eq('id', messageId);
+    if (updateMsgError) throw updateMsgError;
+
+    // Log the generation
+    await supabase.from('ai_generation_logs').insert({
+        user_id: user.id,
+        template_type: 'consulting',
+        final_prompt: `[REGENERATION]\n${finalPrompt}`,
+        generated_content: aiResponse
+    });
+
+    return new Response(JSON.stringify({ reply: aiResponse }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    });
+
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500,
+    })
+  }
+})

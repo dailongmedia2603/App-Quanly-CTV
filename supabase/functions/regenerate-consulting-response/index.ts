@@ -13,6 +13,7 @@ const corsHeaders = {
 }
 
 interface Message {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
 }
@@ -78,10 +79,22 @@ serve(async (req) => {
             .join('\n\n---\n\n');
     }
 
-    const latestUserMessage = messages.length > 0 ? messages[messages.length - 1].content : '';
-    const historyMessages = messages.slice(0, -1);
+    // Find the last user message in the provided history
+    let lastUserMessageContent = '';
+    let historyForPrompt: Message[] = [];
+    for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === 'user') {
+            lastUserMessageContent = messages[i].content;
+            historyForPrompt = messages.slice(0, i);
+            break;
+        }
+    }
 
-    const chatHistory = historyMessages.map((msg: Message) => 
+    if (!lastUserMessageContent) {
+        throw new Error("Could not find a user message to respond to in the history.");
+    }
+
+    const chatHistory = historyForPrompt.map((msg: Message) => 
         `${msg.role === 'user' ? 'Khách hàng nhắn' : 'Bạn sẽ trả lời'}: ${msg.content}`
     ).join('\n');
 
@@ -94,7 +107,7 @@ serve(async (req) => {
     let finalPrompt = promptText
         .replace(/\[dịch vụ\]/gi, serviceForPrompt)
         .replace(/\[lịch sử trò chuyện\]/gi, chatHistory || 'Đây là tin nhắn đầu tiên trong cuộc trò chuyện.')
-        .replace(/\[tin nhắn cần trả lời\]/gi, latestUserMessage)
+        .replace(/\[tin nhắn cần trả lời\]/gi, lastUserMessageContent)
         .replace(/\[biên tài liệu\]/gi, documentContent);
 
     finalPrompt = `Hãy viết lại câu trả lời của bạn dựa trên định hướng mới sau: "${regenerateDirection || 'Hãy viết lại theo một cách khác.'}".\n\n${finalPrompt}`;

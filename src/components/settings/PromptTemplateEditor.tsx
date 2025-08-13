@@ -22,6 +22,7 @@ const variableConfig = {
     { name: 'Biên tài liệu', value: '[biên tài liệu]' },
   ],
   comment: [
+    { name: 'Dịch vụ', value: '[dịch vụ]' },
     { name: 'Nội dung gốc', value: '[nội dung gốc]' },
     { name: 'Cảm xúc', value: '[cảm xúc]' },
     { name: 'Mục tiêu comment', value: '[mục tiêu comment]' },

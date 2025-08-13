@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Home, SlidersHorizontal, FilePieChart, CircleDollarSign, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog, FolderKanban } from "lucide-react";
+import { Home, SlidersHorizontal, FilePieChart, CircleDollarSign, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog, FolderKanban, UserCheck } from "lucide-react";
 import * as Icons from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -81,7 +81,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
   const location = useLocation();
   const { roles } = useAuth();
   const isSuperAdmin = roles.includes('Super Admin');
-  const isCreateContentActive = location.pathname.startsWith('/create-content');
+  const isCreateContentActive = ['/create-content/post', '/create-content/comment'].includes(location.pathname);
   const isConfigActive = location.pathname.startsWith('/config');
   const [supportWidgetData, setSupportWidgetData] = useState<SupportWidgetData | null>(null);
 
@@ -121,12 +121,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
                   <nav className="relative border-l border-gray-200 space-y-1">
                     <SubNavLink to="/create-content/post">Tạo bài viết</SubNavLink>
                     <SubNavLink to="/create-content/comment">Tạo comment</SubNavLink>
-                    <SubNavLink to="/create-content/customer-consulting">Tư vấn khách hàng</SubNavLink>
                   </nav>
                 </AccordionContent>
               </AccordionItem></Accordion>
             )}
+            <NavLink to="/create-content/customer-consulting" icon={UserCheck} isCollapsed={isCollapsed}>Tư vấn khách hàng</NavLink>
             <NavLink to="/create-plan" icon={ClipboardList} isCollapsed={isCollapsed}>Tạo Plan</NavLink>
+            <NavLink to="/income" icon={CircleDollarSign} isCollapsed={isCollapsed}>Thu nhập</NavLink>
             {isCollapsed ? (
               <Tooltip><TooltipTrigger className="w-full"><div className="flex items-center justify-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600"><Cog className="h-5 w-5 flex-shrink-0" /></div></TooltipTrigger><TooltipContent side="right"><p>Cấu hình</p></TooltipContent></Tooltip>
             ) : (
@@ -142,7 +143,6 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
             )}
             <NavLink to="/documents" icon={FolderKanban} isCollapsed={isCollapsed}>Tài liệu</NavLink>
             <NavLink to="/reports" icon={FilePieChart} isCollapsed={isCollapsed}>Báo cáo</NavLink>
-            <NavLink to="/income" icon={CircleDollarSign} isCollapsed={isCollapsed}>Thu nhập</NavLink>
             {isSuperAdmin && <NavLink to="/account" icon={Users} isCollapsed={isCollapsed}>Tài khoản</NavLink>}
             {isSuperAdmin && <NavLink to="/settings" icon={Settings} isCollapsed={isCollapsed}>Settings</NavLink>}
           </nav>

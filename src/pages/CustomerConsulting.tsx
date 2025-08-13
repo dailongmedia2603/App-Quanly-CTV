@@ -155,6 +155,12 @@ const CustomerConsulting = () => {
     }
   };
 
+  const handleTitleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      handleUpdateTitle();
+    }
+  };
+
   const handleDeleteClick = (session: Session) => {
     setSessionToDelete(session);
     setIsDeleteAlertOpen(true);
@@ -206,7 +212,13 @@ const CustomerConsulting = () => {
                     <div key={session.id} onClick={() => handleSelectSession(session)} className={cn("p-3 rounded-lg cursor-pointer border", activeSession?.id === session.id ? "bg-brand-orange-light border-brand-orange" : "hover:bg-gray-50")}>
                       {editingTitle?.id === session.id ? (
                         <div className="flex items-center space-x-2">
-                          <Input value={editingTitle.title} onChange={e => setEditingTitle({ ...editingTitle, title: e.target.value })} className="h-8" />
+                          <Input 
+                            value={editingTitle.title} 
+                            onChange={e => setEditingTitle({ ...editingTitle, title: e.target.value })} 
+                            onKeyDown={handleTitleKeyDown}
+                            autoFocus
+                            className="h-8" 
+                          />
                           <Button size="icon" className="h-8 w-8" onClick={handleUpdateTitle}><Check className="h-4 w-4" /></Button>
                         </div>
                       ) : (

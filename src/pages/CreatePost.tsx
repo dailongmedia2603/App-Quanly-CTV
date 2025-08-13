@@ -8,12 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
-import { Briefcase, FileText, Factory, Compass, Wand2, Sparkles, RefreshCw, Copy, History, ArrowLeft } from 'lucide-react';
+import { Briefcase, FileText, Factory, Compass, Wand2, Sparkles, RefreshCw, Copy, History, ArrowLeft, Info } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Moved FormInput outside of CreatePost to prevent re-rendering on state change
 const FormInput = ({ icon: Icon, label, children }: { icon: React.ElementType, label: string, children: React.ReactNode }) => (
@@ -361,7 +362,14 @@ const CreatePost = () => {
               <Textarea placeholder="VD: Nhấn mạnh vào tốc độ, giá cả phải chăng..." value={direction} onChange={e => setDirection(e.target.value)} />
             </FormInput>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col items-stretch gap-4">
+            <Alert className="border-orange-200 text-orange-900 [&>svg]:text-orange-900">
+                <Info className="h-4 w-4" />
+                <AlertTitle className="font-bold">Lưu ý</AlertTitle>
+                <AlertDescription>
+                Nếu bạn tạo bài viết nhưng hệ thống không hiển thị, hãy bấm lại nút "Tạo bài viết" một lần nữa.
+                </AlertDescription>
+            </Alert>
             <Button className="w-full bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={() => handleGeneratePost(false)} disabled={isGenerating}>
               <Wand2 className="mr-2 h-4 w-4" />
               {isGenerating ? 'Đang tạo...' : 'Tạo bài viết'}

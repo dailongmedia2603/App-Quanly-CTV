@@ -80,11 +80,17 @@ serve(async (req) => {
         .replace(/\[nội dung gốc\]/gi, originalPostContent)
         .replace(/\[biên tài liệu\]/gi, documentContent);
 
+    // Add a strict instruction for the output format
+    finalPrompt += "\n\nQUAN TRỌNG: Chỉ trả về nội dung của comment, không thêm bất kỳ lời dẫn hay giải thích nào khác.";
+
     const genAI = new GoogleGenerativeAI(apiKeys.gemini_api_key);
     const model = genAI.getGenerativeModel({ model: apiKeys.gemini_model });
 
     const result = await model.generateContent(finalPrompt);
-    const generatedComment = result.response.text();
+    let generatedComment = result.response.text().trim();
+
+    // Clean up potential markdown code blocks
+    generatedComment = generatedComment.replace(/^```(markdown|md|)\s*\n/i, '').replace(/\n\s*```$/, '');
 
     await supabase.from('ai_generation_logs').insert({
         user_id: user.id,

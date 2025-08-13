@@ -32,6 +32,12 @@ interface Log {
   generated_content: string;
 }
 
+interface Service {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
 const cleanAiResponseForDisplay = (rawText: string): string => {
   if (!rawText) return '';
   let text = rawText.trim();
@@ -180,7 +186,9 @@ const PostHistoryView = ({ onBack }: { onBack: () => void }) => {
 const CreatePost = () => {
   const [view, setView] = useState<'create' | 'history'>('create');
   // Form state
-  const [service, setService] = useState('');
+  const [services, setServices] = useState<Service[]>([]);
+  const [loadingServices, setLoadingServices] = useState(true);
+  const [selectedServiceId, setSelectedServiceId] = useState('');
   const [postType, setPostType] = useState('');
   const [industry, setIndustry] = useState('');
   const [direction, setDirection] = useState('');
@@ -193,8 +201,28 @@ const CreatePost = () => {
   const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
   const [regenerateDirection, setRegenerateDirection] = useState('');
 
+  useEffect(() => {
+    const fetchServices = async () => {
+      setLoadingServices(true);
+      const { data, error } = await supabase
+        .from('document_services')
+        .select('id, name, description')
+        .order('name', { ascending: true });
+      
+      if (error) {
+        showError("Không thể tải danh sách dịch vụ.");
+      } else {
+        setServices(data as Service[]);
+      }
+      setLoadingServices(false);
+    };
+    fetchServices();
+  }, []);
+
   const handleGeneratePost = async (isRegeneration = false) => {
-    if (!service || !postType || !industry) {
+    const selectedService = services.find(s => s.id === selectedServiceId);
+
+    if (!selectedService || !postType || !industry) {
       showError("Vui lòng điền đầy đủ các trường Dịch vụ, Dạng bài và Ngành.");
       return;
     }
@@ -202,9 +230,11 @@ const CreatePost = () => {
     if (isRegeneration) setIsRegenerateDialogOpen(false);
     const toastId = showLoading(isRegeneration ? "Đang tạo lại bài viết..." : "AI đang sáng tạo, vui lòng chờ...");
 
+    const serviceForPrompt = `${selectedService.name}${selectedService.description ? ` (Mô tả: ${selectedService.description})` : ''}`;
+
     const { data, error } = await supabase.functions.invoke('generate-post', {
       body: {
-        service,
+        service: serviceForPrompt,
         postType,
         industry,
         direction,
@@ -260,7 +290,22 @@ const CreatePost = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <FormInput icon={Briefcase} label="Dịch vụ">
-              <Input placeholder="VD: Thiết kế website" value={service} onChange={e => setService(e.target.value)} />
+              <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn dịch vụ" />
+                </SelectTrigger>
+                <SelectContent>
+                  {loadingServices ? (
+                    <SelectItem value="loading" disabled>Đang tải...</SelectItem>
+                  ) : (
+                    services.map(service => (
+                      <SelectItem key={service.id} value={service.id}>
+                        {service.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </FormInput>
             <FormInput icon={FileText} label="Dạng bài">
               <Select value={postType} onValueChange={setPostType}>

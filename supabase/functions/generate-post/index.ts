@@ -72,14 +72,19 @@ serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Không tìm thấy người dùng.");
 
-    const { data: apiKeys, error: apiKeyError } = await supabase
-        .from('user_api_keys')
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const { data: apiKeys, error: apiKeyError } = await supabaseAdmin
+        .from('app_settings')
         .select('gemini_api_key, gemini_model')
-        .eq('user_id', user.id)
+        .eq('id', 1)
         .single();
 
     if (apiKeyError || !apiKeys?.gemini_api_key || !apiKeys?.gemini_model) {
-        throw new Error("Chưa cấu hình API Key cho Gemini.");
+        throw new Error("Chưa cấu hình API Key cho Gemini trong cài đặt chung.");
     }
 
     const { data: templateData, error: templateError } = await supabase

@@ -63,13 +63,13 @@ serve(async (req) => {
     await logScan(supabaseAdmin, campaign_id, campaignOwnerId, 'info', '(1/4) Bắt đầu quét website: Đang lấy cấu hình...', null, 'progress');
 
     const { data: apiKeys, error: apiKeyError } = await supabaseAdmin
-        .from('user_api_keys')
+        .from('app_settings')
         .select('firecrawl_api_key, gemini_api_key, gemini_model')
-        .eq('user_id', campaignOwnerId)
+        .eq('id', 1)
         .single();
 
-    if (apiKeyError) throw new Error(`Lấy API key cho người dùng ${campaignOwnerId} thất bại: ${apiKeyError.message}`);
-    if (!apiKeys) throw new Error(`Người dùng ${campaignOwnerId} chưa cấu hình API key.`);
+    if (apiKeyError) throw new Error(`Lấy API key chung thất bại: ${apiKeyError.message}`);
+    if (!apiKeys) throw new Error(`Chưa cấu hình API key trong cài đặt chung.`);
 
     const { firecrawl_api_key, gemini_api_key, gemini_model } = apiKeys;
     

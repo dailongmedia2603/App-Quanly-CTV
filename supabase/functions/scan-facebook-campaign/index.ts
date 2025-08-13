@@ -97,13 +97,13 @@ serve(async (req) => {
     if (!campaignOwnerId) throw new Error("Chiến dịch không có người sở hữu.");
 
     const { data: apiKeys, error: apiKeyError } = await supabaseAdmin
-        .from('user_api_keys')
-        .select('*')
-        .eq('user_id', campaignOwnerId)
+        .from('app_settings')
+        .select('facebook_api_url, facebook_api_token, gemini_api_key, gemini_model')
+        .eq('id', 1)
         .single();
 
-    if (apiKeyError) throw new Error(`Lấy API key cho người dùng ${campaignOwnerId} thất bại: ${apiKeyError.message}`);
-    if (!apiKeys) throw new Error(`Người dùng ${campaignOwnerId} chưa cấu hình API key.`);
+    if (apiKeyError) throw new Error(`Lấy API key chung thất bại: ${apiKeyError.message}`);
+    if (!apiKeys) throw new Error(`Chưa cấu hình API key trong cài đặt chung.`);
 
     if (campaign.type !== 'Facebook' && campaign.type !== 'Tổng hợp') {
         return new Response(JSON.stringify({ message: "Chức năng quét này chỉ dành cho các chiến dịch Facebook hoặc Tổng hợp." }), {
@@ -129,7 +129,7 @@ serve(async (req) => {
     } = apiKeys;
 
     if (!facebook_api_url || !facebook_api_token) {
-        throw new Error("URL hoặc Token của API Facebook chưa được cấu hình trong cài đặt của người dùng.");
+        throw new Error("URL hoặc Token của API Facebook chưa được cấu hình trong cài đặt chung.");
     }
 
     await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', 'Bắt đầu quét nguồn Facebook...', null, 'progress');

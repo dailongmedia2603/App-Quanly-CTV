@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Outlet, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
@@ -22,28 +22,41 @@ import ConfigCreatePlan from "./pages/ConfigCreatePlan";
 import Income from "./pages/Income";
 import CustomerConsulting from "./pages/CustomerConsulting";
 import Documents from "./pages/Documents";
+import PermissionGuard from "./components/PermissionGuard";
 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = () => {
-  const { session, roles } = useAuth();
-  const location = useLocation();
-
+  const { session } = useAuth();
   if (!session) {
     return <Navigate to="/login" replace />;
   }
-
-  const isSuperAdmin = roles.includes('Super Admin');
-
-  if ((location.pathname.startsWith('/account') || location.pathname.startsWith('/settings')) && !isSuperAdmin) {
-    return <Navigate to="/" replace />;
-  }
-
   return (
     <Layout>
       <Outlet />
     </Layout>
   );
+};
+
+const HomeRedirect = () => {
+  const { hasPermission } = useAuth();
+  
+  // Xác định trang chủ mặc định dựa trên quyền của người dùng
+  const orderedRoutes = [
+    { path: '/find-customers', feature: 'find_customers' },
+    { path: '/create-content/post', feature: 'create_post' },
+    { path: '/income', feature: 'income' },
+    { path: '/reports', feature: 'reports' },
+  ];
+
+  for (const route of orderedRoutes) {
+    if (hasPermission(route.feature)) {
+      return <Navigate to={route.path} replace />;
+    }
+  }
+
+  // Trang dự phòng nếu không có quyền truy cập các trang chính
+  return <Navigate to="/profile" replace />;
 };
 
 const AppContent = () => {
@@ -58,20 +71,20 @@ const AppContent = () => {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<Navigate to="/find-customers" replace />} />
-          <Route path="/find-customers" element={<FindCustomers />} />
-          <Route path="/create-content/post" element={<CreatePost />} />
-          <Route path="/create-content/comment" element={<CreateComment />} />
-          <Route path="/create-content/customer-consulting" element={<CustomerConsulting />} />
-          <Route path="/create-plan" element={<CreatePlan />} />
-          <Route path="/config/scan-post" element={<Index />} />
-          <Route path="/config/content-ai" element={<ConfigContentAI />} />
-          <Route path="/config/create-plan" element={<ConfigCreatePlan />} />
-          <Route path="/documents" element={<Documents />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/income" element={<Income />} />
-          <Route path="/account" element={<Account />} />
+          <Route path="/" element={<HomeRedirect />} />
+          <Route path="/find-customers" element={<PermissionGuard feature="find_customers"><FindCustomers /></PermissionGuard>} />
+          <Route path="/create-content/post" element={<PermissionGuard feature="create_post"><CreatePost /></PermissionGuard>} />
+          <Route path="/create-content/comment" element={<PermissionGuard feature="create_comment"><CreateComment /></PermissionGuard>} />
+          <Route path="/create-content/customer-consulting" element={<PermissionGuard feature="customer_consulting"><CustomerConsulting /></PermissionGuard>} />
+          <Route path="/create-plan" element={<PermissionGuard feature="create_plan"><CreatePlan /></PermissionGuard>} />
+          <Route path="/config/scan-post" element={<PermissionGuard feature="config_scan_post"><Index /></PermissionGuard>} />
+          <Route path="/config/content-ai" element={<PermissionGuard feature="config_content_ai"><ConfigContentAI /></PermissionGuard>} />
+          <Route path="/config/create-plan" element={<PermissionGuard feature="config_create_plan"><ConfigCreatePlan /></PermissionGuard>} />
+          <Route path="/documents" element={<PermissionGuard feature="documents"><Documents /></PermissionGuard>} />
+          <Route path="/settings" element={<PermissionGuard feature="settings"><Settings /></PermissionGuard>} />
+          <Route path="/reports" element={<PermissionGuard feature="reports"><Reports /></PermissionGuard>} />
+          <Route path="/income" element={<PermissionGuard feature="income"><Income /></PermissionGuard>} />
+          <Route path="/account" element={<PermissionGuard feature="account"><Account /></PermissionGuard>} />
           <Route path="/guide" element={<Guide />} />
           <Route path="/profile" element={<Profile />} />
         </Route>

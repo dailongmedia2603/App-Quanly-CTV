@@ -79,8 +79,7 @@ interface SupportWidgetData {
 
 const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleSidebar: () => void }) => {
   const location = useLocation();
-  const { roles } = useAuth();
-  const isSuperAdmin = roles.includes('Super Admin');
+  const { hasPermission } = useAuth();
   const isCreateContentActive = ['/create-content/post', '/create-content/comment'].includes(location.pathname);
   const isConfigActive = location.pathname.startsWith('/config');
   const [supportWidgetData, setSupportWidgetData] = useState<SupportWidgetData | null>(null);
@@ -111,40 +110,47 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
         </div>
         <div className="flex-1 overflow-y-auto p-4">
           <nav className="space-y-1">
-            <NavLink to="/overview" icon={Home} isCollapsed={isCollapsed}>Overview</NavLink>
-            <NavLink to="/find-customers" icon={Search} isCollapsed={isCollapsed}>Tìm khách hàng</NavLink>
-            {isCollapsed ? (
-              <Tooltip><TooltipTrigger className="w-full"><div className="flex items-center justify-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600"><PenSquare className="h-5 w-5 flex-shrink-0" /></div></TooltipTrigger><TooltipContent side="right"><p>Tạo content</p></TooltipContent></Tooltip>
-            ) : (
-              <Accordion type="single" collapsible defaultValue={isCreateContentActive ? "item-1" : undefined}><AccordionItem value="item-1" className="border-none"><AccordionTrigger className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline [&[data-state=open]>svg]:rotate-180"><div className="flex items-center space-x-3"><PenSquare className="h-5 w-5" /><span>Tạo content</span></div></AccordionTrigger>
-                <AccordionContent className="pl-8 pb-0 pt-1">
-                  <nav className="relative border-l border-gray-200 space-y-1">
-                    <SubNavLink to="/create-content/post">Tạo bài viết</SubNavLink>
-                    <SubNavLink to="/create-content/comment">Tạo comment</SubNavLink>
-                  </nav>
-                </AccordionContent>
-              </AccordionItem></Accordion>
+            {hasPermission('find_customers') && <NavLink to="/find-customers" icon={Search} isCollapsed={isCollapsed}>Tìm khách hàng</NavLink>}
+            
+            {(hasPermission('create_post') || hasPermission('create_comment')) && (
+              isCollapsed ? (
+                <Tooltip><TooltipTrigger className="w-full"><div className="flex items-center justify-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600"><PenSquare className="h-5 w-5 flex-shrink-0" /></div></TooltipTrigger><TooltipContent side="right"><p>Tạo content</p></TooltipContent></Tooltip>
+              ) : (
+                <Accordion type="single" collapsible defaultValue={isCreateContentActive ? "item-1" : undefined}><AccordionItem value="item-1" className="border-none"><AccordionTrigger className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline [&[data-state=open]>svg]:rotate-180"><div className="flex items-center space-x-3"><PenSquare className="h-5 w-5" /><span>Tạo content</span></div></AccordionTrigger>
+                  <AccordionContent className="pl-8 pb-0 pt-1">
+                    <nav className="relative border-l border-gray-200 space-y-1">
+                      {hasPermission('create_post') && <SubNavLink to="/create-content/post">Tạo bài viết</SubNavLink>}
+                      {hasPermission('create_comment') && <SubNavLink to="/create-content/comment">Tạo comment</SubNavLink>}
+                    </nav>
+                  </AccordionContent>
+                </AccordionItem></Accordion>
+              )
             )}
-            <NavLink to="/create-content/customer-consulting" icon={UserCheck} isCollapsed={isCollapsed}>Tư vấn khách hàng</NavLink>
-            <NavLink to="/create-plan" icon={ClipboardList} isCollapsed={isCollapsed}>Tạo Plan</NavLink>
-            <NavLink to="/income" icon={CircleDollarSign} isCollapsed={isCollapsed}>Thu nhập</NavLink>
-            {isCollapsed ? (
-              <Tooltip><TooltipTrigger className="w-full"><div className="flex items-center justify-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600"><Cog className="h-5 w-5 flex-shrink-0" /></div></TooltipTrigger><TooltipContent side="right"><p>Cấu hình</p></TooltipContent></Tooltip>
-            ) : (
-              <Accordion type="single" collapsible defaultValue={isConfigActive ? "item-1" : undefined}><AccordionItem value="item-1" className="border-none"><AccordionTrigger className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline [&[data-state=open]>svg]:rotate-180"><div className="flex items-center space-x-3"><Cog className="h-5 w-5" /><span>Cấu hình</span></div></AccordionTrigger>
-                <AccordionContent className="pl-8 pb-0 pt-1">
-                  <nav className="relative border-l border-gray-200 space-y-1">
-                    <SubNavLink to="/config/scan-post">Quét Post</SubNavLink>
-                    <SubNavLink to="/config/content-ai">Content AI</SubNavLink>
-                    <SubNavLink to="/config/create-plan">Tạo plan</SubNavLink>
-                  </nav>
-                </AccordionContent>
-              </AccordionItem></Accordion>
+
+            {hasPermission('customer_consulting') && <NavLink to="/create-content/customer-consulting" icon={UserCheck} isCollapsed={isCollapsed}>Tư vấn khách hàng</NavLink>}
+            {hasPermission('create_plan') && <NavLink to="/create-plan" icon={ClipboardList} isCollapsed={isCollapsed}>Tạo Plan</NavLink>}
+            {hasPermission('income') && <NavLink to="/income" icon={CircleDollarSign} isCollapsed={isCollapsed}>Thu nhập</NavLink>}
+
+            {(hasPermission('config_scan_post') || hasPermission('config_content_ai') || hasPermission('config_create_plan')) && (
+              isCollapsed ? (
+                <Tooltip><TooltipTrigger className="w-full"><div className="flex items-center justify-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600"><Cog className="h-5 w-5 flex-shrink-0" /></div></TooltipTrigger><TooltipContent side="right"><p>Cấu hình</p></TooltipContent></Tooltip>
+              ) : (
+                <Accordion type="single" collapsible defaultValue={isConfigActive ? "item-1" : undefined}><AccordionItem value="item-1" className="border-none"><AccordionTrigger className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:no-underline [&[data-state=open]>svg]:rotate-180"><div className="flex items-center space-x-3"><Cog className="h-5 w-5" /><span>Cấu hình</span></div></AccordionTrigger>
+                  <AccordionContent className="pl-8 pb-0 pt-1">
+                    <nav className="relative border-l border-gray-200 space-y-1">
+                      {hasPermission('config_scan_post') && <SubNavLink to="/config/scan-post">Quét Post</SubNavLink>}
+                      {hasPermission('config_content_ai') && <SubNavLink to="/config/content-ai">Content AI</SubNavLink>}
+                      {hasPermission('config_create_plan') && <SubNavLink to="/config/create-plan">Tạo plan</SubNavLink>}
+                    </nav>
+                  </AccordionContent>
+                </AccordionItem></Accordion>
+              )
             )}
-            <NavLink to="/documents" icon={FolderKanban} isCollapsed={isCollapsed}>Tài liệu</NavLink>
-            <NavLink to="/reports" icon={FilePieChart} isCollapsed={isCollapsed}>Báo cáo</NavLink>
-            {isSuperAdmin && <NavLink to="/account" icon={Users} isCollapsed={isCollapsed}>Tài khoản</NavLink>}
-            {isSuperAdmin && <NavLink to="/settings" icon={Settings} isCollapsed={isCollapsed}>Settings</NavLink>}
+
+            {hasPermission('documents') && <NavLink to="/documents" icon={FolderKanban} isCollapsed={isCollapsed}>Tài liệu</NavLink>}
+            {hasPermission('reports') && <NavLink to="/reports" icon={FilePieChart} isCollapsed={isCollapsed}>Báo cáo</NavLink>}
+            {hasPermission('account') && <NavLink to="/account" icon={Users} isCollapsed={isCollapsed}>Tài khoản</NavLink>}
+            {hasPermission('settings') && <NavLink to="/settings" icon={Settings} isCollapsed={isCollapsed}>Settings</NavLink>}
           </nav>
         </div>
         <div className="border-t border-gray-200 p-4">

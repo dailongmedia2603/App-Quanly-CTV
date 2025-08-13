@@ -127,6 +127,7 @@ const Income = () => {
   const [loadingAll, setLoadingAll] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCollaboratorId, setSelectedCollaboratorId] = useState('all');
 
   // Dialog states
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
@@ -199,15 +200,22 @@ const Income = () => {
     fetchAllContractsAndUsers();
   }, [user, isSuperAdmin]);
 
+  const collaboratorFilteredContracts = useMemo(() => {
+    if (!isSuperAdmin || selectedCollaboratorId === 'all') {
+        return allContracts;
+    }
+    return allContracts.filter(contract => contract.user_id === selectedCollaboratorId);
+  }, [allContracts, selectedCollaboratorId, isSuperAdmin]);
+
   const monthlyContracts = useMemo(() => {
-    if (!allContracts) return [];
+    if (!collaboratorFilteredContracts) return [];
     const from = startOfMonth(selectedDate);
     const to = endOfMonth(selectedDate);
-    return allContracts.filter(contract => {
+    return collaboratorFilteredContracts.filter(contract => {
         const contractStartDate = new Date(contract.start_date);
         return contractStartDate >= from && contractStartDate <= to;
     });
-  }, [allContracts, selectedDate]);
+  }, [collaboratorFilteredContracts, selectedDate]);
 
   const monthlyStats = useMemo(() => {
     const totalContractValue = monthlyContracts.reduce((acc, contract) => acc + contract.contract_value, 0);
@@ -235,16 +243,16 @@ const Income = () => {
   }, [monthlyContracts]);
 
   const allContractsStats = useMemo(() => {
-    const total = allContracts.length;
-    const ongoing = allContracts.filter(c => c.status === 'ongoing').length;
-    const completed = allContracts.filter(c => c.status === 'completed').length;
-    const thisMonth = allContracts.filter(c => new Date(c.created_at) >= startOfMonth(new Date())).length;
+    const total = collaboratorFilteredContracts.length;
+    const ongoing = collaboratorFilteredContracts.filter(c => c.status === 'ongoing').length;
+    const completed = collaboratorFilteredContracts.filter(c => c.status === 'completed').length;
+    const thisMonth = collaboratorFilteredContracts.filter(c => new Date(c.created_at) >= startOfMonth(new Date())).length;
     return { total, ongoing, completed, thisMonth };
-  }, [allContracts]);
+  }, [collaboratorFilteredContracts]);
 
   const filteredContracts = useMemo(() => {
-    return allContracts.filter(c => c.project_name.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [allContracts, searchTerm]);
+    return collaboratorFilteredContracts.filter(c => c.project_name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [collaboratorFilteredContracts, searchTerm]);
 
   const handleMonthChange = (direction: 'prev' | 'next') => {
     setSelectedDate(currentDate => direction === 'prev' ? subMonths(currentDate, 1) : addMonths(currentDate, 1));
@@ -367,10 +375,26 @@ const Income = () => {
             <TabsTrigger value="income" className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-l-md"><Wallet className="h-4 w-4" /><span>Thu nhập</span></TabsTrigger>
             <TabsTrigger value="contracts" className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-r-md"><Handshake className="h-4 w-4" /><span>Hợp đồng</span></TabsTrigger>
           </TabsList>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" size="icon" onClick={() => handleMonthChange('prev')}><ChevronLeft className="h-4 w-4" /></Button>
-            <span className="text-lg font-semibold w-32 text-center capitalize">{format(selectedDate, 'MMMM yyyy', { locale: vi })}</span>
-            <Button variant="outline" size="icon" onClick={() => handleMonthChange('next')}><ChevronRight className="h-4 w-4" /></Button>
+          <div className="flex items-center space-x-4">
+            {isSuperAdmin && (
+              <Select value={selectedCollaboratorId} onValueChange={setSelectedCollaboratorId}>
+                <SelectTrigger className="w-[220px]">
+                  <UsersIcon className="h-4 w-4 mr-2 text-gray-500" />
+                  <SelectValue placeholder="Lọc theo cộng tác viên" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả cộng tác viên</SelectItem>
+                  {allUsers.map(user => (
+                    <SelectItem key={user.id} value={user.id}>{user.email}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="icon" onClick={() => handleMonthChange('prev')}><ChevronLeft className="h-4 w-4" /></Button>
+              <span className="text-lg font-semibold w-32 text-center capitalize">{format(selectedDate, 'MMMM yyyy', { locale: vi })}</span>
+              <Button variant="outline" size="icon" onClick={() => handleMonthChange('next')}><ChevronRight className="h-4 w-4" /></Button>
+            </div>
           </div>
         </div>
 

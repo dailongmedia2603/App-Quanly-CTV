@@ -105,14 +105,23 @@ serve(async (req) => {
     let documentContent = "Không có tài liệu tham khảo.";
     const { data: documents, error: documentsError } = await supabase
         .from('documents')
-        .select('content')
+        .select('title, ai_prompt, content')
         .eq('service_id', serviceId);
     
     if (documentsError) {
         console.error("Error fetching documents for prompt:", documentsError);
     } else if (documents && documents.length > 0) {
         documentContent = documents
-            .map(doc => doc.content)
+            .map(doc => {
+                let docString = `Tên tài liệu: ${doc.title}`;
+                if (doc.ai_prompt) {
+                    docString += `\nYêu cầu AI khi đọc: ${doc.ai_prompt}`;
+                }
+                if (doc.content) {
+                    docString += `\nNội dung chi tiết:\n${doc.content}`;
+                }
+                return docString;
+            })
             .filter(Boolean)
             .join('\n\n---\n\n');
     }

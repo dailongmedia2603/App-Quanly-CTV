@@ -38,6 +38,12 @@ interface Service {
   description: string | null;
 }
 
+interface PostType {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
 const cleanAiResponseForDisplay = (rawText: string): string => {
   if (!rawText) return '';
   let text = rawText.trim();
@@ -189,7 +195,11 @@ const CreatePost = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [selectedServiceId, setSelectedServiceId] = useState('');
-  const [postType, setPostType] = useState('');
+  
+  const [postTypes, setPostTypes] = useState<PostType[]>([]);
+  const [loadingPostTypes, setLoadingPostTypes] = useState(true);
+  const [selectedPostTypeId, setSelectedPostTypeId] = useState('');
+
   const [industry, setIndustry] = useState('');
   const [direction, setDirection] = useState('');
 
@@ -216,13 +226,31 @@ const CreatePost = () => {
       }
       setLoadingServices(false);
     };
+
+    const fetchPostTypes = async () => {
+      setLoadingPostTypes(true);
+      const { data, error } = await supabase
+        .from('document_post_types')
+        .select('id, name, description')
+        .order('name', { ascending: true });
+      
+      if (error) {
+        showError("Không thể tải danh sách dạng bài.");
+      } else {
+        setPostTypes(data as PostType[]);
+      }
+      setLoadingPostTypes(false);
+    };
+
     fetchServices();
+    fetchPostTypes();
   }, []);
 
   const handleGeneratePost = async (isRegeneration = false) => {
     const selectedService = services.find(s => s.id === selectedServiceId);
+    const selectedPostType = postTypes.find(pt => pt.id === selectedPostTypeId);
 
-    if (!selectedService || !postType || !industry) {
+    if (!selectedService || !selectedPostType || !industry) {
       showError("Vui lòng điền đầy đủ các trường Dịch vụ, Dạng bài và Ngành.");
       return;
     }
@@ -231,11 +259,12 @@ const CreatePost = () => {
     const toastId = showLoading(isRegeneration ? "Đang tạo lại bài viết..." : "AI đang sáng tạo, vui lòng chờ...");
 
     const serviceForPrompt = `${selectedService.name}${selectedService.description ? ` (Mô tả: ${selectedService.description})` : ''}`;
+    const postTypeForPrompt = `${selectedPostType.name}${selectedPostType.description ? ` (Mô tả: ${selectedPostType.description})` : ''}`;
 
     const { data, error } = await supabase.functions.invoke('generate-post', {
       body: {
         service: serviceForPrompt,
-        postType,
+        postType: postTypeForPrompt,
         industry,
         direction,
         ...(isRegeneration && { originalPost: generatedPost, regenerateDirection })
@@ -308,13 +337,18 @@ const CreatePost = () => {
               </Select>
             </FormInput>
             <FormInput icon={FileText} label="Dạng bài">
-              <Select value={postType} onValueChange={setPostType}>
+              <Select value={selectedPostTypeId} onValueChange={setSelectedPostTypeId}>
                 <SelectTrigger><SelectValue placeholder="Chọn dạng bài" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Giới thiệu dịch vụ">Giới thiệu dịch vụ</SelectItem>
-                  <SelectItem value="Chia sẻ kiến thức kèm PR">Chia sẻ kiến thức kèm PR</SelectItem>
-                  <SelectItem value="Kể chuyện">Kể chuyện</SelectItem>
-                  <SelectItem value="Khuyến mãi">Khuyến mãi</SelectItem>
+                  {loadingPostTypes ? (
+                    <SelectItem value="loading" disabled>Đang tải...</SelectItem>
+                  ) : (
+                    postTypes.map(postType => (
+                      <SelectItem key={postType.id} value={postType.id}>
+                        {postType.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </FormInput>

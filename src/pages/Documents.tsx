@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookText, Tags, Briefcase } from "lucide-react";
-import ServicesTab from "@/components/ServicesTab";
+import ServicesTab from "@/components/documents/ServicesTab";
+import PostTypesTab from "@/components/documents/PostTypesTab";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Documents = () => {
@@ -41,14 +42,7 @@ const Documents = () => {
           <ServicesTab />
         </TabsContent>
         <TabsContent value="post_types" className="pt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Đang phát triển</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>Chức năng quản lý dạng bài sẽ sớm được ra mắt.</p>
-            </CardContent>
-          </Card>
+          <PostTypesTab />
         </TabsContent>
       </Tabs>
     </div>

@@ -107,7 +107,13 @@ serve(async (req) => {
             .join('\n\n---\n\n');
     }
 
-    let finalPrompt = templateData.prompt
+    let promptText = templateData.prompt;
+
+    // **FIX:** Remove old, unsupported placeholders to prevent errors
+    promptText = promptText.replace(/\[cảm xúc\]/gi, '');
+    promptText = promptText.replace(/\[mục tiêu comment\]/gi, '');
+
+    let finalPrompt = promptText
         .replace(/\[dịch vụ\]/gi, serviceForPrompt)
         .replace(/\[nội dung gốc\]/gi, originalPostContent)
         .replace(/\[biên tài liệu\]/gi, documentContent);

@@ -78,7 +78,6 @@ serve(async (req) => {
             .join('\n\n---\n\n');
     }
 
-    // Tách tin nhắn cuối cùng của người dùng ra
     const latestUserMessage = messages[messages.length - 1].content;
     const historyMessages = messages.slice(0, -1);
 
@@ -87,8 +86,6 @@ serve(async (req) => {
     ).join('\n');
 
     let promptText = templateData.prompt;
-
-    // Clean unsupported variables to prevent errors
     promptText = promptText.replace(/\[câu hỏi khách hàng\]/gi, '');
     promptText = promptText.replace(/\[sản phẩm liên quan\]/gi, '');
     promptText = promptText.replace(/\[thông tin thêm\]/gi, '');
@@ -102,10 +99,34 @@ serve(async (req) => {
     const genAI = new GoogleGenerativeAI(apiKeys.gemini_api_key);
     const model = genAI.getGenerativeModel({ model: apiKeys.gemini_model });
 
-    const result = await model.generateContent(finalPrompt);
-    const aiResponse = result.response.text();
+    const MAX_RETRIES = 3;
+    let attempt = 0;
+    let aiResponse = '';
+    let success = false;
 
-    // Save the new AI message to the database
+    while (attempt < MAX_RETRIES && !success) {
+        attempt++;
+        try {
+            const result = await model.generateContent(finalPrompt);
+            const responseText = result.response.text();
+            
+            if (responseText && responseText.trim().length > 0) {
+                aiResponse = responseText;
+                success = true;
+            } else {
+                console.log(`Attempt ${attempt} failed: AI returned empty response.`);
+                if (attempt >= MAX_RETRIES) {
+                    throw new Error("AI không phản hồi sau nhiều lần thử.");
+                }
+            }
+        } catch (e) {
+            console.error(`Attempt ${attempt} failed with error:`, e.message);
+            if (attempt >= MAX_RETRIES) {
+                throw new Error(`Tạo nội dung thất bại sau ${MAX_RETRIES} lần thử. Lỗi cuối cùng: ${e.message}`);
+            }
+        }
+    }
+
     const { error: insertMsgError } = await supabase.from('consulting_messages').insert({
         session_id: sessionId,
         role: 'assistant',
@@ -113,7 +134,6 @@ serve(async (req) => {
     });
     if (insertMsgError) throw insertMsgError;
 
-    // Log the generation
     await supabase.from('ai_generation_logs').insert({
         user_id: user.id,
         template_type: 'consulting',

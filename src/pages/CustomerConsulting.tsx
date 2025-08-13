@@ -192,7 +192,9 @@ const CustomerConsulting = () => {
   };
 
   const handleCopy = (content: string) => {
-    navigator.clipboard.writeText(content).then(() => {
+    // Remove bold markers (like **) but keep the content and list markers.
+    const plainText = content.replace(/(\*\*|__)(.*?)\1/g, '$2');
+    navigator.clipboard.writeText(plainText).then(() => {
         showSuccess("Đã sao chép nội dung!");
     }).catch(err => {
         showError("Không thể sao chép.");
@@ -306,21 +308,21 @@ const CustomerConsulting = () => {
                       {messages.map((msg, index) => (
                         <div key={index} className={cn("flex flex-col gap-1", msg.role === 'user' ? 'items-end' : 'items-start')}>
                           <p className="text-xs text-gray-500 px-1">{msg.role === 'user' ? 'Khách hàng nhắn' : 'Bạn sẽ trả lời'}</p>
-                          <div className={cn("flex items-start gap-3 w-full", msg.role === 'user' ? 'justify-end' : '')}>
+                          <div className={cn("flex items-center gap-2 w-full group", msg.role === 'user' ? 'justify-end' : 'justify-start')}>
                             {msg.role === 'assistant' && <div className="flex-shrink-0 h-8 w-8 rounded-full bg-brand-orange flex items-center justify-center text-white"><Bot className="h-5 w-5" /></div>}
-                            <div className={cn("max-w-lg p-3 rounded-lg group relative", msg.role === 'user' ? 'bg-brand-orange-light text-gray-800' : 'bg-white border')}>
+                            <div className={cn("max-w-lg p-3 rounded-lg", msg.role === 'user' ? 'bg-brand-orange-light text-gray-800' : 'bg-white border')}>
                               <div className="prose prose-sm max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown></div>
-                              {msg.role === 'assistant' && (
-                                <div className="absolute top-1 right-1 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleCopy(msg.content)}>
-                                        <Copy className="h-4 w-4" />
+                            </div>
+                            {msg.role === 'assistant' && (
+                                <div className="flex flex-col self-center space-y-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 bg-gray-100 hover:bg-gray-200" onClick={() => handleCopy(msg.content)}>
+                                        <Copy className="h-4 w-4 text-gray-600" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRegenerateClick(msg)}>
-                                        <RefreshCw className="h-4 w-4" />
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 bg-orange-100 hover:bg-orange-200" onClick={() => handleRegenerateClick(msg)}>
+                                        <RefreshCw className="h-4 w-4 text-brand-orange" />
                                     </Button>
                                 </div>
-                              )}
-                            </div>
+                            )}
                             {msg.role === 'user' && <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center"><UserIcon className="h-5 w-5" /></div>}
                           </div>
                         </div>

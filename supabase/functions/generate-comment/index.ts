@@ -18,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { serviceId, originalPostContent, sentiment, commentGoal } = await req.json();
+    const { serviceId, originalPostContent, originalComment, regenerateDirection } = await req.json();
 
     if (!serviceId) throw new Error("Service ID is required.");
     if (!originalPostContent) throw new Error("Original post content is required.");
@@ -78,9 +78,11 @@ serve(async (req) => {
     let finalPrompt = templateData.prompt
         .replace(/\[dịch vụ\]/gi, serviceForPrompt)
         .replace(/\[nội dung gốc\]/gi, originalPostContent)
-        .replace(/\[cảm xúc\]/gi, sentiment || 'trung tính')
-        .replace(/\[mục tiêu comment\]/gi, commentGoal || 'Không có')
         .replace(/\[biên tài liệu\]/gi, documentContent);
+
+    if (regenerateDirection) {
+        finalPrompt = `Dựa trên comment gốc sau:\n---\n${originalComment}\n---\nHãy tạo lại comment theo định hướng mới này: "${regenerateDirection}".\n\n${finalPrompt}`;
+    }
 
     finalPrompt += "\n\nQUAN TRỌNG: Chỉ trả về nội dung của comment, không thêm bất kỳ lời dẫn hay giải thích nào khác.";
 

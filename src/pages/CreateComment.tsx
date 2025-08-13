@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
-import { Briefcase, MessageSquare, Wand2, Sparkles, Copy, History, ArrowLeft } from 'lucide-react';
+import { Briefcase, MessageSquare, Wand2, Sparkles, Copy, History, ArrowLeft, RefreshCw } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -142,6 +143,8 @@ const CreateComment = () => {
   const [originalPostContent, setOriginalPostContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedComment, setGeneratedComment] = useState('');
+  const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
+  const [regenerateDirection, setRegenerateDirection] = useState('');
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -161,18 +164,20 @@ const CreateComment = () => {
     fetchServices();
   }, []);
 
-  const handleGenerateComment = async () => {
+  const handleGenerateComment = async (isRegeneration = false) => {
     if (!selectedServiceId || !originalPostContent.trim()) {
       showError("Vui lòng chọn dịch vụ và nhập nội dung bài viết gốc.");
       return;
     }
     setIsGenerating(true);
-    const toastId = showLoading("AI đang nghĩ comment hay...");
+    if (isRegeneration) setIsRegenerateDialogOpen(false);
+    const toastId = showLoading(isRegeneration ? "Đang tạo lại comment..." : "AI đang nghĩ comment hay...");
 
     const { data, error } = await supabase.functions.invoke('generate-comment', {
       body: {
         serviceId: selectedServiceId,
         originalPostContent: originalPostContent,
+        ...(isRegeneration && { originalComment: generatedComment, regenerateDirection })
       }
     });
 
@@ -182,6 +187,7 @@ const CreateComment = () => {
     } else {
       showSuccess("Tạo comment thành công!");
       setGeneratedComment(data.comment);
+      setRegenerateDirection('');
     }
     setIsGenerating(false);
   };
@@ -249,7 +255,7 @@ const CreateComment = () => {
             </FormInput>
           </CardContent>
           <CardFooter>
-            <Button className="w-full bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={handleGenerateComment} disabled={isGenerating}>
+            <Button className="w-full bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={() => handleGenerateComment(false)} disabled={isGenerating}>
               <Wand2 className="mr-2 h-4 w-4" />
               {isGenerating ? 'Đang tạo...' : 'Tạo Comment'}
             </Button>
@@ -266,7 +272,29 @@ const CreateComment = () => {
               <CardDescription>Đây là bình luận do AI tạo ra.</CardDescription>
             </div>
             {generatedComment && !isGenerating && (
-              <Button variant="outline" size="sm" onClick={handleCopy}><Copy className="h-4 w-4 mr-2" />Sao chép</Button>
+              <div className="flex items-center space-x-2">
+                <Button variant="outline" size="sm" onClick={handleCopy}><Copy className="h-4 w-4 mr-2" />Sao chép</Button>
+                <Dialog open={isRegenerateDialogOpen} onOpenChange={setIsRegenerateDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline" className="bg-brand-orange-light text-brand-orange border-brand-orange hover:bg-orange-200 hover:text-brand-orange">
+                        <RefreshCw className="h-4 w-4 mr-2" />Tạo lại
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Tạo lại Comment</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <Label htmlFor="regenerate-direction">Định hướng mới (nếu có)</Label>
+                      <Textarea id="regenerate-direction" placeholder="VD: Viết ngắn gọn hơn, thêm yếu tố hài hước..." value={regenerateDirection} onChange={e => setRegenerateDirection(e.target.value)} className="mt-2" />
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsRegenerateDialogOpen(false)}>Hủy</Button>
+                      <Button onClick={() => handleGenerateComment(true)} className="bg-brand-orange hover:bg-brand-orange/90 text-white">Tạo lại</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
             )}
           </CardHeader>
           <CardContent>

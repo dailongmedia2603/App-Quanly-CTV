@@ -28,10 +28,10 @@ serve(async (req) => {
     });
     if (usersError) throw usersError;
 
-    // 2. Get all available roles
+    // 2. Get all available roles with permissions
     const { data: allRoles, error: rolesError } = await supabaseAdmin
       .from('roles')
-      .select('id, name');
+      .select('id, name, description, permissions');
     if (rolesError) throw rolesError;
 
     // 3. Get all user-role assignments

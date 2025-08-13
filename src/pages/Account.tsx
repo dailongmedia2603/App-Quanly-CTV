@@ -16,45 +16,22 @@ import ReportWidget from "@/components/ReportWidget";
 import { showError, showLoading, showSuccess, dismissToast } from "@/utils/toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Users, UserCheck, UserX, Search, Plus, MoreHorizontal, Trash2, Ban, CheckCircle, ShieldCheck } from "lucide-react";
+import { Users, UserCheck, UserX, Search, Plus, MoreHorizontal, Trash2, Ban, CheckCircle, ShieldCheck, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { permissionConfig, actionNames } from "@/lib/permissions";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Role {
   id: string;
   name: string;
+  description: string | null;
+  permissions: any;
 }
 
 interface AdminUser extends User {
   banned_until?: string;
   roles: string[];
 }
-
-const rolePermissions: Record<string, { description: string; permissions: { category: string; items: { text: string; allowed: boolean }[] }[] }> = {
-  'Super Admin': {
-    description: 'Quyền cao nhất, toàn quyền kiểm soát hệ thống.',
-    permissions: [
-      { category: 'Quản lý Người dùng', items: [ { text: 'Toàn quyền truy cập, quản lý và phân quyền cho tất cả người dùng', allowed: true } ] },
-      { category: 'Quản lý Dữ liệu', items: [ { text: 'Toàn quyền Xem, Sửa, Xóa trên dữ liệu của tất cả người dùng (Chiến dịch, Nguồn, Báo cáo)', allowed: true } ] }
-    ]
-  },
-  'Admin': {
-    description: 'Quản lý nội dung chính nhưng không quản lý người dùng.',
-    permissions: [
-      { category: 'Quản lý Người dùng', items: [ { text: 'Không thể truy cập trang "Tài khoản"', allowed: false } ] },
-      { category: 'Quản lý Dữ liệu', items: [ { text: 'Toàn quyền Xem, Sửa, Xóa trên dữ liệu của tất cả người dùng', allowed: true } ] }
-    ]
-  },
-  'User': {
-    description: 'Quyền cơ bản, chỉ thao tác trên dữ liệu của chính mình.',
-    permissions: [
-      { category: 'Quản lý Người dùng', items: [ { text: 'Không thể truy cập trang "Tài khoản"', allowed: false } ] },
-      { category: 'Quản lý Dữ liệu', items: [
-          { text: 'Chỉ có thể Xem, Sửa, Xóa trên dữ liệu do chính mình tạo', allowed: true },
-          { text: 'Không thể xem dữ liệu của người dùng khác', allowed: false }
-      ]}
-    ]
-  }
-};
 
 const Account = () => {
   const { roles } = useAuth();
@@ -78,6 +55,7 @@ const Account = () => {
   const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null);
   const [userToEditRoles, setUserToEditRoles] = useState<AdminUser | null>(null);
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
+  const [permissionUpdates, setPermissionUpdates] = useState<Record<string, any>>({});
 
   const fetchUsersAndRoles = async () => {
     setLoading(true);
@@ -151,10 +129,11 @@ const Account = () => {
     setUserToEditRoles(user);
     const currentUserRoleIds = allRoles.filter(role => user.roles.includes(role.name)).map(role => role.id);
     setSelectedRoleIds(currentUserRoleIds);
+    setPermissionUpdates({});
     setIsRolesDialogOpen(true);
   };
 
-  const handleUpdateRoles = async () => {
+  const handleUpdateUserRoles = async () => {
     if (!userToEditRoles) return;
     setIsSubmitting(true);
     const toastId = showLoading("Đang cập nhật quyền...");
@@ -168,6 +147,52 @@ const Account = () => {
     }
     setIsRolesDialogOpen(false);
     setUserToEditRoles(null);
+    setIsSubmitting(false);
+  };
+
+  const handlePermissionChange = (roleId: string, featureKey: string, action: string, checked: boolean) => {
+    setPermissionUpdates(prev => {
+      const newPermissions = { ...(prev[roleId] || allRoles.find(r => r.id === roleId)?.permissions || {}) };
+      if (newPermissions.super_admin) {
+        // Convert from super_admin flag to full permission object
+        const fullPermissions: Record<string, string[]> = {};
+        permissionConfig.forEach(group => {
+          fullPermissions[group.key] = group.actions;
+        });
+        Object.assign(newPermissions, fullPermissions);
+        delete newPermissions.super_admin;
+      }
+
+      const featureActions = newPermissions[featureKey] || [];
+      if (checked) {
+        if (!featureActions.includes(action)) {
+          newPermissions[featureKey] = [...featureActions, action];
+        }
+      } else {
+        newPermissions[featureKey] = featureActions.filter((a: string) => a !== action);
+      }
+      return { ...prev, [roleId]: newPermissions };
+    });
+  };
+
+  const handleSaveRolePermissions = async (roleId: string) => {
+    const permissions = permissionUpdates[roleId];
+    if (!permissions) return;
+    setIsSubmitting(true);
+    const toastId = showLoading("Đang lưu quyền cho vai trò...");
+    const { error } = await supabase.functions.invoke("admin-update-role", { body: { role_id: roleId, permissions } });
+    dismissToast(toastId);
+    if (error) {
+      showError(`Lưu thất bại: ${error.message}`);
+    } else {
+      showSuccess("Lưu quyền thành công!");
+      setPermissionUpdates(prev => {
+        const newUpdates = { ...prev };
+        delete newUpdates[roleId];
+        return newUpdates;
+      });
+      fetchUsersAndRoles();
+    }
     setIsSubmitting(false);
   };
 
@@ -248,42 +273,74 @@ const Account = () => {
       </AlertDialog>
 
       <Dialog open={isRolesDialogOpen} onOpenChange={setIsRolesDialogOpen}>
-        <DialogContent className="sm:max-w-lg bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
-          <DialogHeader><DialogTitle>Phân quyền cho tài khoản</DialogTitle><DialogDescription>Chọn các quyền bạn muốn gán cho <span className="font-bold">{userToEditRoles?.email}</span>.</DialogDescription></DialogHeader>
-          <Accordion type="single" collapsible className="w-full py-4">
-            {allRoles.map(role => (
-              <AccordionItem value={role.id} key={role.id} className="border-b">
-                <AccordionTrigger className="flex w-full items-center space-x-3 p-2 rounded-md hover:bg-orange-50 hover:no-underline">
-                  <Checkbox
-                    id={`role-${role.id}`}
-                    checked={selectedRoleIds.includes(role.id)}
-                    onCheckedChange={(checked) => {
-                      setSelectedRoleIds(prev => checked ? [...prev, role.id] : prev.filter(id => id !== role.id));
-                    }}
-                    onClick={(e) => e.stopPropagation()} // Prevent accordion from toggling when clicking checkbox
-                  />
-                  <Label htmlFor={`role-${role.id}`} className="font-medium text-base cursor-pointer flex-1 text-left">{role.name}</Label>
-                </AccordionTrigger>
-                <AccordionContent className="pt-2 pb-4 pl-12 pr-4 text-sm">
-                  <p className="italic text-gray-600 mb-3">{rolePermissions[role.name].description}</p>
-                  {rolePermissions[role.name].permissions.map((cat, catIndex) => (
-                    <div key={catIndex} className="mt-2">
-                      <h4 className="font-semibold text-gray-800">{cat.category}:</h4>
-                      <ul className="list-none p-0 mt-1 space-y-1">
-                        {cat.items.map((item, itemIndex) => (
-                          <li key={itemIndex} className="flex items-start">
-                            <span className="mr-2 mt-1 text-xs">{item.allowed ? '✅' : '❌'}</span>
-                            <span className="text-gray-700">{item.text}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
+        <DialogContent className="sm:max-w-4xl bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
+          <DialogHeader><DialogTitle>Phân quyền cho tài khoản</DialogTitle><DialogDescription>Chọn các vai trò bạn muốn gán cho <span className="font-bold">{userToEditRoles?.email}</span>. Bạn cũng có thể chỉnh sửa quyền của từng vai trò tại đây.</DialogDescription></DialogHeader>
+          <Accordion type="multiple" className="w-full py-4 space-y-2">
+            {allRoles.map(role => {
+              const currentPermissions = permissionUpdates[role.id] || role.permissions || {};
+              const isSuperAdminRole = role.name === 'Super Admin' || currentPermissions.super_admin;
+              const hasPermissionChanges = !!permissionUpdates[role.id];
+
+              return (
+                <AccordionItem value={role.id} key={role.id} className="border border-orange-100 rounded-lg bg-white/50">
+                  <div className="flex w-full items-center space-x-3 p-2 rounded-md hover:bg-orange-50">
+                    <Checkbox
+                      id={`role-${role.id}`}
+                      checked={selectedRoleIds.includes(role.id)}
+                      onCheckedChange={(checked) => {
+                        setSelectedRoleIds(prev => checked ? [...prev, role.id] : prev.filter(id => id !== role.id));
+                      }}
+                    />
+                    <AccordionTrigger className="flex-1 p-0 hover:no-underline">
+                      <Label htmlFor={`role-${role.id}`} className="font-medium text-base cursor-pointer flex-1 text-left">{role.name}</Label>
+                    </AccordionTrigger>
+                  </div>
+                  <AccordionContent className="pt-2 pb-4 px-4 text-sm">
+                    <p className="italic text-gray-600 mb-3">{role.description}</p>
+                    {isSuperAdminRole ? (
+                      <div className="flex items-center space-x-2 p-4 bg-blue-50 border border-blue-200 text-blue-800 rounded-md">
+                        <Info className="h-5 w-5" />
+                        <span>Vai trò Super Admin có tất cả các quyền và không thể chỉnh sửa.</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-4">
+                          {permissionConfig.map(group => (
+                            <div key={group.key} className="space-y-2">
+                              <h4 className="font-semibold text-gray-800 border-b pb-1">{group.name}</h4>
+                              <div className="space-y-1">
+                                {group.actions.map(action => {
+                                  const isChecked = currentPermissions[group.key]?.includes(action);
+                                  return (
+                                    <div key={action} className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`${role.id}-${group.key}-${action}`}
+                                        checked={isChecked}
+                                        onCheckedChange={(checked) => handlePermissionChange(role.id, group.key, action, checked as boolean)}
+                                      />
+                                      <Label htmlFor={`${role.id}-${group.key}-${action}`} className="font-normal text-gray-700">{actionNames[action]}</Label>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {hasPermissionChanges && (
+                          <div className="flex justify-end pt-2">
+                            <Button size="sm" onClick={() => handleSaveRolePermissions(role.id)} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700 text-white">
+                              {isSubmitting ? "Đang lưu..." : `Lưu quyền cho vai trò ${role.name}`}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
           </Accordion>
-          <DialogFooter><Button variant="outline" onClick={() => setIsRolesDialogOpen(false)}>Hủy</Button><Button onClick={handleUpdateRoles} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setIsRolesDialogOpen(false)}>Hủy</Button><Button onClick={handleUpdateUserRoles} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? "Đang lưu..." : "Lưu vai trò cho User"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

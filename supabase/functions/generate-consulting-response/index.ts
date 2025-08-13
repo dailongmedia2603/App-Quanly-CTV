@@ -79,7 +79,7 @@ serve(async (req) => {
     }
 
     const chatHistory = messages.map((msg: Message) => 
-        `${msg.role === 'user' ? 'Khách hàng' : 'Tư vấn viên'}: ${msg.content}`
+        `${msg.role === 'user' ? 'Khách hàng nhắn' : 'Bạn sẽ trả lời'}: ${msg.content}`
     ).join('\n');
 
     let finalPrompt = templateData.prompt

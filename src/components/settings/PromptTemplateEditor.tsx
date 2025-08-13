@@ -27,9 +27,8 @@ const variableConfig = {
     { name: 'Biên tài liệu', value: '[biên tài liệu]' },
   ],
   consulting: [
-    { name: 'Câu hỏi khách hàng', value: '[câu hỏi khách hàng]' },
-    { name: 'Sản phẩm liên quan', value: '[sản phẩm liên quan]' },
-    { name: 'Thông tin thêm', value: '[thông tin thêm]' },
+    { name: 'Dịch vụ', value: '[dịch vụ]' },
+    { name: 'Lịch sử trò chuyện', value: '[lịch sử trò chuyện]' },
     { name: 'Biên tài liệu', value: '[biên tài liệu]' },
   ],
 };

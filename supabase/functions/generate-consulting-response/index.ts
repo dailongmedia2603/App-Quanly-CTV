@@ -82,7 +82,14 @@ serve(async (req) => {
         `${msg.role === 'user' ? 'Khách hàng nhắn' : 'Bạn sẽ trả lời'}: ${msg.content}`
     ).join('\n');
 
-    let finalPrompt = templateData.prompt
+    let promptText = templateData.prompt;
+
+    // Clean unsupported variables to prevent errors
+    promptText = promptText.replace(/\[câu hỏi khách hàng\]/gi, '');
+    promptText = promptText.replace(/\[sản phẩm liên quan\]/gi, '');
+    promptText = promptText.replace(/\[thông tin thêm\]/gi, '');
+
+    let finalPrompt = promptText
         .replace(/\[dịch vụ\]/gi, serviceForPrompt)
         .replace(/\[lịch sử trò chuyện\]/gi, chatHistory)
         .replace(/\[biên tài liệu\]/gi, documentContent);

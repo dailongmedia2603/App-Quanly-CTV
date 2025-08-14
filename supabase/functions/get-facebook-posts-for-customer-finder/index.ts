@@ -21,20 +21,33 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch from Bao_cao_Facebook for all campaigns
-    const { data: facebookReports, error: facebookError } = await supabaseAdmin
-      .from('Bao_cao_Facebook')
-      .select('id, campaign_id, posted_at, keywords_found, ai_evaluation, sentiment, source_url, scanned_at, content, suggested_comment');
+    // Fetch from Bao_cao_tong_hop for all Facebook-sourced posts
+    const { data: reports, error: reportError } = await supabaseAdmin
+      .from('"Bao_cao_tong_hop"')
+      .select(`
+        id, 
+        campaign_id, 
+        posted_at, 
+        keywords_found, 
+        ai_evaluation, 
+        sentiment, 
+        source_url, 
+        scanned_at, 
+        description, 
+        suggested_comment,
+        identified_service_id,
+        service:document_services ( name )
+      `)
+      .eq('source_type', 'Facebook');
 
-    if (facebookError) {
-      console.error("Error fetching from Bao_cao_Facebook:", facebookError);
-      throw new Error(`Lỗi khi lấy báo cáo Facebook: ${facebookError.message}`);
+    if (reportError) {
+      console.error("Error fetching from Bao_cao_tong_hop:", reportError);
+      throw new Error(`Lỗi khi lấy báo cáo: ${reportError.message}`);
     }
     
-    // Rename 'content' to 'description' to match the frontend type
-    const allData = (facebookReports || []).map(report => ({
+    const allData = (reports || []).map((report: any) => ({
       ...report,
-      description: report.content
+      identified_service_name: report.service?.name || null,
     }));
 
     // Sort by posted_at descending

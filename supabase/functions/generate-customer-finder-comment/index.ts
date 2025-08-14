@@ -172,7 +172,7 @@ serve(async (req) => {
 
     // 7. Save the comment and identified service to the database
     const { error: updateError } = await supabaseAdmin
-      .from('Bao_cao_tong_hop')
+      .from('"Bao_cao_tong_hop"')
       .update({ 
         suggested_comment: cleanedGeneratedComment,
         identified_service_id: matchedService.id 

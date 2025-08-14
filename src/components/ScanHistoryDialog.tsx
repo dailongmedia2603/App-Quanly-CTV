@@ -30,12 +30,38 @@ const DetailItem = ({ label, value }: { label: string, value: React.ReactNode })
   </div>
 );
 
-const formatApiResponse = (response: string) => {
-  try {
-    return JSON.stringify(JSON.parse(response), null, 2);
-  } catch (e) {
-    return response;
+const formatApiResponse = (response: any) => {
+  if (typeof response === 'string') {
+    try {
+      return JSON.stringify(JSON.parse(response), null, 2);
+    } catch (e) {
+      return response;
+    }
   }
+  if (typeof response === 'object' && response !== null) {
+    return JSON.stringify(response, null, 2);
+  }
+  return String(response);
+};
+
+const ApiCallResponseDetails = ({ response }: { response: any }) => {
+  if (typeof response !== 'object' || response === null) {
+    return <pre className="text-xs whitespace-pre-wrap break-all bg-gray-800 text-white p-2 rounded-md max-h-60 overflow-auto">{formatApiResponse(response)}</pre>;
+  }
+
+  return (
+    <div className="space-y-3 text-xs">
+      <div className="grid grid-cols-2 gap-2">
+        <DetailItem label="Số bài viết nhận được" value={<Badge variant="secondary">{response.posts_received}</Badge>} />
+        <DetailItem label="Còn trang tiếp theo" value={<Badge variant={response.has_next_page ? 'default' : 'secondary'} className={cn(response.has_next_page && 'bg-green-100 text-green-800')}>{response.has_next_page ? 'Có' : 'Không'}</Badge>} />
+      </div>
+      {response.error_message && <DetailItem label="Thông báo lỗi" value={<span className="text-red-600 font-mono">{response.error_message}</span>} />}
+      <div>
+        <p className="font-medium text-gray-500 mb-1">Xem trước dữ liệu thô</p>
+        <pre className="whitespace-pre-wrap break-all bg-gray-800 text-white p-2 rounded-md max-h-40 overflow-auto">{response.raw_preview}</pre>
+      </div>
+    </div>
+  );
 };
 
 export const ScanHistoryDialog = ({ isOpen, onOpenChange, logs, loading }: ScanHistoryDialogProps) => {
@@ -100,7 +126,7 @@ export const ScanHistoryDialog = ({ isOpen, onOpenChange, logs, loading }: ScanH
                                       </div>
                                     </AccordionTrigger>
                                     <AccordionContent className="p-3">
-                                      <pre className="text-xs whitespace-pre-wrap break-all bg-gray-800 text-white p-2 rounded-md max-h-60 overflow-auto">{formatApiResponse(call.response)}</pre>
+                                      <ApiCallResponseDetails response={call.response} />
                                     </AccordionContent>
                                   </AccordionItem>
                                 ))}

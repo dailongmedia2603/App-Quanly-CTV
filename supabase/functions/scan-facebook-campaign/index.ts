@@ -175,35 +175,37 @@ serve(async (req) => {
         const fbResponse = await fetch(url);
         const responseText = await fbResponse.text();
         
-        apiCallDetails.push({
+        let responseData;
+        let posts = [];
+        let apiCallLog = {
             url,
             status: fbResponse.status,
-            response: responseText.substring(0, 2000)
-        });
+            response: {
+                posts_received: 0,
+                has_next_page: false,
+                error_message: null as string | null,
+                raw_preview: responseText.substring(0, 500) + (responseText.length > 500 ? '...' : '')
+            }
+        };
 
-        if (!fbResponse.ok) {
-            console.error(`API server returned non-OK status for group ${groupId}: ${fbResponse.status} ${responseText}`);
-            continue;
-        }
-        
-        let responseData;
         try {
             responseData = JSON.parse(responseText);
+            if (responseData.data?.data) {
+                posts = responseData.data.data;
+            } else if (responseData.data) {
+                posts = responseData.data;
+            }
+            apiCallLog.response.posts_received = posts.length;
+            apiCallLog.response.has_next_page = !!(responseData.data?.paging?.next || responseData.paging?.next);
+            if (responseData.error) {
+                apiCallLog.response.error_message = responseData.error.message;
+            }
         } catch (e) {
+            apiCallLog.response.error_message = `Failed to parse JSON: ${e.message}`;
             console.error(`Failed to parse JSON response for group ${groupId}: ${e.message}`, responseText);
-            continue;
         }
-
-        let posts = [];
-        if (responseData.data?.data) {
-            posts = responseData.data.data;
-        } else if (responseData.data) {
-            posts = responseData.data;
-        } else {
-            const errorMessage = responseData.message || `API returned malformed data for group ${groupId}`;
-            console.error(errorMessage, JSON.stringify(responseData));
-            continue;
-        }
+        
+        apiCallDetails.push(apiCallLog);
 
         if (posts.length > 0) {
             allPostsData.push(...posts.map((post: any) => ({ ...post, campaign_id: campaign.id })));

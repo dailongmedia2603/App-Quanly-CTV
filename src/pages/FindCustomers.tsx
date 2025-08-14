@@ -79,14 +79,7 @@ const FindCustomers = () => {
 
   return (
     <>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Tìm khách hàng</h1>
-          <p className="text-gray-500 mt-1">
-            Xem và phân tích các bài viết thu thập được từ tất cả chiến dịch Facebook.
-          </p>
-        </div>
-
+      <div>
         <Card className="border-orange-200">
           <CardHeader>
             <CardTitle>Khách hàng tiềm năng ({reportData.length})</CardTitle>

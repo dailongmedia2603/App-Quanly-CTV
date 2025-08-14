@@ -21,11 +21,12 @@ interface RolesTabProps {
   loading: boolean;
   onUsersAndRolesUpdate: () => void;
   onEditRole: (role: Role) => void;
+  isSuperAdmin: boolean;
 }
 
 const PROTECTED_ROLES = ['Super Admin', 'Admin', 'User'];
 
-const RolesTab = ({ allRoles, loading, onUsersAndRolesUpdate, onEditRole }: RolesTabProps) => {
+const RolesTab = ({ allRoles, loading, onUsersAndRolesUpdate, onEditRole, isSuperAdmin }: RolesTabProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [permissionUpdates, setPermissionUpdates] = useState<Record<string, any>>({});
   
@@ -122,7 +123,7 @@ const RolesTab = ({ allRoles, loading, onUsersAndRolesUpdate, onEditRole }: Role
                     <p className="font-semibold text-base text-gray-800">{role.name}</p>
                     <p className="text-sm text-gray-500 font-normal">{role.description}</p>
                   </div>
-                  {!isProtected && (
+                  {isSuperAdmin && !isProtected && (
                     <div className="flex items-center space-x-1">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleEditRoleClick(role); }}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={(e) => { e.stopPropagation(); handleDeleteRoleClick(role); }}><Trash2 className="h-4 w-4" /></Button>

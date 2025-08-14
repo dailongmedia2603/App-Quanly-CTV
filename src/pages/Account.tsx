@@ -140,6 +140,7 @@ const Account = () => {
             loading={loading}
             onUsersAndRolesUpdate={fetchUsersAndRoles}
             onEditRole={handleEditRoleClick}
+            isSuperAdmin={isSuperAdmin}
           />
         </TabsContent>
       </Tabs>

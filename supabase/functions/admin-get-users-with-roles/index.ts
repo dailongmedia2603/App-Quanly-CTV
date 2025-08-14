@@ -40,8 +40,15 @@ serve(async (req) => {
       .select('user_id, role_id');
     if (userRolesError) throw userRolesError;
 
-    // 4. Map roles to users
-    const usersWithRoles = users.map(user => {
+    // 4. Get all profiles
+    const { data: profiles, error: profilesError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, first_name, last_name, phone');
+    if (profilesError) throw profilesError;
+    const profilesMap = new Map(profiles.map((p: any) => [p.id, p]));
+
+    // 5. Map roles and profiles to users
+    const usersWithDetails = users.map(user => {
       const assignedRoleIds = userRoles
         .filter(ur => ur.user_id === user.id)
         .map(ur => ur.role_id);
@@ -49,14 +56,19 @@ serve(async (req) => {
       const assignedRoleNames = allRoles
         .filter(role => assignedRoleIds.includes(role.id))
         .map(role => role.name);
+      
+      const userProfile = profilesMap.get(user.id) as any;
 
       return {
         ...user,
         roles: assignedRoleNames,
+        first_name: userProfile?.first_name || null,
+        last_name: userProfile?.last_name || null,
+        phone: userProfile?.phone || null,
       };
     });
 
-    return new Response(JSON.stringify({ users: usersWithRoles, allRoles }), {
+    return new Response(JSON.stringify({ users: usersWithDetails, allRoles }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

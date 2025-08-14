@@ -27,6 +27,9 @@ interface Role {
 interface AdminUser extends User {
   banned_until?: string;
   roles: string[];
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
 }
 
 interface UsersTabProps {
@@ -168,14 +171,17 @@ const UsersTab = ({ users, allRoles, loading, isSuperAdmin, onUsersAndRolesUpdat
 
       <div className="border border-orange-200 rounded-lg bg-white">
         <Table>
-          <TableHeader><TableRow className="bg-gray-50 hover:bg-gray-50"><TableHead>Tài khoản</TableHead><TableHead>Vai trò</TableHead><TableHead>Ngày tạo</TableHead><TableHead>Trạng thái</TableHead><TableHead className="text-right">Hành động</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow className="bg-gray-50 hover:bg-gray-50"><TableHead>Tài khoản</TableHead><TableHead>Họ và tên</TableHead><TableHead>Số điện thoại</TableHead><TableHead>Vai trò</TableHead><TableHead>Ngày tạo</TableHead><TableHead>Trạng thái</TableHead><TableHead className="text-right">Hành động</TableHead></TableRow></TableHeader>
           <TableBody>
-            {loading ? <TableRow><TableCell colSpan={5} className="text-center py-8">Đang tải dữ liệu...</TableCell></TableRow> : filteredUsers.length === 0 ? <TableRow><TableCell colSpan={5} className="text-center py-8">Không tìm thấy tài khoản nào.</TableCell></TableRow> : (
+            {loading ? <TableRow><TableCell colSpan={7} className="text-center py-8">Đang tải dữ liệu...</TableCell></TableRow> : filteredUsers.length === 0 ? <TableRow><TableCell colSpan={7} className="text-center py-8">Không tìm thấy tài khoản nào.</TableCell></TableRow> : (
               filteredUsers.map((user) => {
                 const isBanned = user.banned_until && new Date(user.banned_until) > new Date();
+                const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
                 return (
                   <TableRow key={user.id}>
                     <TableCell><div className="flex items-center space-x-3"><Avatar><AvatarImage src={user.user_metadata.avatar_url} /><AvatarFallback className="bg-brand-orange-light text-brand-orange">{getInitials(user.email || "")}</AvatarFallback></Avatar><span className="font-medium">{user.email}</span></div></TableCell>
+                    <TableCell>{fullName || <span className="text-gray-400 text-xs">Chưa có</span>}</TableCell>
+                    <TableCell>{user.phone || <span className="text-gray-400 text-xs">Chưa có</span>}</TableCell>
                     <TableCell><div className="flex flex-wrap gap-1">{user.roles.length > 0 ? user.roles.map(role => <Badge key={role} variant="secondary">{role}</Badge>) : <span className="text-gray-400 text-xs">Chưa có</span>}</div></TableCell>
                     <TableCell>{format(new Date(user.created_at), "dd/MM/yyyy")}</TableCell>
                     <TableCell><Badge className={cn("text-white capitalize", isBanned ? "bg-gray-500" : "bg-green-500")}>{isBanned ? "Ngưng hoạt động" : "Hoạt động"}</Badge></TableCell>

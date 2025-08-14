@@ -23,6 +23,9 @@ interface Role {
 interface AdminUser extends User {
   banned_until?: string;
   roles: string[];
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
 }
 
 const PROTECTED_ROLES_FOR_EDIT = ['Super Admin', 'Admin', 'User'];

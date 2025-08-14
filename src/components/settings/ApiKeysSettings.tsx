@@ -28,7 +28,7 @@ import { useEffect, useState } from "react";
 const ApiKeysSettings = () => {
   // Gemini states
   const [geminiApiKey, setGeminiApiKey] = useState("");
-  const [geminiModel, setGeminiModel] = useState("gemini-1.5-pro-latest");
+  const [geminiModel, setGeminiModel] = useState("gemini-2.5-pro-latest");
   const [isTestingGemini, setIsTestingGemini] = useState(false);
   const [geminiTestStatus, setGeminiTestStatus] = useState<"success" | "error" | null>(null);
 
@@ -58,7 +58,7 @@ const ApiKeysSettings = () => {
         console.error("Error fetching settings:", error);
       } else if (data) {
         setGeminiApiKey(data.gemini_api_key || "");
-        setGeminiModel(data.gemini_model || "gemini-1.5-pro-latest");
+        setGeminiModel(data.gemini_model || "gemini-2.5-pro-latest");
         setFacebookApiUrl(data.facebook_api_url || "");
         setFacebookApiToken(data.facebook_api_token || "");
         setFirecrawlApiKey(data.firecrawl_api_key || "");
@@ -186,7 +186,7 @@ const ApiKeysSettings = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2"><Label htmlFor="gemini-api-key">API Key</Label><Input id="gemini-api-key" placeholder="Nhập Gemini API Key của bạn" value={geminiApiKey} onChange={(e) => { setGeminiApiKey(e.target.value); setGeminiTestStatus(null); }} /></div>
-            <div className="space-y-2"><Label htmlFor="gemini-model">Model</Label><Select value={geminiModel} onValueChange={setGeminiModel}><SelectTrigger id="gemini-model"><SelectValue placeholder="Chọn một model" /></SelectTrigger><SelectContent><SelectItem value="gemini-1.5-pro-latest">Gemini 1.5 Pro</SelectItem><SelectItem value="gemini-1.5-flash-latest">Gemini 1.5 Flash</SelectItem><SelectItem value="gemini-pro">Gemini Pro</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label htmlFor="gemini-model">Model</Label><Select value={geminiModel} onValueChange={setGeminiModel}><SelectTrigger id="gemini-model"><SelectValue placeholder="Chọn một model" /></SelectTrigger><SelectContent><SelectItem value="gemini-2.5-pro-latest">Gemini 2.5 Pro</SelectItem><SelectItem value="gemini-2.5-flash-latest">Gemini 2.5 Flash</SelectItem></SelectContent></Select></div>
             <div className="flex items-center justify-between"><Button onClick={handleTestGeminiConnection} disabled={isTestingGemini || isSaving} variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700">{isTestingGemini ? "Đang kiểm tra..." : "Kiểm tra kết nối"}</Button><div>{geminiTestStatus === "success" && (<div className="flex items-center text-sm font-medium text-green-600"><CheckCircle className="w-4 h-4 mr-1.5" />Thành công</div>)}{geminiTestStatus === "error" && (<div className="flex items-center text-sm font-medium text-red-600"><XCircle className="w-4 h-4 mr-1.5" />Thất bại</div>)}</div></div>
           </CardContent>
         </Card>

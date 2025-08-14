@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { showLoading, dismissToast, showSuccess, showError } from '@/utils/toast';
 import { Separator } from '@/components/ui/separator';
-import { Landmark } from 'lucide-react';
+import { Landmark, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface ProfileData {
   first_name: string | null;
@@ -21,7 +22,7 @@ interface ProfileData {
 }
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, isProfileComplete, profile: authProfile } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -74,6 +75,12 @@ const Profile = () => {
     fetchProfile();
   }, [user]);
 
+  useEffect(() => {
+    if (!isProfileComplete && !loading) {
+      setIsEditOpen(true);
+    }
+  }, [isProfileComplete, loading]);
+
   const handleUpdateProfile = async () => {
     if (!user) return;
     setIsSaving(true);
@@ -100,7 +107,8 @@ const Profile = () => {
     } else {
       showSuccess('Cập nhật thông tin thành công!');
       setIsEditOpen(false);
-      fetchProfile(); // Re-fetch profile to update UI
+      // Manually trigger a re-check in AuthContext after successful update
+      window.location.reload();
     }
     setIsSaving(false);
   };
@@ -146,6 +154,17 @@ const Profile = () => {
         <h1 className="text-3xl font-bold">Thông tin tài khoản</h1>
         <p className="text-gray-500 mt-1">Xem và chỉnh sửa thông tin cá nhân của bạn.</p>
       </div>
+
+      {!isProfileComplete && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Hoàn tất đăng ký</AlertTitle>
+          <AlertDescription>
+            Nhập thông tin đầy đủ để hoàn tất đăng ký. Phần thông tin thanh toán cần phải điền để công ty thanh toán lương + hoa hồng.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card className="border-orange-200 max-w-2xl">
         <CardHeader>
           <CardTitle>Chi tiết tài khoản</CardTitle>

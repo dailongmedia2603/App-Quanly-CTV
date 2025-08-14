@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, Navigate, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
@@ -29,10 +29,21 @@ import { useEffect } from "react";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = () => {
-  const { session } = useAuth();
+  const { session, loading, isProfileComplete } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return <div className="flex h-screen w-full items-center justify-center"><p>Loading...</p></div>;
+  }
+
   if (!session) {
     return <Navigate to="/login" replace />;
   }
+
+  if (!isProfileComplete && location.pathname !== '/profile') {
+    return <Navigate to="/profile" replace />;
+  }
+
   return (
     <Layout>
       <Outlet />

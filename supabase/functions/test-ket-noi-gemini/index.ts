@@ -48,8 +48,12 @@ serve(async (req) => {
       throw new Error("Cần có model.");
     }
 
-    const testPromises = apiKeys.map(key => testSingleKey(key, model));
-    const results = await Promise.all(testPromises);
+    // Send requests sequentially instead of in parallel to avoid rate limiting
+    const results = [];
+    for (const key of apiKeys) {
+      const result = await testSingleKey(key, model);
+      results.push(result);
+    }
 
     return new Response(JSON.stringify({ results }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

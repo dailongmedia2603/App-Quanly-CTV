@@ -213,17 +213,41 @@ serve(async (req) => {
     }
     await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(1/4) Đã lấy xong ${allPostsData.length} bài viết.`, null, 'progress');
 
+    let newPostsData = allPostsData;
+    if (allPostsData.length > 0) {
+        const postIdsFromApi = allPostsData.map(p => p.id);
+        
+        let existingPostsQuery = supabaseAdmin
+            .from(reportTable)
+            .select('source_post_id')
+            .eq('campaign_id', campaign.id)
+            .in('source_post_id', postIdsFromApi);
+
+        if (campaign.type === 'Tổng hợp') {
+            existingPostsQuery = existingPostsQuery.eq('source_type', 'Facebook');
+        }
+
+        const { data: existingPosts, error: existingPostsError } = await existingPostsQuery;
+
+        if (existingPostsError) {
+            throw new Error(`Lỗi khi kiểm tra bài viết đã tồn tại: ${existingPostsError.message}`);
+        }
+
+        const existingPostIds = new Set(existingPosts.map(p => p.source_post_id));
+        newPostsData = allPostsData.filter(p => !existingPostIds.has(p.id));
+    }
+
     let filteredPosts = [];
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/4) Đang lọc ${allPostsData.length} bài viết...`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/4) Đang lọc ${newPostsData.length} bài viết mới...`, null, 'progress');
     if (keywords.length > 0) {
-        for (const post of allPostsData) {
+        for (const post of newPostsData) {
             const foundKeywords = findKeywords(post.message, keywords);
             if (foundKeywords.length > 0) {
                 filteredPosts.push({ ...post, keywords_found: foundKeywords });
             }
         }
     } else {
-        filteredPosts = allPostsData.map(post => ({ ...post, keywords_found: [] }));
+        filteredPosts = newPostsData.map(post => ({ ...post, keywords_found: [] }));
     }
 
     let finalResults = [];
@@ -265,6 +289,7 @@ serve(async (req) => {
                     keywords_found: post.keywords_found,
                     ai_evaluation: aiResult.evaluation,
                     sentiment: aiResult.sentiment,
+                    source_post_id: post.id,
                 });
 
             } catch (e) {
@@ -277,6 +302,7 @@ serve(async (req) => {
                     keywords_found: post.keywords_found,
                     ai_evaluation: 'Xử lý bằng AI thất bại.',
                     sentiment: null,
+                    source_post_id: post.id,
                 });
             }
         }
@@ -289,6 +315,7 @@ serve(async (req) => {
             keywords_found: post.keywords_found,
             ai_evaluation: null,
             sentiment: null,
+            source_post_id: post.id,
         }));
     }
     await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(2/4) Phân tích và lọc xong.`, null, 'progress');
@@ -353,7 +380,7 @@ serve(async (req) => {
         await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(4/4) Đã lưu ${resultsWithComments.length} kết quả.`, null, 'progress');
     }
     
-    const successMessage = `Quét Facebook hoàn tất. Đã tìm thấy và xử lý ${resultsWithComments.length} bài viết.`;
+    const successMessage = `Quét Facebook hoàn tất. Đã tìm thấy và xử lý ${resultsWithComments.length} bài viết mới.`;
     await logScan(supabaseAdmin, campaign_id_from_req, user_id_from_req, 'success', successMessage, { 
         since: sinceTimestamp,
         "since (readable)": formatTimestampForHumans(sinceTimestamp),

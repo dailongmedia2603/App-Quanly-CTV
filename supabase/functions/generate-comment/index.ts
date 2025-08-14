@@ -27,6 +27,10 @@ const cleanAiResponse = (rawText: string): string => {
     for (let i = 0; i < lines.length; i++) {
       const trimmedLine = lines[i].trim();
       if (trimmedLine === '') continue;
+      if (trimmedLine.startsWith('#') || trimmedLine.startsWith('*')) {
+        firstContentLineIndex = i;
+        break;
+      }
       const isPreamble = /^(chắc chắn rồi|dưới đây là|here is|tuyệt vời|tất nhiên|here's a draft|here's the comment)/i.test(trimmedLine);
       if (!isPreamble) {
         firstContentLineIndex = i;

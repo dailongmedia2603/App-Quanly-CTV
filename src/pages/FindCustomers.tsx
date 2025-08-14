@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { FacebookReportDetailsDialog } from "@/components/FacebookReportDetailsDialog";
 import { showError, showSuccess } from '@/utils/toast';
 import { format } from 'date-fns';
-import { ExternalLink, FileText, Users, MessageSquare, Clock, Tags, Link as LinkIcon } from 'lucide-react';
+import { ExternalLink, FileText, Users, MessageSquare, Clock, Tags, Link as LinkIcon, Sparkles, Copy, RefreshCw, Loader2 } from 'lucide-react';
 
 interface ReportData {
   id: string;
   campaign_id: string;
-  keywords_found?: string[] | null;
+  identified_service_id?: string | null;
+  identified_service_name?: string | null;
   ai_evaluation?: string | null;
   description: string | null;
   source_url: string | null;
@@ -35,6 +36,7 @@ const FindCustomers = () => {
   const [selectedItemDetails, setSelectedItemDetails] = useState<ReportData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
+  const [generatingCommentId, setGeneratingCommentId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchReportData = async () => {
@@ -77,6 +79,47 @@ const FindCustomers = () => {
     });
   };
 
+  const handleGenerateComment = async (item: ReportData) => {
+    if (!item.description) {
+      showError("Bài viết không có nội dung để tạo comment.");
+      return;
+    }
+    setGeneratingCommentId(item.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-customer-finder-comment', {
+        body: {
+          reportId: item.id,
+          postContent: item.description,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      const { comment, service } = data;
+
+      setReportData(prevData =>
+        prevData.map(report =>
+          report.id === item.id
+            ? { 
+                ...report, 
+                suggested_comment: comment,
+                identified_service_id: service.id,
+                identified_service_name: service.name,
+              }
+            : report
+        )
+      );
+      showSuccess("Đã tạo comment thành công!");
+
+    } catch (error: any) {
+      showError(`Lỗi tạo comment: ${error.message}`);
+    } finally {
+      setGeneratingCommentId(null);
+    }
+  };
+
   return (
     <>
       <div>
@@ -86,7 +129,7 @@ const FindCustomers = () => {
               <Users className="h-6 w-6 text-brand-orange" />
               <span>Khách hàng tiềm năng ({reportData.length})</span>
             </CardTitle>
-            <CardDescription>Danh sách các khách hàng tiềm năng được thu thập.</CardDescription>
+            <CardDescription>Danh sách các khách hàng tiềm năng được thu thập. Bấm vào nút để AI tạo comment giới thiệu dịch vụ phù hợp.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="border rounded-lg">
@@ -96,7 +139,7 @@ const FindCustomers = () => {
                     <TableHead><div className="flex items-center space-x-2"><FileText className="h-4 w-4" /><span>Nội dung bài viết</span></div></TableHead>
                     <TableHead><div className="flex items-center space-x-2"><MessageSquare className="h-4 w-4" /><span>Comment đề xuất</span></div></TableHead>
                     <TableHead><div className="flex items-center space-x-2"><Clock className="h-4 w-4" /><span>Thời gian đăng</span></div></TableHead>
-                    <TableHead><div className="flex items-center space-x-2"><Tags className="h-4 w-4" /><span>Dịch vụ</span></div></TableHead>
+                    <TableHead><div className="flex items-center space-x-2"><Tags className="h-4 w-4" /><span>Dịch vụ phù hợp</span></div></TableHead>
                     <TableHead className="text-right"><div className="flex items-center justify-end space-x-2"><LinkIcon className="h-4 w-4" /><span>Link</span></div></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -118,17 +161,39 @@ const FindCustomers = () => {
                         <TableCell className="max-w-md truncate cursor-pointer hover:text-brand-orange" onClick={() => handleViewDetails(item)}>
                           {item.description}
                         </TableCell>
-                        <TableCell 
-                          className="max-w-sm whitespace-pre-wrap cursor-pointer hover:bg-orange-50"
-                          onClick={() => handleCopyComment(item.suggested_comment)}
-                        >
-                          {item.suggested_comment || <span className="text-gray-400 italic">Chưa có</span>}
+                        <TableCell className="max-w-sm">
+                          {generatingCommentId === item.id ? (
+                            <div className="flex items-center space-x-2 text-gray-500">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span>AI đang viết...</span>
+                            </div>
+                          ) : item.suggested_comment ? (
+                            <div className="space-y-2">
+                              <p className="whitespace-pre-wrap text-sm">{item.suggested_comment}</p>
+                              <div className="flex items-center space-x-1">
+                                <Button variant="ghost" size="sm" onClick={() => handleCopyComment(item.suggested_comment)}>
+                                  <Copy className="h-3 w-3 mr-1" /> Sao chép
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleGenerateComment(item)}>
+                                  <RefreshCw className="h-3 w-3 mr-1" /> Tạo lại
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <Button 
+                              onClick={() => handleGenerateComment(item)}
+                              className="bg-brand-orange text-white hover:bg-brand-orange/90 animate-pulse"
+                            >
+                              <Sparkles className="h-4 w-4 mr-2" />
+                              Tạo comment giới thiệu
+                            </Button>
+                          )}
                         </TableCell>
                         <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
                         <TableCell>
-                          {item.keywords_found && item.keywords_found.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">{item.keywords_found.map((kw, i) => <Badge key={i} variant="secondary">{kw}</Badge>)}</div>
-                          ) : <span className="text-gray-400">Không có</span>}
+                          {item.identified_service_name ? (
+                            <Badge variant="default">{item.identified_service_name}</Badge>
+                          ) : <span className="text-gray-400 italic">Chưa xác định</span>}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" asChild className="text-brand-orange hover:bg-brand-orange-light hover:text-brand-orange">

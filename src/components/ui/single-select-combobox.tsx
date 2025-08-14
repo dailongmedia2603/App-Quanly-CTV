@@ -21,7 +21,8 @@ import {
 
 export interface SelectOption {
   value: string;
-  label: string;
+  label: React.ReactNode;
+  searchValue: string;
 }
 
 interface SingleSelectComboboxProps {
@@ -31,21 +32,19 @@ interface SingleSelectComboboxProps {
   placeholder?: string;
   searchPlaceholder?: string;
   emptyPlaceholder?: string;
-  className?: string;
 }
 
 export function SingleSelectCombobox({
   options,
   selected,
   onChange,
-  placeholder = "Select an option...",
+  placeholder = "Select an option",
   searchPlaceholder = "Search...",
   emptyPlaceholder = "No options found.",
-  className,
 }: SingleSelectComboboxProps) {
   const [open, setOpen] = React.useState(false);
 
-  const selectedLabel = options.find((option) => option.value === selected)?.label;
+  const selectedOption = options.find((option) => option.value === selected);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -54,9 +53,11 @@ export function SingleSelectCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between", className)}
+          className="w-full justify-between h-auto"
         >
-          {selected ? selectedLabel : placeholder}
+          <div className="text-left">
+            {selectedOption ? selectedOption.label : placeholder}
+          </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -69,7 +70,7 @@ export function SingleSelectCombobox({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label}
+                  value={option.searchValue}
                   onSelect={() => {
                     onChange(option.value === selected ? undefined : option.value);
                     setOpen(false);

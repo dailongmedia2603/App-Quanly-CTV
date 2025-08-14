@@ -24,7 +24,7 @@ interface RolesTabProps {
   isSuperAdmin: boolean;
 }
 
-const PROTECTED_ROLES = ['Super Admin', 'Admin', 'User'];
+const PROTECTED_ROLES = ['Super Admin'];
 
 const RolesTab = ({ allRoles, loading, onUsersAndRolesUpdate, onEditRole, isSuperAdmin }: RolesTabProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);

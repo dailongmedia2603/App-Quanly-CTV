@@ -28,7 +28,7 @@ interface AdminUser extends User {
   phone?: string | null;
 }
 
-const PROTECTED_ROLES_FOR_EDIT = ['Super Admin', 'Admin', 'User'];
+const PROTECTED_ROLES_FOR_EDIT = ['Super Admin'];
 
 const Account = () => {
   const { roles } = useAuth();

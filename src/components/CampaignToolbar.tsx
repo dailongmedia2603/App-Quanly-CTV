@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, ListFilter, Activity } from "lucide-react";
+import { Search, ListFilter, Activity, History } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
@@ -15,9 +15,10 @@ interface CampaignToolbarProps {
   filters: CampaignFilters;
   onFiltersChange: (filters: CampaignFilters) => void;
   onScanStatusClick: () => void;
+  onScanHistoryClick: () => void;
 }
 
-const CampaignToolbar = ({ searchTerm, onSearchTermChange, filters, onFiltersChange, onScanStatusClick }: CampaignToolbarProps) => {
+const CampaignToolbar = ({ searchTerm, onSearchTermChange, filters, onFiltersChange, onScanStatusClick, onScanHistoryClick }: CampaignToolbarProps) => {
   return (
     <div className="flex items-center justify-between space-x-4 mt-6 mb-4">
       <div className="flex items-center space-x-2 flex-1">
@@ -60,10 +61,16 @@ const CampaignToolbar = ({ searchTerm, onSearchTermChange, filters, onFiltersCha
           </PopoverContent>
         </Popover>
       </div>
-      <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white flex items-center space-x-2" onClick={onScanStatusClick}>
-        <Activity className="h-4 w-4" />
-        <span>Trạng thái quét</span>
-      </Button>
+      <div className="flex items-center space-x-2">
+        <Button variant="outline" className="flex items-center space-x-2 border-orange-200 text-gray-700 hover:bg-brand-orange-light hover:text-brand-orange" onClick={onScanHistoryClick}>
+          <History className="h-4 w-4" />
+          <span>Lịch sử quét</span>
+        </Button>
+        <Button className="bg-brand-orange hover:bg-brand-orange/90 text-white flex items-center space-x-2" onClick={onScanStatusClick}>
+          <Activity className="h-4 w-4" />
+          <span>Trạng thái quét</span>
+        </Button>
+      </div>
     </div>
   );
 };

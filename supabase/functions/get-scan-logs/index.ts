@@ -16,10 +16,7 @@ serve(async (req) => {
   }
 
   try {
-    const { campaign_id } = await req.json();
-    if (!campaign_id) {
-      throw new Error("Cần có ID của chiến dịch.");
-    }
+    const { campaign_id } = await req.json(); // campaign_id is now optional
 
     const authHeader = req.headers.get('Authorization')!
     const supabase = createClient(
@@ -28,12 +25,22 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     )
 
-    const { data, error } = await supabase
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated.");
+
+    let query = supabase
       .from('scan_logs')
-      .select('*')
-      .eq('campaign_id', campaign_id)
+      .select('*, campaign:danh_sach_chien_dich(name)') // Join to get campaign name
+      .eq('user_id', user.id)
       .eq('log_type', 'final')
-      .order('scan_time', { ascending: false });
+      .order('scan_time', { ascending: false })
+      .limit(100); // Add a limit to avoid fetching too much data
+
+    if (campaign_id) {
+      query = query.eq('campaign_id', campaign_id);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       throw new Error(`Lấy dữ liệu logs thất bại: ${error.message}`);

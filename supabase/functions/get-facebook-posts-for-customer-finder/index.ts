@@ -21,7 +21,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch from Bao_cao_tong_hop for all Facebook-sourced posts
+    // Step 1: Fetch reports from Bao_cao_tong_hop
     const { data: reports, error: reportError } = await supabaseAdmin
       .from('"Bao_cao_tong_hop"')
       .select(`
@@ -35,8 +35,7 @@ serve(async (req) => {
         scanned_at, 
         description, 
         suggested_comment,
-        identified_service_id,
-        service:document_services ( name )
+        identified_service_id
       `)
       .eq('source_type', 'Facebook');
 
@@ -44,10 +43,38 @@ serve(async (req) => {
       console.error("Error fetching from Bao_cao_tong_hop:", reportError);
       throw new Error(`Lỗi khi lấy báo cáo: ${reportError.message}`);
     }
+
+    if (!reports || reports.length === 0) {
+        return new Response(JSON.stringify([]), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+        });
+    }
+
+    // Step 2: Collect unique service IDs
+    const serviceIds = [...new Set(reports.map(r => r.identified_service_id).filter(Boolean))];
+
+    let servicesMap = new Map();
+
+    // Step 3: Fetch corresponding services if there are any service IDs
+    if (serviceIds.length > 0) {
+        const { data: services, error: servicesError } = await supabaseAdmin
+            .from('document_services')
+            .select('id, name')
+            .in('id', serviceIds);
+
+        if (servicesError) {
+            console.error("Error fetching services:", servicesError);
+            // We can continue without service names, it's not a fatal error
+        } else {
+            servicesMap = new Map(services.map(s => [s.id, s.name]));
+        }
+    }
     
-    const allData = (reports || []).map((report: any) => ({
+    // Step 4: Map service names back to reports
+    const allData = reports.map((report) => ({
       ...report,
-      identified_service_name: report.service?.name || null,
+      identified_service_name: servicesMap.get(report.identified_service_id) || null,
     }));
 
     // Sort by posted_at descending

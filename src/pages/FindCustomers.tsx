@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { FacebookReportDetailsDialog } from "@/components/FacebookReportDetailsDialog";
 import { showError, showSuccess } from '@/utils/toast';
 import { format } from 'date-fns';
-import { ExternalLink, FileText } from 'lucide-react';
+import { ExternalLink, FileText, Users, MessageSquare, Clock, Tags, Link as LinkIcon } from 'lucide-react';
 
 interface ReportData {
   id: string;
@@ -82,7 +82,10 @@ const FindCustomers = () => {
       <div>
         <Card className="border-orange-200">
           <CardHeader>
-            <CardTitle>Khách hàng tiềm năng ({reportData.length})</CardTitle>
+            <CardTitle className="flex items-center space-x-2">
+              <Users className="h-6 w-6 text-brand-orange" />
+              <span>Khách hàng tiềm năng ({reportData.length})</span>
+            </CardTitle>
             <CardDescription>Danh sách các khách hàng tiềm năng được thu thập.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -90,11 +93,11 @@ const FindCustomers = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nội dung bài viết</TableHead>
-                    <TableHead>Comment đề xuất</TableHead>
-                    <TableHead>Thời gian đăng</TableHead>
-                    <TableHead>Dịch vụ</TableHead>
-                    <TableHead className="text-right">Link</TableHead>
+                    <TableHead><div className="flex items-center space-x-2"><FileText className="h-4 w-4" /><span>Nội dung bài viết</span></div></TableHead>
+                    <TableHead><div className="flex items-center space-x-2"><MessageSquare className="h-4 w-4" /><span>Comment đề xuất</span></div></TableHead>
+                    <TableHead><div className="flex items-center space-x-2"><Clock className="h-4 w-4" /><span>Thời gian đăng</span></div></TableHead>
+                    <TableHead><div className="flex items-center space-x-2"><Tags className="h-4 w-4" /><span>Dịch vụ</span></div></TableHead>
+                    <TableHead className="text-right"><div className="flex items-center justify-end space-x-2"><LinkIcon className="h-4 w-4" /><span>Link</span></div></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

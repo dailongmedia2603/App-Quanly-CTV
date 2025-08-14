@@ -255,7 +255,7 @@ const CustomerConsulting = () => {
                 <span>Lịch sử trò chuyện</span>
               </h2>
               <div className="flex items-center space-x-2 mb-4">
-                <Select value={selectedServiceId} onValueChange={setSelectedServiceId} disabled={!!activeSession}>
+                <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
                   <SelectTrigger><SelectValue placeholder="Chọn dịch vụ" /></SelectTrigger>
                   <SelectContent>{services.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                 </Select>

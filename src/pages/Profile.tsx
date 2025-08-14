@@ -17,6 +17,7 @@ interface ProfileData {
   bank_name: string | null;
   bank_account_number: string | null;
   bank_account_name: string | null;
+  momo: string | null;
 }
 
 const Profile = () => {
@@ -32,6 +33,7 @@ const Profile = () => {
   const [bankName, setBankName] = useState('');
   const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [bankAccountName, setBankAccountName] = useState('');
+  const [momo, setMomo] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   // Change password state
@@ -48,7 +50,7 @@ const Profile = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('profiles')
-      .select('first_name, last_name, phone, bank_name, bank_account_number, bank_account_name')
+      .select('first_name, last_name, phone, bank_name, bank_account_number, bank_account_name, momo')
       .eq('id', user.id)
       .single();
 
@@ -63,6 +65,7 @@ const Profile = () => {
       setBankName(data?.bank_name || '');
       setBankAccountNumber(data?.bank_account_number || '');
       setBankAccountName(data?.bank_account_name || '');
+      setMomo(data?.momo || '');
     }
     setLoading(false);
   };
@@ -85,6 +88,7 @@ const Profile = () => {
         bank_name: bankName,
         bank_account_number: bankAccountNumber,
         bank_account_name: bankAccountName,
+        momo: momo,
         updated_at: new Date().toISOString()
       })
       .eq('id', user.id);
@@ -168,7 +172,7 @@ const Profile = () => {
           <div>
             <h3 className="text-lg font-semibold mb-3 flex items-center">
               <Landmark className="h-5 w-5 mr-2 text-brand-orange" />
-              Thông tin ngân hàng
+              Thông tin thanh toán
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
@@ -179,9 +183,13 @@ const Profile = () => {
                 <Label>Số tài khoản</Label>
                 <p className="font-semibold text-gray-800">{profile?.bank_account_number || 'Chưa cập nhật'}</p>
               </div>
-              <div className="space-y-1 col-span-2">
+              <div className="space-y-1">
                 <Label>Tên tài khoản</Label>
                 <p className="font-semibold text-gray-800">{profile?.bank_account_name || 'Chưa cập nhật'}</p>
+              </div>
+              <div className="space-y-1">
+                <Label>Momo</Label>
+                <p className="font-semibold text-gray-800">{profile?.momo || 'Chưa cập nhật'}</p>
               </div>
             </div>
           </div>
@@ -212,18 +220,24 @@ const Profile = () => {
                     <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
                   </div>
                   <Separator className="my-6" />
-                  <h4 className="font-medium">Thông tin ngân hàng</h4>
-                  <div className="space-y-2">
-                    <Label htmlFor="bank-name">Ngân hàng</Label>
-                    <Input id="bank-name" value={bankName} onChange={(e) => setBankName(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bank-account-number">Số tài khoản</Label>
-                    <Input id="bank-account-number" value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} />
+                  <h4 className="font-medium">Thông tin thanh toán</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-name">Ngân hàng</Label>
+                      <Input id="bank-name" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bank-account-number">Số tài khoản</Label>
+                      <Input id="bank-account-number" value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="bank-account-name">Tên tài khoản</Label>
                     <Input id="bank-account-name" value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="momo">Momo</Label>
+                    <Input id="momo" value={momo} onChange={(e) => setMomo(e.target.value)} />
                   </div>
                 </div>
                 <DialogFooter>

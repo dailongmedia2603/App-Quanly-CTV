@@ -229,29 +229,63 @@ const Income = () => {
   }, [collaboratorFilteredContracts, selectedDate]);
 
   const monthlyStats = useMemo(() => {
-    const totalContractValue = monthlyContracts.reduce((acc, contract) => acc + contract.contract_value, 0);
-    
-    let fixedSalary = 0;
-    if (totalContractValue > 40000000) {
-      fixedSalary = 3000000;
-    } else if (totalContractValue >= 20000000) {
-      fixedSalary = 2000000;
-    } else if (totalContractValue > 10000000) {
-      fixedSalary = 1000000;
+    const contractCount = monthlyContracts.length;
+
+    if (selectedCollaboratorId !== 'all' || !isSuperAdmin) {
+      const totalContractValue = monthlyContracts.reduce((acc, contract) => acc + contract.contract_value, 0);
+      
+      let fixedSalary = 0;
+      if (totalContractValue > 40000000) {
+        fixedSalary = 3000000;
+      } else if (totalContractValue >= 20000000) {
+        fixedSalary = 2000000;
+      } else if (totalContractValue > 10000000) {
+        fixedSalary = 1000000;
+      }
+
+      let monthlyCommissionRate = 0.05;
+      if (totalContractValue >= 40000000) {
+        monthlyCommissionRate = 0.10;
+      } else if (totalContractValue >= 20000000) {
+        monthlyCommissionRate = 0.07;
+      }
+      
+      const totalCommission = totalContractValue * monthlyCommissionRate;
+      const totalIncome = fixedSalary + totalCommission;
+      return { totalIncome, fixedSalary, totalCommission, contractCount };
     }
 
-    let monthlyCommissionRate = 0.05; // Mức mặc định: dưới 20.000.000đ
-    if (totalContractValue >= 40000000) {
-      monthlyCommissionRate = 0.10;
-    } else if (totalContractValue >= 20000000) {
-      monthlyCommissionRate = 0.07;
+    // Logic for "All collaborators"
+    const contractsByUser = monthlyContracts.reduce((acc, contract) => {
+      const userId = contract.user_id;
+      if (!acc[userId]) acc[userId] = [];
+      acc[userId].push(contract);
+      return acc;
+    }, {} as Record<string, Contract[]>);
+
+    let totalFixedSalary = 0;
+    let totalCommissionForAll = 0;
+
+    for (const userId in contractsByUser) {
+      const userContracts = contractsByUser[userId];
+      const totalContractValue = userContracts.reduce((acc, contract) => acc + contract.contract_value, 0);
+
+      let fixedSalary = 0;
+      if (totalContractValue > 40000000) fixedSalary = 3000000;
+      else if (totalContractValue >= 20000000) fixedSalary = 2000000;
+      else if (totalContractValue > 10000000) fixedSalary = 1000000;
+      totalFixedSalary += fixedSalary;
+
+      let monthlyCommissionRate = 0.05;
+      if (totalContractValue >= 40000000) monthlyCommissionRate = 0.10;
+      else if (totalContractValue >= 20000000) monthlyCommissionRate = 0.07;
+      
+      totalCommissionForAll += totalContractValue * monthlyCommissionRate;
     }
-    
-    const totalCommission = totalContractValue * monthlyCommissionRate;
-    const totalIncome = fixedSalary + totalCommission;
-    const contractCount = monthlyContracts.length;
-    return { totalIncome, fixedSalary, totalCommission, contractCount };
-  }, [monthlyContracts]);
+
+    const totalIncome = totalFixedSalary + totalCommissionForAll;
+    return { totalIncome, fixedSalary: totalFixedSalary, totalCommission: totalCommissionForAll, contractCount };
+  }, [monthlyContracts, isSuperAdmin, selectedCollaboratorId]);
 
   const allContractsStats = useMemo(() => {
     const total = collaboratorFilteredContracts.length;

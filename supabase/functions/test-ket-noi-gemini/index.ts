@@ -6,29 +6,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+const testSingleKey = async (apiKey: string, model: string) => {
+  if (!apiKey || !model) {
+    return { success: false, message: 'Cần có API key và model.' };
   }
 
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
   try {
-    const { apiKey, model } = await req.json()
-    if (!apiKey) {
-      return new Response(JSON.stringify({ success: false, message: 'API key is required' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      })
-    }
-    if (!model) {
-        return new Response(JSON.stringify({ success: false, message: 'Model is required' }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
-        })
-    }
-
-    // Khôi phục lại phiên bản v1beta như trước
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
     const response = await fetch(geminiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -40,20 +25,41 @@ serve(async (req) => {
     const responseData = await response.json();
 
     if (response.ok) {
-      return new Response(JSON.stringify({ success: true, message: 'Connection successful!' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      })
+      return { success: true, message: 'Kết nối thành công!' };
     } else {
-      return new Response(JSON.stringify({ success: false, message: responseData.error?.message || 'Connection failed. Please check your API key.' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      })
+      return { success: false, message: responseData.error?.message || 'Kết nối thất bại. Vui lòng kiểm tra API key.' };
     }
   } catch (error) {
-    return new Response(JSON.stringify({ success: false, message: error.message }), {
+    return { success: false, message: error.message };
+  }
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
+  try {
+    const { apiKeys, model } = await req.json();
+    if (!apiKeys || !Array.isArray(apiKeys) || apiKeys.length === 0) {
+      throw new Error("Cần có một danh sách API key.");
+    }
+    if (!model) {
+      throw new Error("Cần có model.");
+    }
+
+    const testPromises = apiKeys.map(key => testSingleKey(key, model));
+    const results = await Promise.all(testPromises);
+
+    return new Response(JSON.stringify({ results }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
+    });
+
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
     })
   }
 })

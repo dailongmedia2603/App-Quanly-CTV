@@ -22,15 +22,18 @@ import {
   showLoading,
   showSuccess,
 } from "@/utils/toast";
-import { CheckCircle, XCircle, Plus, Trash2 } from "lucide-react";
+import { CheckCircle, XCircle, Plus, Trash2, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+type KeyStatus = { status: 'success' | 'error' | 'testing' | null; message?: string };
 
 const ApiKeysSettings = () => {
   // Gemini states
   const [geminiApiKeys, setGeminiApiKeys] = useState<string[]>([""]);
   const [geminiModel, setGeminiModel] = useState("gemini-2.5-pro");
+  const [geminiKeyStatuses, setGeminiKeyStatuses] = useState<Array<KeyStatus | null>>([null]);
   const [isTestingGemini, setIsTestingGemini] = useState(false);
-  const [geminiTestStatus, setGeminiTestStatus] = useState<"success" | "error" | null>(null);
 
   // Facebook states
   const [facebookApiUrl, setFacebookApiUrl] = useState("");
@@ -52,7 +55,9 @@ const ApiKeysSettings = () => {
       if (error && error.code !== 'PGRST116') {
         console.error("Error fetching settings:", error);
       } else if (data) {
-        setGeminiApiKeys(data.gemini_api_keys && data.gemini_api_keys.length > 0 ? data.gemini_api_keys : [""]);
+        const keys = data.gemini_api_keys && data.gemini_api_keys.length > 0 ? data.gemini_api_keys : [""];
+        setGeminiApiKeys(keys);
+        setGeminiKeyStatuses(new Array(keys.length).fill(null));
         setGeminiModel(data.gemini_model || "gemini-2.5-pro");
         setFacebookApiUrl(data.facebook_api_url || "");
         setFacebookApiToken(data.facebook_api_token || "");
@@ -86,31 +91,51 @@ const ApiKeysSettings = () => {
   };
 
   const handleTestGeminiConnection = async () => {
-    const keyToTest = geminiApiKeys.find(key => key.trim() !== '');
-    if (!keyToTest) {
+    const keysToTest = geminiApiKeys.map((key, index) => ({ key, index })).filter(item => item.key.trim() !== '');
+    if (keysToTest.length === 0) {
       showError("Vui lòng nhập ít nhất một Gemini API Key.");
       return;
     }
+
     setIsTestingGemini(true);
-    setGeminiTestStatus(null);
-    const toastId = showLoading("Đang kiểm tra kết nối...");
+    const newStatuses: Array<KeyStatus | null> = [...geminiKeyStatuses];
+    keysToTest.forEach(({ index }) => {
+        newStatuses[index] = { status: 'testing' };
+    });
+    setGeminiKeyStatuses(newStatuses);
+
+    const toastId = showLoading(`Đang kiểm tra ${keysToTest.length} key...`);
 
     const { data, error } = await supabase.functions.invoke(
       "test-ket-noi-gemini",
-      { body: { apiKey: keyToTest, model: geminiModel } }
+      { body: { apiKeys: keysToTest.map(item => item.key), model: geminiModel } }
     );
 
     dismissToast(toastId);
+
+    const finalStatuses = [...geminiApiKeys].map(() => null) as Array<KeyStatus | null>;
+
     if (error) {
-      showError(`Kiểm tra thất bại: ${error.message}`);
-      setGeminiTestStatus("error");
-    } else if (data.success) {
-      showSuccess(data.message);
-      setGeminiTestStatus("success");
+        showError(`Kiểm tra thất bại: ${error.message}`);
+        keysToTest.forEach(({ index }) => {
+            finalStatuses[index] = { status: 'error', message: error.message };
+        });
     } else {
-      showError(`Kiểm tra thất bại: ${data.message}`);
-      setGeminiTestStatus("error");
+        keysToTest.forEach(({ index }, resultIndex) => {
+            const result = data.results[resultIndex];
+            finalStatuses[index] = {
+                status: result.success ? 'success' : 'error',
+                message: result.message,
+            };
+        });
+        const successCount = data.results.filter((r: any) => r.success).length;
+        if (successCount === keysToTest.length) {
+            showSuccess(`Tất cả ${successCount} key đều kết nối thành công!`);
+        } else {
+            showError(`${keysToTest.length - successCount}/${keysToTest.length} key kết nối thất bại. Vui lòng kiểm tra lại.`);
+        }
     }
+    setGeminiKeyStatuses(finalStatuses);
     setIsTestingGemini(false);
   };
 
@@ -144,13 +169,16 @@ const ApiKeysSettings = () => {
 
   const handleAddKey = () => {
     setGeminiApiKeys([...geminiApiKeys, ""]);
+    setGeminiKeyStatuses([...geminiKeyStatuses, null]);
   };
 
   const handleRemoveKey = (index: number) => {
     if (geminiApiKeys.length > 1) {
       setGeminiApiKeys(geminiApiKeys.filter((_, i) => i !== index));
+      setGeminiKeyStatuses(geminiKeyStatuses.filter((_, i) => i !== index));
     } else {
       setGeminiApiKeys([""]);
+      setGeminiKeyStatuses([null]);
     }
   };
 
@@ -158,7 +186,9 @@ const ApiKeysSettings = () => {
     const newKeys = [...geminiApiKeys];
     newKeys[index] = value;
     setGeminiApiKeys(newKeys);
-    setGeminiTestStatus(null);
+    const newStatuses = [...geminiKeyStatuses];
+    newStatuses[index] = null;
+    setGeminiKeyStatuses(newStatuses);
   };
 
   return (
@@ -172,16 +202,32 @@ const ApiKeysSettings = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>API Keys</Label>
-              {geminiApiKeys.map((key, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <Input placeholder={`Nhập Gemini API Key #${index + 1}`} value={key} onChange={(e) => handleKeyChange(index, e.target.value)} />
-                  <Button variant="ghost" size="icon" onClick={() => handleRemoveKey(index)} className="text-gray-500 hover:text-red-500"><Trash2 className="h-4 w-4" /></Button>
-                </div>
-              ))}
+              <TooltipProvider>
+                {geminiApiKeys.map((key, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <Input placeholder={`Nhập Gemini API Key #${index + 1}`} value={key} onChange={(e) => handleKeyChange(index, e.target.value)} />
+                    <div className="w-6 h-6 flex items-center justify-center">
+                      {geminiKeyStatuses[index]?.status === 'testing' && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {geminiKeyStatuses[index]?.status === 'success' && <CheckCircle className="h-4 w-4 text-green-500" />}
+                      {geminiKeyStatuses[index]?.status === 'error' && (
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <XCircle className="h-4 w-4 text-red-500" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{geminiKeyStatuses[index]?.message}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => handleRemoveKey(index)} className="text-gray-500 hover:text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+              </TooltipProvider>
               <Button variant="outline" size="sm" onClick={handleAddKey} className="flex items-center space-x-2"><Plus className="h-4 w-4" /><span>Thêm Key</span></Button>
             </div>
             <div className="space-y-2"><Label htmlFor="gemini-model">Model</Label><Select value={geminiModel} onValueChange={setGeminiModel}><SelectTrigger id="gemini-model"><SelectValue placeholder="Chọn một model" /></SelectTrigger><SelectContent><SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro</SelectItem><SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem></SelectContent></Select></div>
-            <div className="flex items-center justify-between"><Button onClick={handleTestGeminiConnection} disabled={isTestingGemini || isSaving} variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700">{isTestingGemini ? "Đang kiểm tra..." : "Kiểm tra kết nối"}</Button><div>{geminiTestStatus === "success" && (<div className="flex items-center text-sm font-medium text-green-600"><CheckCircle className="w-4 h-4 mr-1.5" />Thành công</div>)}{geminiTestStatus === "error" && (<div className="flex items-center text-sm font-medium text-red-600"><XCircle className="w-4 h-4 mr-1.5" />Thất bại</div>)}</div></div>
+            <div className="flex items-center justify-between"><Button onClick={handleTestGeminiConnection} disabled={isTestingGemini || isSaving} variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700">{isTestingGemini ? "Đang kiểm tra..." : "Kiểm tra kết nối"}</Button></div>
           </CardContent>
         </Card>
         <Card className="border-orange-200">

@@ -121,7 +121,7 @@ export const ScanHistoryDialog = ({ isOpen, onOpenChange, logs, loading }: ScanH
                                   <AccordionItem value={`call-${index}`} key={index} className="border rounded-md bg-white">
                                     <AccordionTrigger className="px-3 py-2 text-xs hover:no-underline">
                                       <div className="flex items-center justify-between w-full">
-                                        <span className="font-mono truncate max-w-md">{call.url}</span>
+                                        <span className="font-mono break-all text-left flex-1 mr-4">{call.url}</span>
                                         <Badge variant={call.status === 200 ? 'default' : 'destructive'} className={cn(call.status === 200 && 'bg-green-500')}>Status: {call.status}</Badge>
                                       </div>
                                     </AccordionTrigger>

@@ -77,8 +77,12 @@ serve(async (req) => {
       identified_service_name: servicesMap.get(report.identified_service_id) || null,
     }));
 
-    // Sort by posted_at descending
-    allData.sort((a, b) => new Date(b.posted_at).getTime() - new Date(a.posted_at).getTime());
+    // Sort by posted_at descending, handling null dates gracefully
+    allData.sort((a, b) => {
+        const dateA = a.posted_at ? new Date(a.posted_at).getTime() : 0;
+        const dateB = b.posted_at ? new Date(b.posted_at).getTime() : 0;
+        return dateB - dateA;
+    });
 
     return new Response(JSON.stringify(allData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

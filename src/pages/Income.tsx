@@ -415,8 +415,8 @@ const Income = () => {
         value: u.id,
         label: (
             <div>
-                <div className="font-medium">{displayLabel}</div>
-                {fullName && <div className="text-xs text-gray-500">{u.email}</div>}
+                <div className="font-medium leading-snug">{displayLabel}</div>
+                {fullName && <div className="text-xs text-gray-500 leading-snug">{u.email}</div>}
             </div>
         ),
         searchValue: searchValue,
@@ -514,9 +514,9 @@ const Income = () => {
                         {isSuperAdmin && (
                           <TableCell>
                             <div>
-                              <div className="font-medium">{contract.collaborator_name}</div>
+                              <div className="font-medium leading-snug">{contract.collaborator_name}</div>
                               {contract.collaborator_name !== contract.collaborator_email && (
-                                <div className="text-xs text-gray-500">{contract.collaborator_email}</div>
+                                <div className="text-xs text-gray-500 leading-snug">{contract.collaborator_email}</div>
                               )}
                             </div>
                           </TableCell>
@@ -545,7 +545,7 @@ const Income = () => {
                 {canCreate && <Button onClick={handleAddNewClick} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><Plus className="mr-2 h-4 w-4" />Tạo hợp đồng</Button>}
               </div>
             </CardHeader>
-            <CardContent><Table><TableHeader><TableRow><TableHead>Tên dự án</TableHead><TableHead>Link hợp đồng</TableHead><TableHead>Giá trị</TableHead><TableHead>Đã thanh toán</TableHead><TableHead>Còn nợ</TableHead><TableHead>Tiến độ</TableHead>{isSuperAdmin && <TableHead>Cộng tác viên</TableHead>}{(canUpdate || canDelete) && <TableHead className="text-right">Hành động</TableHead>}</TableRow></TableHeader><TableBody>{loadingAll ? <TableRow><TableCell colSpan={isSuperAdmin ? 8 : 7} className="h-24 text-center">Đang tải...</TableCell></TableRow> : filteredContracts.length === 0 ? <TableRow><TableCell colSpan={isSuperAdmin ? 8 : 7} className="h-24 text-center">Không có hợp đồng nào.</TableCell></TableRow> : (filteredContracts.map((contract) => (<TableRow key={contract.id}><TableCell className="font-medium">{contract.project_name}</TableCell><TableCell>{contract.contract_link ? (<Button variant="link" asChild className="p-0 h-auto text-brand-orange hover:text-brand-orange/80"><a href={contract.contract_link} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1"><LinkIcon className="h-4 w-4" /><span>Xem</span></a></Button>) : (<span className="text-gray-400">N/A</span>)}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell><EditableCurrencyCell contract={contract} onUpdate={handleFieldUpdate} canEdit={canUpdate} /></TableCell><TableCell>{formatCurrency(contract.contract_value - contract.paid_amount)}</TableCell><TableCell><EditableStatusCell contract={contract} onUpdate={handleFieldUpdate} canEdit={canUpdate} /></TableCell>{isSuperAdmin && <TableCell><div><div className="font-medium">{contract.collaborator_name}</div>{contract.collaborator_name !== contract.collaborator_email && (<div className="text-xs text-gray-500">{contract.collaborator_email}</div>)}</div></TableCell>}{(canUpdate || canDelete) && <TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">{canUpdate && <DropdownMenuItem onClick={() => handleEditClick(contract)}><Pencil className="mr-2 h-4 w-4" />Sửa</DropdownMenuItem>}{canDelete && <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(contract)}><Trash2 className="mr-2 h-4 w-4" />Xóa</DropdownMenuItem>}</DropdownMenuContent></DropdownMenu></TableCell>}</TableRow>)))}</TableBody></Table></CardContent>
+            <CardContent><Table><TableHeader><TableRow><TableHead>Tên dự án</TableHead><TableHead>Link hợp đồng</TableHead><TableHead>Giá trị</TableHead><TableHead>Đã thanh toán</TableHead><TableHead>Còn nợ</TableHead><TableHead>Tiến độ</TableHead>{isSuperAdmin && <TableHead>Cộng tác viên</TableHead>}{(canUpdate || canDelete) && <TableHead className="text-right">Hành động</TableHead>}</TableRow></TableHeader><TableBody>{loadingAll ? <TableRow><TableCell colSpan={isSuperAdmin ? 8 : 7} className="h-24 text-center">Đang tải...</TableCell></TableRow> : filteredContracts.length === 0 ? <TableRow><TableCell colSpan={isSuperAdmin ? 8 : 7} className="h-24 text-center">Không có hợp đồng nào.</TableCell></TableRow> : (filteredContracts.map((contract) => (<TableRow key={contract.id}><TableCell className="font-medium">{contract.project_name}</TableCell><TableCell>{contract.contract_link ? (<Button variant="link" asChild className="p-0 h-auto text-brand-orange hover:text-brand-orange/80"><a href={contract.contract_link} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1"><LinkIcon className="h-4 w-4" /><span>Xem</span></a></Button>) : (<span className="text-gray-400">N/A</span>)}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell><EditableCurrencyCell contract={contract} onUpdate={handleFieldUpdate} canEdit={canUpdate} /></TableCell><TableCell>{formatCurrency(contract.contract_value - contract.paid_amount)}</TableCell><TableCell><EditableStatusCell contract={contract} onUpdate={handleFieldUpdate} canEdit={canUpdate} /></TableCell>{isSuperAdmin && <TableCell><div><div className="font-medium leading-snug">{contract.collaborator_name}</div>{contract.collaborator_name !== contract.collaborator_email && (<div className="text-xs text-gray-500 leading-snug">{contract.collaborator_email}</div>)}</div></TableCell>}{(canUpdate || canDelete) && <TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">{canUpdate && <DropdownMenuItem onClick={() => handleEditClick(contract)}><Pencil className="mr-2 h-4 w-4" />Sửa</DropdownMenuItem>}{canDelete && <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(contract)}><Trash2 className="mr-2 h-4 w-4" />Xóa</DropdownMenuItem>}</DropdownMenuContent></DropdownMenu></TableCell>}</TableRow>)))}</TableBody></Table></CardContent>
           </Card>
         </TabsContent>
       </Tabs>
@@ -561,7 +561,7 @@ const Income = () => {
                 <SingleSelectCombobox
                   options={allUsers.map(u => ({ 
                     value: u.id, 
-                    label: <div><div className="font-medium">{`${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email}</div>{u.email && <div className="text-xs text-gray-500">{u.email}</div>}</div>,
+                    label: <div><div className="font-medium leading-snug">{`${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email}</div>{u.email && <div className="text-xs text-gray-500 leading-snug">{u.email}</div>}</div>,
                     searchValue: `${u.first_name || ''} ${u.last_name || ''} ${u.email}`.trim()
                   }))}
                   selected={collaboratorId}

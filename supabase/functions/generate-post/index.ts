@@ -77,14 +77,19 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { data: apiKeys, error: apiKeyError } = await supabaseAdmin
+    const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
+    if (apiKeyError || !geminiApiKey) {
+        throw new Error("Chưa cấu hình hoặc không thể lấy Gemini API Key.");
+    }
+
+    const { data: settings, error: settingsError } = await supabaseAdmin
         .from('app_settings')
-        .select('gemini_api_key, gemini_model')
+        .select('gemini_model')
         .eq('id', 1)
         .single();
 
-    if (apiKeyError || !apiKeys?.gemini_api_key || !apiKeys?.gemini_model) {
-        throw new Error("Chưa cấu hình API Key cho Gemini trong cài đặt chung.");
+    if (settingsError || !settings?.gemini_model) {
+        throw new Error("Chưa cấu hình model cho Gemini trong cài đặt chung.");
     }
 
     const { data: templateData, error: templateError } = await supabase
@@ -156,8 +161,8 @@ serve(async (req) => {
     (Toàn bộ nội dung bài đăng của bạn ở đây, sẵn sàng để sao chép và sử dụng)
     `;
 
-    const genAI = new GoogleGenerativeAI(apiKeys.gemini_api_key);
-    const model = genAI.getGenerativeModel({ model: apiKeys.gemini_model });
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const model = genAI.getGenerativeModel({ model: settings.gemini_model });
 
     const MAX_RETRIES = 3;
     let attempt = 0;

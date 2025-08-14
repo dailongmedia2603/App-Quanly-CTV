@@ -44,14 +44,19 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { data: apiKeys, error: apiKeyError } = await supabaseAdmin
+    const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
+    if (apiKeyError || !geminiApiKey) {
+        throw new Error("Chưa cấu hình hoặc không thể lấy Gemini API Key.");
+    }
+
+    const { data: settings, error: settingsError } = await supabaseAdmin
         .from('app_settings')
-        .select('gemini_api_key, gemini_model')
+        .select('gemini_model')
         .eq('id', 1)
         .single();
 
-    if (apiKeyError || !apiKeys?.gemini_api_key || !apiKeys?.gemini_model) {
-        throw new Error("Chưa cấu hình API Key cho Gemini trong cài đặt chung.");
+    if (settingsError || !settings?.gemini_model) {
+        throw new Error("Chưa cấu hình model cho Gemini trong cài đặt chung.");
     }
 
     const { data: templateData, error: templateError } = await supabase
@@ -117,8 +122,8 @@ serve(async (req) => {
 
     finalPrompt = `Hãy viết lại câu trả lời của bạn dựa trên định hướng mới sau: "${regenerateDirection || 'Hãy viết lại theo một cách khác.'}".\n\n${finalPrompt}`;
 
-    const genAI = new GoogleGenerativeAI(apiKeys.gemini_api_key);
-    const model = genAI.getGenerativeModel({ model: apiKeys.gemini_model });
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const model = genAI.getGenerativeModel({ model: settings.gemini_model });
 
     const result = await model.generateContent(finalPrompt);
     const aiResponse = result.response.text();

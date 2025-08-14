@@ -98,7 +98,7 @@ serve(async (req) => {
 
     const { data: apiKeys, error: apiKeyError } = await supabaseAdmin
         .from('app_settings')
-        .select('facebook_api_url, facebook_api_token, gemini_api_key, gemini_model')
+        .select('facebook_api_url, facebook_api_token, gemini_model')
         .eq('id', 1)
         .single();
 
@@ -124,7 +124,6 @@ serve(async (req) => {
     const {
         facebook_api_url,
         facebook_api_token,
-        gemini_api_key,
         gemini_model
     } = apiKeys;
 
@@ -226,12 +225,18 @@ serve(async (req) => {
     }
 
     let finalResults = [];
-    if (campaign.ai_filter_enabled && campaign.ai_prompt && gemini_api_key && gemini_model) {
+    if (campaign.ai_filter_enabled && campaign.ai_prompt && gemini_model) {
         await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/4) AI đang phân tích ${filteredPosts.length} bài viết...`, null, 'progress');
-        const genAI = new GoogleGenerativeAI(gemini_api_key);
-        const model = genAI.getGenerativeModel({ model: gemini_model });
-
+        
         for (const post of filteredPosts) {
+            const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
+            if (apiKeyError || !geminiApiKey) {
+                console.error("Could not retrieve a valid Gemini API key for post:", post.id);
+                continue;
+            }
+            const genAI = new GoogleGenerativeAI(geminiApiKey);
+            const model = genAI.getGenerativeModel({ model: gemini_model });
+
             const prompt = `
                 ${campaign.ai_prompt}
                 
@@ -288,8 +293,14 @@ serve(async (req) => {
 
     await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(3/4) AI đang tạo comment đề xuất cho ${finalResults.length} bài viết...`, null, 'progress');
     const commentGenerationPromises = finalResults.map(async (post) => {
-        if (!gemini_api_key || !gemini_model || !post.content) {
+        if (!gemini_model || !post.content) {
             return { ...post, suggested_comment: null };
+        }
+        
+        const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
+        if (apiKeyError || !geminiApiKey) {
+            console.error("Could not retrieve a valid Gemini API key for comment generation on post:", post.source_url);
+            return { ...post, suggested_comment: 'AI comment generation failed due to API key issue.' };
         }
 
         const prompt = `
@@ -307,7 +318,7 @@ serve(async (req) => {
         `;
 
         try {
-            const genAI = new GoogleGenerativeAI(gemini_api_key);
+            const genAI = new GoogleGenerativeAI(geminiApiKey);
             const model = genAI.getGenerativeModel({ model: gemini_model });
             const result = await model.generateContent(prompt);
             const comment = result.response.text().trim();

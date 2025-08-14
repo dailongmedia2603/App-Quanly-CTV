@@ -38,11 +38,6 @@ const ApiKeysSettings = () => {
   const [isTestingFacebook, setIsTestingFacebook] = useState(false);
   const [facebookTestStatus, setFacebookTestStatus] = useState<"success" | "error" | null>(null);
 
-  // Firecrawl states
-  const [firecrawlApiKey, setFirecrawlApiKey] = useState("");
-  const [isTestingFirecrawl, setIsTestingFirecrawl] = useState(false);
-  const [firecrawlTestStatus, setFirecrawlTestStatus] = useState<"success" | "error" | null>(null);
-
   // General state
   const [isSaving, setIsSaving] = useState(false);
 
@@ -61,7 +56,6 @@ const ApiKeysSettings = () => {
         setGeminiModel(data.gemini_model || "gemini-2.5-pro");
         setFacebookApiUrl(data.facebook_api_url || "");
         setFacebookApiToken(data.facebook_api_token || "");
-        setFirecrawlApiKey(data.firecrawl_api_key || "");
       }
     };
 
@@ -80,7 +74,6 @@ const ApiKeysSettings = () => {
         gemini_model: geminiModel,
         facebook_api_url: facebookApiUrl,
         facebook_api_token: facebookApiToken,
-        firecrawl_api_key: firecrawlApiKey,
       });
 
     dismissToast(toastId);
@@ -148,34 +141,6 @@ const ApiKeysSettings = () => {
     setIsTestingFacebook(false);
   };
 
-  const handleTestFirecrawlConnection = async () => {
-    if (!firecrawlApiKey) {
-      showError("Vui lòng nhập Firecrawl API Key.");
-      return;
-    }
-    setIsTestingFirecrawl(true);
-    setFirecrawlTestStatus(null);
-    const toastId = showLoading("Đang kiểm tra kết nối Firecrawl...");
-
-    const { data, error } = await supabase.functions.invoke(
-      "test-ket-noi-firecrawl",
-      { body: { apiKey: firecrawlApiKey } }
-    );
-
-    dismissToast(toastId);
-    if (error) {
-      showError(`Kiểm tra thất bại: ${error.message}`);
-      setFirecrawlTestStatus("error");
-    } else if (data.success) {
-      showSuccess(data.message);
-      setFirecrawlTestStatus("success");
-    } else {
-      showError(`Kiểm tra thất bại: ${data.message}`);
-      setFirecrawlTestStatus("error");
-    }
-    setIsTestingFirecrawl(false);
-  };
-
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -202,18 +167,8 @@ const ApiKeysSettings = () => {
           </CardContent>
         </Card>
       </div>
-      <Card className="border-orange-200">
-        <CardHeader>
-          <CardTitle>Firecrawl API</CardTitle>
-          <CardDescription>Dùng để thu thập dữ liệu từ các website. Lấy key của bạn từ firecrawl.dev.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2"><Label htmlFor="firecrawl-api-key">API Key</Label><Input id="firecrawl-api-key" placeholder="Nhập Firecrawl API Key của bạn" value={firecrawlApiKey} onChange={(e) => { setFirecrawlApiKey(e.target.value); setFirecrawlTestStatus(null); }} /></div>
-          <div className="flex items-center justify-between"><Button onClick={handleTestFirecrawlConnection} disabled={isTestingFirecrawl || isSaving} variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700">{isTestingFirecrawl ? "Đang kiểm tra..." : "Kiểm tra kết nối"}</Button><div>{firecrawlTestStatus === "success" && (<div className="flex items-center text-sm font-medium text-green-600"><CheckCircle className="w-4 h-4 mr-1.5" />Thành công</div>)}{firecrawlTestStatus === "error" && (<div className="flex items-center text-sm font-medium text-red-600"><XCircle className="w-4 h-4 mr-1.5" />Thất bại</div>)}</div></div>
-        </CardContent>
-      </Card>
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={isSaving || isTestingFacebook || isTestingGemini || isTestingFirecrawl} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSaving ? "Đang lưu..." : "Lưu tất cả thay đổi"}</Button>
+        <Button onClick={handleSave} disabled={isSaving || isTestingFacebook || isTestingGemini} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSaving ? "Đang lưu..." : "Lưu tất cả thay đổi"}</Button>
       </div>
     </div>
   );

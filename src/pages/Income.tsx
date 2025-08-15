@@ -201,7 +201,7 @@ const Income = () => {
         setLoadingStats(false);
     };
     if (user) fetchIncomeStats();
-  }, [selectedDate, user, isSuperAdmin, selectedCollaboratorId]);
+  }, [selectedDate, user, isSuperAdmin, selectedCollaboratorId, allContracts]);
 
   const collaboratorFilteredContracts = useMemo(() => {
     if (!isSuperAdmin || selectedCollaboratorId === 'all') return allContracts;

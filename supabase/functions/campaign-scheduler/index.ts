@@ -76,9 +76,6 @@ serve(async (req) => {
             if (campaign.type === 'Facebook' || campaign.type === 'Tổng hợp') {
                 scanFunctionsToCall.push('scan-facebook-campaign');
             }
-            if (campaign.type === 'Website' || campaign.type === 'Tổng hợp') {
-                scanFunctionsToCall.push('scan-website-campaign');
-            }
 
             if (scanFunctionsToCall.length > 0) {
                 for (const scanFunctionName of scanFunctionsToCall) {

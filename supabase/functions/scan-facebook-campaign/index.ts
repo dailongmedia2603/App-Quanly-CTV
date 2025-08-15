@@ -105,8 +105,8 @@ serve(async (req) => {
     if (apiKeyError) throw new Error(`Lấy API key chung thất bại: ${apiKeyError.message}`);
     if (!apiKeys) throw new Error(`Chưa cấu hình API key trong cài đặt chung.`);
 
-    if (campaign.type !== 'Facebook' && campaign.type !== 'Tổng hợp') {
-        return new Response(JSON.stringify({ message: "Chức năng quét này chỉ dành cho các chiến dịch Facebook hoặc Tổng hợp." }), {
+    if (campaign.type !== 'Facebook') {
+        return new Response(JSON.stringify({ message: "Chức năng quét này chỉ dành cho các chiến dịch Facebook." }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         });
@@ -133,21 +133,16 @@ serve(async (req) => {
 
     await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', 'Bắt đầu quét nguồn Facebook...', null, 'progress');
 
-    const reportTable = campaign.type === 'Tổng hợp' ? 'Bao_cao_tong_hop' : 'Bao_cao_Facebook';
+    const reportTable = '"Bao_cao_Facebook"';
     
-    let latestPostQuery = supabaseAdmin
+    const { data: latestPostData, error: latestPostError } = await supabaseAdmin
         .from(reportTable)
         .select('posted_at')
         .eq('campaign_id', campaign.id)
         .not('posted_at', 'is', null)
         .order('posted_at', { ascending: false })
-        .limit(1);
-
-    if (campaign.type === 'Tổng hợp') {
-        latestPostQuery = latestPostQuery.eq('source_type', 'Facebook');
-    }
-
-    const { data: latestPostData, error: latestPostError } = await latestPostQuery.single();
+        .limit(1)
+        .single();
 
     if (latestPostError && latestPostError.code !== 'PGRST116') {
         throw new Error(`Lỗi khi lấy bài viết cuối cùng: ${latestPostError.message}`);
@@ -217,17 +212,11 @@ serve(async (req) => {
     if (allPostsData.length > 0) {
         const postIdsFromApi = allPostsData.map(p => p.id);
         
-        let existingPostsQuery = supabaseAdmin
+        const { data: existingPosts, error: existingPostsError } = await supabaseAdmin
             .from(reportTable)
             .select('source_post_id')
             .eq('campaign_id', campaign.id)
             .in('source_post_id', postIdsFromApi);
-
-        if (campaign.type === 'Tổng hợp') {
-            existingPostsQuery = existingPostsQuery.eq('source_type', 'Facebook');
-        }
-
-        const { data: existingPosts, error: existingPostsError } = await existingPostsQuery;
 
         if (existingPostsError) {
             throw new Error(`Lỗi khi kiểm tra bài viết đã tồn tại: ${existingPostsError.message}`);
@@ -362,16 +351,10 @@ serve(async (req) => {
 
     if (resultsWithComments.length > 0) {
         await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(4/4) Đang lưu ${resultsWithComments.length} kết quả vào báo cáo...`, null, 'progress');
-        const dataToInsert = campaign.type === 'Tổng hợp' 
-            ? resultsWithComments.map(r => {
-                const { content, ...rest } = r;
-                return { ...rest, description: content, source_type: 'Facebook' };
-            })
-            : resultsWithComments;
-
+        
         const { error: insertError } = await supabaseAdmin
             .from(reportTable)
-            .insert(dataToInsert);
+            .insert(resultsWithComments);
 
         if (insertError) {
             await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'error', `(4/4) Lưu kết quả thất bại.`, null, 'final');

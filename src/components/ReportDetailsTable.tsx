@@ -6,34 +6,25 @@ import { Button } from "@/components/ui/button";
 import { supabase } from '@/integrations/supabase/client';
 import { Campaign } from '@/pages/Index';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { 
-  ExternalLink, Download, FileText, History, Trash2, Eye, 
-  Tag, Scaling, MapPin, CalendarDays, Tags, BrainCircuit 
-} from 'lucide-react';
+import { ExternalLink, Download, FileText, History, Trash2 } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import * as XLSX from "xlsx";
 import { ScanLogsDialog, ScanLog } from "@/components/ScanLogsDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from './ui/separator';
 import { FacebookReportDetailsDialog } from "@/components/FacebookReportDetailsDialog";
 
 interface ReportData {
   id: string;
-  // Facebook specific
   keywords_found?: string[] | null;
   ai_evaluation?: string | null;
-  // Website specific
   title: string | null;
   price: string | null;
   area: string | null;
   address: string | null;
   listing_url: string | null;
   posted_date_string: string | null;
-  // Common
   description: string | null;
   source_url: string | null;
   posted_at: string | null;
@@ -43,19 +34,6 @@ interface ReportData {
 interface ReportDetailsTableProps {
   selectedCampaign: Campaign | null;
 }
-
-const DetailItem = ({ icon: Icon, label, children }: { icon: React.ElementType; label: string; children: React.ReactNode }) => {
-  if (!children) return null;
-  return (
-    <div className="flex items-start space-x-3">
-      <Icon className="h-5 w-5 text-brand-orange flex-shrink-0 mt-1" />
-      <div>
-        <p className="text-sm font-medium text-gray-500">{label}</p>
-        <div className="text-base text-gray-800">{children}</div>
-      </div>
-    </div>
-  );
-};
 
 const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
   const [reportData, setReportData] = useState<ReportData[]>([]);
@@ -127,29 +105,13 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
       return;
     }
 
-    const isFacebook = selectedCampaign.type === 'Facebook';
-
-    const dataToExport = reportData.map(item => {
-      if (isFacebook) {
-        return {
-          'Nội dung': item.description,
-          'Thời gian đăng': item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A',
-          'Từ khoá': item.keywords_found?.join(', ') || 'N/A',
-          'AI đánh giá': item.ai_evaluation || 'N/A',
-          'Link bài viết': item.source_url,
-        };
-      } else { // Website or Combined
-        return {
-          'Tiêu đề': item.title,
-          'Giá': item.price,
-          'Diện tích': item.area,
-          'Địa chỉ': item.address,
-          'Ngày đăng': item.posted_date_string,
-          'Link tin đăng': item.listing_url,
-          'Nội dung': item.description,
-        };
-      }
-    });
+    const dataToExport = reportData.map(item => ({
+      'Nội dung': item.description,
+      'Thời gian đăng': item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A',
+      'Từ khoá': item.keywords_found?.join(', ') || 'N/A',
+      'AI đánh giá': item.ai_evaluation || 'N/A',
+      'Link bài viết': item.source_url,
+    }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
@@ -214,71 +176,7 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
     );
   }
 
-  const isFacebookCampaign = selectedCampaign.type === 'Facebook';
   const isAllOnPageSelected = paginatedData.length > 0 && paginatedData.every(item => selectedRows.includes(item.id));
-
-  const renderTableHeaders = () => {
-    if (isFacebookCampaign) {
-      return (
-        <>
-          <TableHead>Nội dung bài viết</TableHead>
-          <TableHead>Thời gian đăng</TableHead>
-          <TableHead>Từ khoá</TableHead>
-          <TableHead>AI đánh giá</TableHead>
-          <TableHead className="text-right">Link</TableHead>
-        </>
-      );
-    }
-    return (
-      <>
-        <TableHead>Tiêu đề</TableHead>
-        <TableHead>Giá</TableHead>
-        <TableHead>Diện tích</TableHead>
-        <TableHead>Địa chỉ</TableHead>
-        <TableHead>Ngày đăng</TableHead>
-        <TableHead className="text-right">Hành động</TableHead>
-      </>
-    );
-  };
-
-  const renderTableRow = (item: ReportData) => {
-    if (isFacebookCampaign) {
-      return (
-        <>
-          <TableCell className="max-w-md truncate cursor-pointer hover:text-brand-orange" onClick={() => handleViewDetails(item)}>{item.description}</TableCell>
-          <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
-          <TableCell>
-            {item.keywords_found && item.keywords_found.length > 0 ? (
-              <div className="flex flex-wrap gap-1">{item.keywords_found.map((kw, i) => <Badge key={i} variant="secondary">{kw}</Badge>)}</div>
-            ) : 'N/A'}
-          </TableCell>
-          <TableCell>{item.ai_evaluation || 'N/A'}</TableCell>
-          <TableCell className="text-right">
-            <Button variant="ghost" size="icon" asChild className="text-brand-orange hover:bg-brand-orange-light hover:text-brand-orange">
-              <a href={item.source_url!} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
-            </Button>
-          </TableCell>
-        </>
-      );
-    }
-    return (
-      <>
-        <TableCell className="font-medium max-w-xs truncate">{item.title}</TableCell>
-        <TableCell>{item.price}</TableCell>
-        <TableCell>{item.area}</TableCell>
-        <TableCell className="max-w-xs truncate">{item.address}</TableCell>
-        <TableCell>{item.posted_date_string}</TableCell>
-        <TableCell className="text-right space-x-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewDetails(item)}>
-            <Eye className="h-4 w-4 text-gray-600" />
-          </Button>
-          <Button variant="ghost" size="icon" asChild className="h-8 w-8 text-brand-orange hover:bg-brand-orange-light hover:text-brand-orange">
-            <a href={item.listing_url || item.source_url!} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
-          </Button>
-        </TableCell>
-      </>
-    );
-  };
 
   return (
     <>
@@ -309,21 +207,37 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
                   <TableHead className="w-[50px]">
                     <Checkbox checked={isAllOnPageSelected} onCheckedChange={(c) => handleSelectAll(c as boolean)} disabled={paginatedData.length === 0} />
                   </TableHead>
-                  {renderTableHeaders()}
+                  <TableHead>Nội dung bài viết</TableHead>
+                  <TableHead>Thời gian đăng</TableHead>
+                  <TableHead>Từ khoá</TableHead>
+                  <TableHead>AI đánh giá</TableHead>
+                  <TableHead className="text-right">Link</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={7} className="h-24 text-center">Đang tải báo cáo...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="h-24 text-center">Đang tải báo cáo...</TableCell></TableRow>
                 ) : paginatedData.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="h-24 text-center">Không có dữ liệu nào.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="h-24 text-center">Không có dữ liệu nào.</TableCell></TableRow>
                 ) : (
                   paginatedData.map((item) => (
                     <TableRow key={item.id} data-state={selectedRows.includes(item.id) && "selected"}>
                       <TableCell>
                         <Checkbox checked={selectedRows.includes(item.id)} onCheckedChange={(c) => setSelectedRows(p => c ? [...p, item.id] : p.filter(id => id !== item.id))} aria-label="Select row" />
                       </TableCell>
-                      {renderTableRow(item)}
+                      <TableCell className="max-w-md truncate cursor-pointer hover:text-brand-orange" onClick={() => handleViewDetails(item)}>{item.description}</TableCell>
+                      <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
+                      <TableCell>
+                        {item.keywords_found && item.keywords_found.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">{item.keywords_found.map((kw, i) => <Badge key={i} variant="secondary">{kw}</Badge>)}</div>
+                        ) : 'N/A'}
+                      </TableCell>
+                      <TableCell>{item.ai_evaluation || 'N/A'}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" asChild className="text-brand-orange hover:bg-brand-orange-light hover:text-brand-orange">
+                          <a href={item.source_url!} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -353,73 +267,11 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
         </CardContent>
       </Card>
 
-      {isFacebookCampaign ? (
-        <FacebookReportDetailsDialog
-          isOpen={isDetailsModalOpen}
-          onOpenChange={setIsDetailsModalOpen}
-          item={selectedItemDetails}
-        />
-      ) : (
-        <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-          <DialogContent className="sm:max-w-2xl bg-gradient-to-br from-white via-brand-orange-light/50 to-white">
-            <DialogHeader>
-              <DialogTitle>{selectedItemDetails?.title || 'Chi tiết bài viết'}</DialogTitle>
-              <DialogDescription>
-                Thông tin chi tiết được trích xuất từ nguồn.
-              </DialogDescription>
-            </DialogHeader>
-            {selectedItemDetails && (
-              <div className="py-4 max-h-[60vh] overflow-y-auto space-y-6 pr-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <DetailItem icon={Tag} label="Giá">
-                    <Badge variant="secondary" className="text-base font-semibold">{selectedItemDetails.price}</Badge>
-                  </DetailItem>
-                  <DetailItem icon={Scaling} label="Diện tích">
-                    <Badge variant="secondary" className="text-base font-semibold">{selectedItemDetails.area}</Badge>
-                  </DetailItem>
-                  <DetailItem icon={MapPin} label="Địa chỉ / Khu vực">
-                    {selectedItemDetails.address}
-                  </DetailItem>
-                  <DetailItem icon={CalendarDays} label="Ngày đăng">
-                    {selectedItemDetails.posted_date_string || (selectedItemDetails.posted_at ? format(new Date(selectedItemDetails.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A')}
-                  </DetailItem>
-                </div>
-                
-                {selectedItemDetails.description && (
-                  <div>
-                    <Separator className="my-4" />
-                    <DetailItem icon={FileText} label="Nội dung chi tiết">
-                      <p className="whitespace-pre-wrap text-gray-700 text-sm font-normal bg-white/50 p-3 rounded-md border border-orange-100">
-                        {selectedItemDetails.description}
-                      </p>
-                    </DetailItem>
-                  </div>
-                )}
-
-                {selectedItemDetails.keywords_found && selectedItemDetails.keywords_found.length > 0 && (
-                   <div>
-                    <Separator className="my-4" />
-                    <DetailItem icon={Tags} label="Từ khóa được tìm thấy">
-                       <div className="flex flex-wrap gap-2">
-                        {selectedItemDetails.keywords_found.map((kw, i) => <Badge key={i}>{kw}</Badge>)}
-                      </div>
-                    </DetailItem>
-                  </div>
-                )}
-
-                {selectedItemDetails.ai_evaluation && (
-                   <div>
-                    <Separator className="my-4" />
-                    <DetailItem icon={BrainCircuit} label="AI Đánh giá">
-                      <p className="text-gray-700 text-sm font-normal bg-white/50 p-3 rounded-md border border-orange-100">{selectedItemDetails.ai_evaluation}</p>
-                    </DetailItem>
-                  </div>
-                )}
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-      )}
+      <FacebookReportDetailsDialog
+        isOpen={isDetailsModalOpen}
+        onOpenChange={setIsDetailsModalOpen}
+        item={selectedItemDetails}
+      />
 
       <ScanLogsDialog isOpen={isLogsOpen} onOpenChange={setIsLogsOpen} logs={scanLogs} loading={loadingLogs} />
 

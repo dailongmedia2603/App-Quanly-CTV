@@ -12,7 +12,6 @@ import {
   Type,
   Calendar,
   Clock,
-  Globe,
   Facebook,
   BrainCircuit,
   FileText,
@@ -23,7 +22,6 @@ import {
   CalendarDays,
   Tags,
   Bot,
-  Code,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -84,15 +82,7 @@ export const CampaignDetailsDialog = ({
     keywords,
     ai_filter_enabled,
     ai_prompt,
-    website_scan_type,
   } = campaign;
-
-  const isFacebook = type === "Facebook";
-  const isWebsite = type === "Website";
-  const isCombined = type === "Tổng hợp";
-
-  const facebookSources = sources.filter(s => !s.startsWith('http') && !s.startsWith('www'));
-  const websiteSources = sources.filter(s => s.startsWith('http') || s.startsWith('www'));
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -116,22 +106,11 @@ export const CampaignDetailsDialog = ({
               <DetailItem icon={Type} label="Loại chiến dịch">
                 <Badge
                   variant="outline"
-                  className={cn(
-                    "text-base font-semibold",
-                    isFacebook && "border-blue-500 text-blue-600 bg-blue-50",
-                    isWebsite && "border-green-500 text-green-600 bg-green-50",
-                    isCombined && "border-purple-500 text-purple-600 bg-purple-50"
-                  )}
+                  className="text-base font-semibold border-blue-500 text-blue-600 bg-blue-50"
                 >
                   {type}
                 </Badge>
               </DetailItem>
-
-              {(isWebsite || isCombined) && website_scan_type && (
-                <DetailItem icon={Code} label="Loại quét Website">
-                  <Badge variant="secondary">{website_scan_type}</Badge>
-                </DetailItem>
-              )}
 
               <DetailItem icon={Timer} label="Trạng thái">
                 <Badge
@@ -161,72 +140,53 @@ export const CampaignDetailsDialog = ({
               </DetailItem>
             </div>
 
-            {(isFacebook || isCombined) && facebookSources.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold text-gray-700 flex items-center"><Facebook className="h-5 w-5 mr-2 text-blue-600"/>Nguồn Facebook</h3>
-                <div className="p-4 border rounded-lg bg-white/60 max-h-40 overflow-y-auto">
-                  <ul className="space-y-1 list-disc list-inside">
-                    {facebookSources.map((source, index) => (
-                      <li key={index} className="text-sm font-mono text-gray-600">{source}</li>
-                    ))}
-                  </ul>
-                </div>
+            <div className="space-y-3">
+              <h3 className="font-semibold text-gray-700 flex items-center"><Facebook className="h-5 w-5 mr-2 text-blue-600"/>Nguồn Facebook</h3>
+              <div className="p-4 border rounded-lg bg-white/60 max-h-40 overflow-y-auto">
+                <ul className="space-y-1 list-disc list-inside">
+                  {sources.map((source, index) => (
+                    <li key={index} className="text-sm font-mono text-gray-600">{source}</li>
+                  ))}
+                </ul>
               </div>
-            )}
+            </div>
 
-            {(isWebsite || isCombined) && websiteSources.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-semibold text-gray-700 flex items-center"><Globe className="h-5 w-5 mr-2 text-green-600"/>Nguồn Website</h3>
-                <div className="p-4 border rounded-lg bg-white/60 max-h-40 overflow-y-auto">
-                  <ul className="space-y-1 list-disc list-inside">
-                    {websiteSources.map((source, index) => (
-                      <li key={index} className="text-sm text-gray-600 truncate">{source}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            {isFacebook && (
-              <>
-                <Separator />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                  <DetailItem icon={Tags} label="Từ khóa cần lọc">
-                    {keywords ? (
-                      <pre className="text-sm font-sans bg-gray-100 p-2 rounded-md whitespace-pre-wrap max-h-40 overflow-y-auto">
-                        {keywords}
-                      </pre>
+            <Separator />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <DetailItem icon={Tags} label="Từ khóa cần lọc">
+                {keywords ? (
+                  <pre className="text-sm font-sans bg-gray-100 p-2 rounded-md whitespace-pre-wrap max-h-40 overflow-y-auto">
+                    {keywords}
+                  </pre>
+                ) : (
+                  "Không có"
+                )}
+              </DetailItem>
+              <div className="space-y-4">
+                <DetailItem icon={Bot} label="Lọc bằng AI">
+                  {ai_filter_enabled ? (
+                    <span className="flex items-center text-green-600">
+                      <CheckCircle className="h-5 w-5 mr-2" /> Bật
+                    </span>
+                  ) : (
+                    <span className="flex items-center text-gray-500">
+                      <XCircle className="h-5 w-5 mr-2" /> Tắt
+                    </span>
+                  )}
+                </DetailItem>
+                {ai_filter_enabled && (
+                  <DetailItem icon={BrainCircuit} label="Yêu cầu AI">
+                    {ai_prompt ? (
+                      <p className="text-sm font-normal text-gray-700 bg-gray-100 p-2 rounded-md max-h-40 overflow-y-auto">
+                        {ai_prompt}
+                      </p>
                     ) : (
                       "Không có"
                     )}
                   </DetailItem>
-                  <div className="space-y-4">
-                    <DetailItem icon={Bot} label="Lọc bằng AI">
-                      {ai_filter_enabled ? (
-                        <span className="flex items-center text-green-600">
-                          <CheckCircle className="h-5 w-5 mr-2" /> Bật
-                        </span>
-                      ) : (
-                        <span className="flex items-center text-gray-500">
-                          <XCircle className="h-5 w-5 mr-2" /> Tắt
-                        </span>
-                      )}
-                    </DetailItem>
-                    {ai_filter_enabled && (
-                      <DetailItem icon={BrainCircuit} label="Yêu cầu AI">
-                        {ai_prompt ? (
-                          <p className="text-sm font-normal text-gray-700 bg-gray-100 p-2 rounded-md max-h-40 overflow-y-auto">
-                            {ai_prompt}
-                          </p>
-                        ) : (
-                          "Không có"
-                        )}
-                      </DetailItem>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
+                )}
+              </div>
+            </div>
           </div>
         </ScrollArea>
 

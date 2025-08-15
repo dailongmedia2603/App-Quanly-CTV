@@ -29,23 +29,15 @@ serve(async (req) => {
     let tableName = '';
     let selectStatement = '*';
 
-    switch (campaign_type) {
-      case 'Facebook':
-        tableName = 'Bao_cao_Facebook';
-        // Alias content to description to create a consistent field for the frontend
-        selectStatement = 'id, campaign_id, posted_at, keywords_found, ai_evaluation, sentiment, source_url, scanned_at, description:content';
-        break;
-      case 'Website':
-        tableName = 'Bao_cao_Website';
-        break;
-      case 'Tổng hợp':
-        tableName = 'Bao_cao_tong_hop';
-        break;
-      default:
-        return new Response(JSON.stringify({ error: "Loại chiến dịch không hợp lệ" }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        });
+    if (campaign_type === 'Facebook') {
+      tableName = 'Bao_cao_Facebook';
+      // Alias content to description to create a consistent field for the frontend
+      selectStatement = 'id, campaign_id, posted_at, keywords_found, ai_evaluation, sentiment, source_url, scanned_at, description:content';
+    } else {
+      return new Response(JSON.stringify({ error: "Loại chiến dịch không hợp lệ" }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      });
     }
 
     const { data, error } = await supabaseAdmin

@@ -30,21 +30,13 @@ serve(async (req) => {
     );
 
     let tableName = '';
-    switch (campaign_type) {
-      case 'Facebook':
-        tableName = 'Bao_cao_Facebook';
-        break;
-      case 'Website':
-        tableName = 'Bao_cao_Website';
-        break;
-      case 'Tổng hợp':
-        tableName = 'Bao_cao_tong_hop';
-        break;
-      default:
-        return new Response(JSON.stringify({ error: "Loại chiến dịch không hợp lệ" }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        });
+    if (campaign_type === 'Facebook') {
+      tableName = 'Bao_cao_Facebook';
+    } else {
+      return new Response(JSON.stringify({ error: "Loại chiến dịch không hợp lệ" }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      });
     }
 
     const { error } = await supabaseAdmin

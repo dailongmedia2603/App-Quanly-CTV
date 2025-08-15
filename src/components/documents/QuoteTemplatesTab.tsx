@@ -3,15 +3,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Checkbox } from '@/components/ui/checkbox';
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
 import { format } from 'date-fns';
-import { Search, Plus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Search, Plus, Trash2, FileText, Pencil } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface QuoteTemplate {
   id: string;
@@ -24,15 +25,13 @@ const QuoteTemplatesTab = () => {
   const [templates, setTemplates] = useState<QuoteTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Dialog states
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<QuoteTemplate | null>(null);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
-  const [templateToDelete, setTemplateToDelete] = useState<QuoteTemplate | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form states
   const [name, setName] = useState('');
   const [content, setContent] = useState('');
 
@@ -77,14 +76,8 @@ const QuoteTemplatesTab = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDeleteClick = (template: QuoteTemplate) => {
-    setTemplateToDelete(template);
-    setIsDeleteAlertOpen(true);
-  };
-
   const handleSave = async () => {
-    if (!name.trim()) return showError("Tên mẫu không được để trống.");
-    if (!content.trim()) return showError("Nội dung mẫu không được để trống.");
+    if (!name.trim() || !content.trim()) return showError("Vui lòng điền đầy đủ tên và nội dung mẫu.");
     setIsSubmitting(true);
     const toastId = showLoading(editingTemplate ? "Đang cập nhật..." : "Đang thêm...");
 
@@ -107,123 +100,131 @@ const QuoteTemplatesTab = () => {
   };
 
   const confirmDelete = async () => {
-    if (!templateToDelete) return;
+    if (selectedIds.length === 0) return;
     setIsSubmitting(true);
-    const toastId = showLoading("Đang xóa...");
-    const { error } = await supabase.from('quote_templates').delete().eq('id', templateToDelete.id);
+    const toastId = showLoading(`Đang xóa ${selectedIds.length} mẫu...`);
+    const { error } = await supabase.from('quote_templates').delete().in('id', selectedIds);
     dismissToast(toastId);
     if (error) {
       showError(`Xóa thất bại: ${error.message}`);
     } else {
       showSuccess("Xóa mẫu báo giá thành công!");
+      setSelectedIds([]);
       fetchTemplates();
     }
     setIsDeleteAlertOpen(false);
     setIsSubmitting(false);
   };
 
+  const handleSelect = (id: string, checked: boolean) => {
+    setSelectedIds(prev => checked ? [...prev, id] : prev.filter(i => i !== id));
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    setSelectedIds(checked ? filteredTemplates.map(d => d.id) : []);
+  };
+
+  const isAllFilteredSelected = filteredTemplates.length > 0 && selectedIds.length === filteredTemplates.length;
+
   return (
     <Card className="border-orange-200">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Quản lý Mẫu báo giá</CardTitle>
-          <CardDescription>Thêm, sửa, xóa các mẫu báo giá để AI tham khảo khi tạo báo giá tự động.</CardDescription>
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="relative w-full max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input placeholder="Tìm theo tên mẫu..." className="pl-10" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+      <CardHeader>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <CardTitle>Danh sách Mẫu báo giá</CardTitle>
+            <CardDescription>Quản lý các mẫu báo giá để AI tham khảo.</CardDescription>
           </div>
-          <Button onClick={handleAddNewClick} className="bg-brand-orange hover:bg-brand-orange/90 text-white">
-            <Plus className="mr-2 h-4 w-4" />Thêm mẫu
-          </Button>
+          <div className="flex items-center space-x-2">
+            <div className="relative w-full max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input placeholder="Tìm theo tên mẫu..." className="pl-10" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+            </div>
+            {selectedIds.length > 0 ? (
+              <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)}>
+                <Trash2 className="mr-2 h-4 w-4" /> Xóa ({selectedIds.length})
+              </Button>
+            ) : (
+              <Button onClick={handleAddNewClick} className="bg-brand-orange hover:bg-brand-orange/90 text-white">
+                <Plus className="mr-2 h-4 w-4" />Thêm mẫu
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tên mẫu báo giá</TableHead>
-                <TableHead>Nội dung</TableHead>
-                <TableHead>Ngày tạo</TableHead>
-                <TableHead className="text-right">Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center">Đang tải...</TableCell></TableRow>
-              ) : filteredTemplates.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="h-24 text-center">Không có mẫu báo giá nào.</TableCell></TableRow>
-              ) : (
-                filteredTemplates.map((template) => (
-                  <TableRow key={template.id}>
-                    <TableCell className="font-medium">{template.name}</TableCell>
-                    <TableCell className="max-w-md truncate">{template.content || <span className="text-gray-400">Không có nội dung</span>}</TableCell>
-                    <TableCell>{format(new Date(template.created_at), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditClick(template)}>
-                            <Pencil className="mr-2 h-4 w-4" />Sửa
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(template)}>
-                            <Trash2 className="mr-2 h-4 w-4" />Xóa
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        {loading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </div>
+        ) : filteredTemplates.length === 0 ? (
+          <div className="text-center text-gray-500 py-10">
+            <FileText className="mx-auto h-12 w-12 text-gray-400" />
+            <p className="mt-4 font-medium">Không có mẫu báo giá nào</p>
+            <p className="text-sm">Hãy thêm mẫu mới để bắt đầu.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-center p-4 border rounded-lg bg-gray-50">
+              <Checkbox id="select-all" checked={isAllFilteredSelected} onCheckedChange={handleSelectAll} />
+              <label htmlFor="select-all" className="ml-3 text-sm font-medium">Chọn tất cả ({filteredTemplates.length})</label>
+            </div>
+            <Accordion type="multiple" className="w-full space-y-2">
+              {filteredTemplates.map(template => (
+                <AccordionItem value={template.id} key={template.id} className="border border-orange-200 rounded-lg bg-white shadow-sm overflow-hidden">
+                  <AccordionTrigger className="p-4 hover:no-underline hover:bg-gray-50/50 w-full text-left data-[state=open]:border-b data-[state=open]:border-orange-200">
+                    <div className="flex items-center w-full gap-4">
+                      <Checkbox
+                        checked={selectedIds.includes(template.id)}
+                        onCheckedChange={(c) => handleSelect(template.id, c as boolean)}
+                        onClick={e => e.stopPropagation()}
+                        className="flex-shrink-0"
+                      />
+                      <div className="flex-grow min-w-0">
+                        <p className="font-semibold text-gray-800 truncate">{template.name}</p>
+                        <p className="text-xs text-gray-500">{format(new Date(template.created_at), 'dd/MM/yyyy')}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); handleEditClick(template); }}
+                        className="flex-shrink-0 text-gray-600 hover:text-brand-orange"
+                      >
+                        <Pencil className="h-4 w-4 mr-2" /> Sửa
+                      </Button>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="p-4 bg-brand-orange-light/30">
+                    <div className="space-y-4 bg-white/50 p-4 rounded-md border border-orange-100 text-sm">
+                      <div>
+                        <h4 className="font-semibold text-sm mb-2 flex items-center"><FileText className="h-4 w-4 mr-2 text-brand-orange"/>Nội dung chi tiết</h4>
+                        <pre className="font-sans whitespace-pre-wrap text-gray-800">{template.content || <em>Không có nội dung.</em>}</pre>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        )}
       </CardContent>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingTemplate ? 'Sửa mẫu báo giá' : 'Thêm mẫu báo giá mới'}</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader><DialogTitle>{editingTemplate ? 'Sửa mẫu báo giá' : 'Thêm mẫu báo giá mới'}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="template-name">Tên mẫu</Label>
-              <Input id="template-name" value={name} onChange={e => setName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="template-content">Nội dung</Label>
-              <Textarea id="template-content" value={content} onChange={e => setContent(e.target.value)} className="min-h-[200px]" />
-            </div>
+            <div className="space-y-2"><Label htmlFor="template-name">Tên mẫu</Label><Input id="template-name" value={name} onChange={e => setName(e.target.value)} /></div>
+            <div className="space-y-2"><Label htmlFor="template-content">Nội dung chi tiết</Label><Textarea id="template-content" value={content} onChange={e => setContent(e.target.value)} className="min-h-[200px]" /></div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Hủy</Button>
-            <Button onClick={handleSave} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">
-              {isSubmitting ? 'Đang lưu...' : 'Lưu'}
-            </Button>
-          </DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setIsDialogOpen(false)}>Hủy</Button><Button onClick={handleSave} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? 'Đang lưu...' : 'Lưu'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bạn có chắc muốn xóa mẫu báo giá "{templateToDelete?.name}" không? Hành động này không thể hoàn tác.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} disabled={isSubmitting} className="bg-red-600 hover:bg-red-700">
-              {isSubmitting ? 'Đang xóa...' : 'Xóa'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
+          <AlertDialogHeader><AlertDialogTitle>Xác nhận xóa</AlertDialogTitle><AlertDialogDescription>Bạn có chắc muốn xóa {selectedIds.length} mẫu đã chọn không? Hành động này không thể hoàn tác.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Hủy</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} disabled={isSubmitting} className="bg-red-600 hover:bg-red-700">{isSubmitting ? 'Đang xóa...' : 'Xóa'}</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </Card>

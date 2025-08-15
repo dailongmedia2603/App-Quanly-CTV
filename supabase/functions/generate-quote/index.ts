@@ -26,6 +26,14 @@ const formatDate = (date: Date): string => {
 const cleanAiResponse = (rawText: string): string => {
   if (!rawText) return '';
   let text = rawText.trim();
+  
+  // Find the main header and take everything from there
+  const headerMarker = '# BÁO GIÁ DỊCH VỤ';
+  const headerIndex = text.indexOf(headerMarker);
+  if (headerIndex !== -1) {
+    text = text.substring(headerIndex);
+  }
+
   // Remove markdown code block fences that Gemini often adds
   text = text.replace(/^```(markdown|md|)\s*\n/i, '');
   text = text.replace(/\n\s*```$/, '');
@@ -99,7 +107,7 @@ serve(async (req) => {
     }
 
     // Extract final price from the cleaned content for storage
-    const totalMatch = generatedContent.match(/TỔNG CỘNG \(VNĐ\)\*\*:\s*([\d.,]+)/);
+    const totalMatch = generatedContent.match(/(?:TỔNG TIỀN SAU THUẾ|TỔNG CỘNG \(VNĐ\))\**:\s*([\d.,]+)/i);
     const finalPrice = totalMatch ? parseFormattedNumber(totalMatch[1]) : null;
 
     const { data: savedQuote, error: saveError } = await supabaseAdmin

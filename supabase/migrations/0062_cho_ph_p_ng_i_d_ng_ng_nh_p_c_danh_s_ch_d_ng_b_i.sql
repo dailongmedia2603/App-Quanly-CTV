@@ -1,0 +1,1 @@
+CREATE POLICY "Allow authenticated users to read post types" ON public.document_post_types FOR SELECT TO authenticated USING (true);

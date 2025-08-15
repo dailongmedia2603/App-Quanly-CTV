@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Home, SlidersHorizontal, FilePieChart, CircleDollarSign, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog, FolderKanban, UserCheck, FileSpreadsheet } from "lucide-react";
+import { Home, SlidersHorizontal, FilePieChart, CircleDollarSign, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog, FolderKanban, UserCheck, FileSpreadsheet, FileBarChart } from "lucide-react";
 import * as Icons from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -150,6 +150,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
             )}
 
             {hasPermission('documents') && <NavLink to="/documents" icon={FolderKanban} isCollapsed={isCollapsed}>Tài liệu</NavLink>}
+            {hasPermission('reports') && <NavLink to="/reports" icon={FileBarChart} isCollapsed={isCollapsed}>Báo cáo</NavLink>}
             {hasPermission('account') && <NavLink to="/account" icon={Users} isCollapsed={isCollapsed}>Tài khoản</NavLink>}
             {hasPermission('settings') && <NavLink to="/settings" icon={Settings} isCollapsed={isCollapsed}>Settings</NavLink>}
           </nav>

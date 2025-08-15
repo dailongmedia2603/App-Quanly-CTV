@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import QuoteDisplay from '@/components/QuoteDisplay';
 
 interface Service {
   id: string;
@@ -211,7 +212,7 @@ const CreateQuote = () => {
             {isGenerating ? (
               <div className="flex flex-col items-center justify-center text-center text-gray-500 py-20"><Sparkles className="h-12 w-12 text-brand-orange animate-pulse" /><p className="mt-4 font-semibold text-gray-700">AI đang phân tích...</p></div>
             ) : generatedQuote ? (
-              <div className="prose prose-sm max-w-none bg-gray-50 p-4 rounded-md border"><ReactMarkdown remarkPlugins={[remarkGfm]}>{generatedQuote.generated_content}</ReactMarkdown></div>
+              <QuoteDisplay content={generatedQuote.generated_content} />
             ) : (
               <div className="text-center text-gray-500 py-20"><Sparkles className="mx-auto h-12 w-12 text-gray-400" /><p className="mt-4 font-medium">Báo giá của bạn sẽ xuất hiện ở đây</p></div>
             )}

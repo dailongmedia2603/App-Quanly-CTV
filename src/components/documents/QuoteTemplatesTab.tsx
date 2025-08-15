@@ -7,22 +7,32 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
 import { format } from 'date-fns';
-import { Search, Plus, Trash2, FileText, Pencil } from 'lucide-react';
+import { Search, Plus, Trash2, FileText, Pencil, Briefcase } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+
+interface Service {
+  id: string;
+  name: string;
+}
 
 interface QuoteTemplate {
   id: string;
   name: string;
   content: string;
   created_at: string;
+  service_id: string | null;
+  document_services: { name: string } | null;
 }
 
 const QuoteTemplatesTab = () => {
   const [templates, setTemplates] = useState<QuoteTemplate[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -34,24 +44,26 @@ const QuoteTemplatesTab = () => {
 
   const [name, setName] = useState('');
   const [content, setContent] = useState('');
+  const [selectedServiceId, setSelectedServiceId] = useState<string | undefined>();
 
-  const fetchTemplates = async () => {
+  const fetchData = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('quote_templates')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const [templatesRes, servicesRes] = await Promise.all([
+      supabase.from('quote_templates').select('*, document_services(name)').order('created_at', { ascending: false }),
+      supabase.from('document_services').select('*').order('name', { ascending: true })
+    ]);
 
-    if (error) {
-      showError("Không thể tải danh sách mẫu báo giá.");
-    } else {
-      setTemplates(data as QuoteTemplate[]);
-    }
+    if (templatesRes.error) showError("Không thể tải danh sách mẫu báo giá.");
+    else setTemplates(templatesRes.data as QuoteTemplate[]);
+
+    if (servicesRes.error) showError("Không thể tải danh sách dịch vụ.");
+    else setServices(servicesRes.data as Service[]);
+    
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchTemplates();
+    fetchData();
   }, []);
 
   const filteredTemplates = useMemo(() => {
@@ -61,6 +73,7 @@ const QuoteTemplatesTab = () => {
   const resetForm = () => {
     setName('');
     setContent('');
+    setSelectedServiceId(undefined);
   };
 
   const handleAddNewClick = () => {
@@ -73,6 +86,7 @@ const QuoteTemplatesTab = () => {
     setEditingTemplate(template);
     setName(template.name);
     setContent(template.content || '');
+    setSelectedServiceId(template.service_id || undefined);
     setIsDialogOpen(true);
   };
 
@@ -81,7 +95,11 @@ const QuoteTemplatesTab = () => {
     setIsSubmitting(true);
     const toastId = showLoading(editingTemplate ? "Đang cập nhật..." : "Đang thêm...");
 
-    const payload = { name, content };
+    const payload = { 
+      name, 
+      content,
+      service_id: selectedServiceId
+    };
 
     const query = editingTemplate
       ? supabase.from('quote_templates').update(payload).eq('id', editingTemplate.id)
@@ -94,7 +112,7 @@ const QuoteTemplatesTab = () => {
     } else {
       showSuccess("Lưu mẫu báo giá thành công!");
       setIsDialogOpen(false);
-      fetchTemplates();
+      fetchData();
     }
     setIsSubmitting(false);
   };
@@ -110,7 +128,7 @@ const QuoteTemplatesTab = () => {
     } else {
       showSuccess("Xóa mẫu báo giá thành công!");
       setSelectedIds([]);
-      fetchTemplates();
+      fetchData();
     }
     setIsDeleteAlertOpen(false);
     setIsSubmitting(false);
@@ -185,6 +203,11 @@ const QuoteTemplatesTab = () => {
                         <p className="font-semibold text-gray-800 truncate">{template.name}</p>
                         <p className="text-xs text-gray-500">{format(new Date(template.created_at), 'dd/MM/yyyy')}</p>
                       </div>
+                      {template.document_services?.name && (
+                        <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700 flex-shrink-0">
+                          {template.document_services.name}
+                        </Badge>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -215,6 +238,7 @@ const QuoteTemplatesTab = () => {
           <DialogHeader><DialogTitle>{editingTemplate ? 'Sửa mẫu báo giá' : 'Thêm mẫu báo giá mới'}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2"><Label htmlFor="template-name">Tên mẫu</Label><Input id="template-name" value={name} onChange={e => setName(e.target.value)} /></div>
+            <div className="space-y-2"><Label htmlFor="template-service" className="flex items-center"><Briefcase className="h-4 w-4 mr-2"/>Dịch vụ</Label><Select value={selectedServiceId} onValueChange={setSelectedServiceId}><SelectTrigger id="template-service"><SelectValue placeholder="Chọn dịch vụ" /></SelectTrigger><SelectContent>{services.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select></div>
             <div className="space-y-2"><Label htmlFor="template-content">Nội dung chi tiết</Label><Textarea id="template-content" value={content} onChange={e => setContent(e.target.value)} className="min-h-[200px]" /></div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setIsDialogOpen(false)}>Hủy</Button><Button onClick={handleSave} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? 'Đang lưu...' : 'Lưu'}</Button></DialogFooter>

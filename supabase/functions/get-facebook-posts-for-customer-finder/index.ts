@@ -21,26 +21,12 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Step 1: Fetch reports from Bao_cao_tong_hop
+    // Step 1: Call the new RPC function to get unified data
     const { data: reports, error: reportError } = await supabaseAdmin
-      .from('"Bao_cao_tong_hop"')
-      .select(`
-        id, 
-        campaign_id, 
-        posted_at, 
-        keywords_found, 
-        ai_evaluation, 
-        sentiment, 
-        source_url, 
-        scanned_at, 
-        description, 
-        suggested_comment,
-        identified_service_id
-      `)
-      .eq('source_type', 'Facebook');
+      .rpc('get_all_facebook_posts_for_finder');
 
     if (reportError) {
-      console.error("Error fetching from Bao_cao_tong_hop:", reportError);
+      console.error("Error calling RPC function:", reportError);
       throw new Error(`Lỗi khi lấy báo cáo: ${reportError.message}`);
     }
 
@@ -53,10 +39,9 @@ serve(async (req) => {
 
     // Step 2: Collect unique service IDs
     const serviceIds = [...new Set(reports.map(r => r.identified_service_id).filter(Boolean))];
-
     let servicesMap = new Map();
 
-    // Step 3: Fetch corresponding services if there are any service IDs
+    // Step 3: Fetch corresponding services
     if (serviceIds.length > 0) {
         const { data: services, error: servicesError } = await supabaseAdmin
             .from('document_services')
@@ -65,7 +50,6 @@ serve(async (req) => {
 
         if (servicesError) {
             console.error("Error fetching services:", servicesError);
-            // We can continue without service names, it's not a fatal error
         } else {
             servicesMap = new Map(services.map(s => [s.id, s.name]));
         }
@@ -77,18 +61,11 @@ serve(async (req) => {
       identified_service_name: servicesMap.get(report.identified_service_id) || null,
     }));
 
-    // Step 5: Robustly sort by posted_at descending, handling null or invalid dates
+    // Step 5: Robustly sort by posted_at descending
     allData.sort((a, b) => {
-      const dateA = a.posted_at ? new Date(a.posted_at) : null;
-      const dateB = b.posted_at ? new Date(b.posted_at) : null;
-
-      const timeA = dateA && !isNaN(dateA.getTime()) ? dateA.getTime() : 0;
-      const timeB = dateB && !isNaN(dateB.getTime()) ? dateB.getTime() : 0;
-
-      if (timeA === 0 && timeB !== 0) return 1; // a is invalid/null, push to end
-      if (timeB === 0 && timeA !== 0) return -1; // b is invalid/null, push to end
-
-      return timeB - timeA; // Sort descending
+      const dateA = a.posted_at ? new Date(a.posted_at).getTime() : 0;
+      const dateB = b.posted_at ? new Date(b.posted_at).getTime() : 0;
+      return dateB - dateA;
     });
 
     return new Response(JSON.stringify(allData), {

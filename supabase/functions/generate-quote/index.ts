@@ -38,7 +38,7 @@ serve(async (req) => {
   }
 
   try {
-    const { name, budget, serviceIds, includesVat, otherRequirements } = await req.json();
+    const { name, budget, serviceIds, includesVat, otherRequirements, implementationTime } = await req.json();
     if (!budget || !serviceIds || serviceIds.length === 0) {
       throw new Error("Cần có ngân sách và ít nhất một dịch vụ được chọn.");
     }
@@ -85,6 +85,7 @@ serve(async (req) => {
     const prompt = promptTemplateData.prompt
       .replace(/\[budget\]/gi, budget.toLocaleString('vi-VN'))
       .replace(/\[vat_info\]/gi, includesVat ? "Báo giá CÓ bao gồm 8% VAT." : "Báo giá KHÔNG bao gồm VAT.")
+      .replace(/\[thời gian triển khai\]/gi, implementationTime || "Chưa xác định")
       .replace(/\[other_requirements\]/gi, otherRequirements || "Không có.")
       .replace(/\[service_prices\]/gi, servicePricesText)
       .replace(/\[quote_templates\]/gi, quoteTemplatesText);
@@ -110,6 +111,7 @@ serve(async (req) => {
         service_ids: serviceIds,
         includes_vat: includesVat,
         other_requirements: otherRequirements,
+        implementation_time: implementationTime,
         generated_content: generatedContent,
         final_price: finalPrice,
       })

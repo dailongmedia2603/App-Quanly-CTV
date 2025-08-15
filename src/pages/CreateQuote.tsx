@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { MultiSelectCombobox, SelectOption } from '@/components/ui/multi-select-combobox';
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
-import { Wand2, Sparkles, History, ArrowLeft, FileText, Copy, Trash2 } from 'lucide-react';
+import { Wand2, Sparkles, History, ArrowLeft, FileText, Copy, Trash2, Clock } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { format } from 'date-fns';
@@ -124,6 +124,7 @@ const CreateQuote = () => {
   const [quoteName, setQuoteName] = useState('');
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [budget, setBudget] = useState<number | ''>('');
+  const [implementationTime, setImplementationTime] = useState('');
   const [includesVat, setIncludesVat] = useState('yes');
   const [otherRequirements, setOtherRequirements] = useState('');
 
@@ -156,6 +157,7 @@ const CreateQuote = () => {
           serviceIds: selectedServiceIds,
           includesVat: includesVat === 'yes',
           otherRequirements: otherRequirements,
+          implementationTime: implementationTime,
         }
       });
       if (error) throw error;
@@ -198,6 +200,7 @@ const CreateQuote = () => {
             <div className="space-y-2"><Label>Tên báo giá (tùy chọn)</Label><Input placeholder={`Báo giá ngày ${format(new Date(), 'dd/MM/yyyy')}`} value={quoteName} onChange={e => setQuoteName(e.target.value)} /></div>
             <div className="space-y-2"><Label>Dịch vụ</Label><MultiSelectCombobox options={serviceOptions} selected={selectedServiceIds} onChange={setSelectedServiceIds} placeholder="Chọn dịch vụ" searchPlaceholder="Tìm dịch vụ..." emptyPlaceholder="Không tìm thấy." /></div>
             <div className="space-y-2"><Label>Ngân sách (VND)</Label><Input placeholder="VD: 50.000.000" value={formatNumberWithDots(budget)} onChange={e => setBudget(parseFormattedNumber(e.target.value))} /></div>
+            <div className="space-y-2"><Label className="flex items-center space-x-2"><Clock className="h-4 w-4" /><span>Thời gian triển khai</span></Label><Input placeholder="VD: 30 ngày" value={implementationTime} onChange={e => setImplementationTime(e.target.value)} /></div>
             <div className="space-y-2"><Label>Thuế</Label><RadioGroup value={includesVat} onValueChange={setIncludesVat} className="flex items-center space-x-4"><div className="flex items-center space-x-2"><RadioGroupItem value="yes" id="vat-yes" /><Label htmlFor="vat-yes">Có VAT (8%)</Label></div><div className="flex items-center space-x-2"><RadioGroupItem value="no" id="vat-no" /><Label htmlFor="vat-no">Không VAT</Label></div></RadioGroup></div>
             <div className="space-y-2"><Label>Yêu cầu khác (nếu có)</Label><Textarea placeholder="VD: Nhấn mạnh vào các dịch vụ social media..." value={otherRequirements} onChange={e => setOtherRequirements(e.target.value)} /></div>
           </CardContent>

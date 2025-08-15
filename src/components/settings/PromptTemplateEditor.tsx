@@ -40,6 +40,7 @@ const variableConfig = {
   quote: [
     { name: 'Ngân sách', value: '[budget]' },
     { name: 'Thông tin VAT', value: '[vat_info]' },
+    { name: 'Thời gian triển khai', value: '[thời gian triển khai]' },
     { name: 'Yêu cầu khác', value: '[other_requirements]' },
     { name: 'Bảng giá dịch vụ', value: '[service_prices]' },
     { name: 'Mẫu báo giá tham khảo', value: '[quote_templates]' },

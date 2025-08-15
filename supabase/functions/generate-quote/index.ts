@@ -23,6 +23,15 @@ const formatDate = (date: Date): string => {
   return `${day}/${month}/${year}`;
 };
 
+const cleanAiResponse = (rawText: string): string => {
+  if (!rawText) return '';
+  let text = rawText.trim();
+  // Remove markdown code block fences that Gemini often adds
+  text = text.replace(/^```(markdown|md|)\s*\n/i, '');
+  text = text.replace(/\n\s*```$/, '');
+  return text.trim();
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -103,9 +112,14 @@ serve(async (req) => {
     `;
 
     const result = await model.generateContent(prompt);
-    const generatedContent = result.response.text();
+    const rawGeneratedContent = result.response.text();
+    const generatedContent = cleanAiResponse(rawGeneratedContent);
 
-    // Extract final price from the generated content for storage
+    if (!generatedContent) {
+        throw new Error("AI không thể tạo nội dung báo giá. Vui lòng thử lại.");
+    }
+
+    // Extract final price from the cleaned content for storage
     const totalMatch = generatedContent.match(/TỔNG CỘNG \(VNĐ\)\*\*:\s*([\d.,]+)/);
     const finalPrice = totalMatch ? parseFormattedNumber(totalMatch[1]) : null;
 

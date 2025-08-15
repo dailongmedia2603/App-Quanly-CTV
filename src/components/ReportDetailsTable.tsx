@@ -114,6 +114,40 @@ const ReportDetailsTable = ({ selectedCampaign }: ReportDetailsTableProps) => {
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+    // Set column widths
+    worksheet['!cols'] = [
+      { wch: 60 }, // Nội dung
+      { wch: 20 }, // Thời gian đăng
+      { wch: 30 }, // Từ khoá
+      { wch: 40 }, // AI đánh giá
+      { wch: 40 }, // Link bài viết
+    ];
+
+    // Apply alignment and styling to all cells
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cell_address = { c: C, r: R };
+        const cell_ref = XLSX.utils.encode_cell(cell_address);
+        if (!worksheet[cell_ref]) continue;
+        
+        if (!worksheet[cell_ref].s) worksheet[cell_ref].s = {};
+        
+        worksheet[cell_ref].s.alignment = {
+          vertical: 'center',
+          horizontal: 'left',
+          wrapText: true,
+        };
+
+        // Style header row
+        if (R === 0) {
+          worksheet[cell_ref].s.font = { bold: true, color: { rgb: "FFFFFFFF" } };
+          worksheet[cell_ref].s.fill = { fgColor: { rgb: "FF282828" } };
+        }
+      }
+    }
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Báo cáo");
     XLSX.writeFile(workbook, `Bao_cao_${selectedCampaign.name.replace(/\s+/g, '_')}.xlsx`);

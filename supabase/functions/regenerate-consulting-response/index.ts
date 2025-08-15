@@ -24,7 +24,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messageId, sessionId, serviceId, messages, regenerateDirection } = await req.json();
+    const { messageId, sessionId, serviceId, messages, regenerateDirection, customerSalutation } = await req.json();
     if (!messageId || !sessionId || !serviceId || !messages) {
       throw new Error("Yêu cầu thiếu thông tin cần thiết.");
     }
@@ -121,6 +121,10 @@ serve(async (req) => {
         .replace(/\[biên tài liệu\]/gi, documentContent);
 
     finalPrompt = `Hãy viết lại câu trả lời của bạn dựa trên định hướng mới sau: "${regenerateDirection || 'Hãy viết lại theo một cách khác.'}".\n\n${finalPrompt}`;
+
+    if (customerSalutation) {
+        finalPrompt = `QUAN TRỌNG: Khách hàng là "${customerSalutation}". Hãy xưng hô cho phù hợp trong câu trả lời của bạn (ví dụ: "Chào ${customerSalutation}", "Dạ ${customerSalutation} ạ", "bên em gửi ${customerSalutation}").\n\n---\n\n${finalPrompt}`;
+    }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({ model: settings.gemini_model });

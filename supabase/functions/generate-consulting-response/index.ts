@@ -23,7 +23,7 @@ serve(async (req) => {
   }
 
   try {
-    const { sessionId, serviceId, messages } = await req.json();
+    const { sessionId, serviceId, messages, customerSalutation } = await req.json();
     if (!sessionId || !serviceId || !messages || messages.length === 0) {
       throw new Error("Yêu cầu thiếu thông tin cần thiết.");
     }
@@ -105,6 +105,10 @@ serve(async (req) => {
         .replace(/\[lịch sử trò chuyện\]/gi, chatHistory || 'Đây là tin nhắn đầu tiên trong cuộc trò chuyện.')
         .replace(/\[tin nhắn cần trả lời\]/gi, latestUserMessage)
         .replace(/\[biên tài liệu\]/gi, documentContent);
+
+    if (customerSalutation) {
+        finalPrompt = `QUAN TRỌNG: Khách hàng là "${customerSalutation}". Hãy xưng hô cho phù hợp trong câu trả lời của bạn (ví dụ: "Chào ${customerSalutation}", "Dạ ${customerSalutation} ạ", "bên em gửi ${customerSalutation}").\n\n---\n\n${finalPrompt}`;
+    }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({ model: settings.gemini_model });

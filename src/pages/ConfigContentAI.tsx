@@ -1,7 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PromptTemplateEditor from "@/components/settings/PromptTemplateEditor";
 import PromptHistory from "@/components/settings/PromptHistory";
-import { PenSquare, MessageSquare, UserCheck } from "lucide-react";
+import { PenSquare, MessageSquare, UserCheck, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -39,7 +39,7 @@ const ConfigContentAI = () => {
         </p>
       </div>
       <Tabs defaultValue="post" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-2xl rounded-lg border border-orange-200 p-0 bg-white overflow-hidden">
+        <TabsList className="grid w-full grid-cols-4 max-w-3xl rounded-lg border border-orange-200 p-0 bg-white overflow-hidden">
           <TabsTrigger value="post" className="flex-1 flex items-center justify-center space-x-2 py-2.5 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold">
             <PenSquare className="h-5 w-5" />
             <span>Prompt Post</span>
@@ -47,6 +47,10 @@ const ConfigContentAI = () => {
           <TabsTrigger value="comment" className="flex-1 flex items-center justify-center space-x-2 py-2.5 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold">
             <MessageSquare className="h-5 w-5" />
             <span>Prompt Comment</span>
+          </TabsTrigger>
+          <TabsTrigger value="customer_finder_comment" className="flex-1 flex items-center justify-center space-x-2 py-2.5 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold">
+            <Users className="h-5 w-5" />
+            <span>Prompt tìm KH</span>
           </TabsTrigger>
           <TabsTrigger value="consulting" className="flex-1 flex items-center justify-center space-x-2 py-2.5 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold">
             <UserCheck className="h-5 w-5" />
@@ -68,6 +72,14 @@ const ConfigContentAI = () => {
             description="Cấu hình mẫu prompt mặc định cho chức năng 'Tạo comment'. Mẫu này sẽ được dùng để tạo các bình luận tương tác."
           />
           <PromptHistory templateType="comment" />
+        </TabsContent>
+        <TabsContent value="customer_finder_comment" className="pt-6 space-y-6">
+          <PromptTemplateEditor
+            templateType="customer_finder_comment"
+            title="Mẫu Prompt cho Tìm Khách hàng"
+            description="Cấu hình mẫu prompt mặc định cho chức năng 'Tạo comment giới thiệu' trong trang Tìm khách hàng."
+          />
+          <PromptHistory templateType="customer_finder_comment" />
         </TabsContent>
         <TabsContent value="consulting" className="pt-6 space-y-6">
           <PromptTemplateEditor

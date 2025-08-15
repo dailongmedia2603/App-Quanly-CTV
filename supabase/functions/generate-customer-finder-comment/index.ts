@@ -53,14 +53,16 @@ serve(async (req) => {
     // Step 1: Fetch all services and the comment prompt template
     const [servicesRes, templateRes] = await Promise.all([
         supabaseAdmin.from('document_services').select('id, name, description'),
-        supabase.from('ai_prompt_templates').select('prompt').eq('template_type', 'comment').single()
+        supabase.from('ai_prompt_templates').select('prompt').eq('template_type', 'customer_finder_comment').single()
     ]);
 
     const { data: services, error: servicesError } = servicesRes;
     if (servicesError || !services || services.length === 0) throw new Error("Không tìm thấy dịch vụ nào để đối chiếu.");
 
     const { data: templateData, error: templateError } = templateRes;
-    if (templateError || !templateData?.prompt) throw new Error("Không tìm thấy mẫu prompt cho 'comment'.");
+    if (templateError || !templateData?.prompt) {
+        throw new Error("Không tìm thấy mẫu prompt cho 'Tìm khách hàng'. Vui lòng tạo một mẫu trong Cấu hình > Content AI.");
+    }
 
     // Step 2: Construct the master prompt
     const { data: documents } = await supabaseAdmin.from('documents').select('title, content, service_id');

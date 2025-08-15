@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tag } from 'lucide-react';
 
 interface PromptTemplateEditorProps {
-  templateType: 'post' | 'comment' | 'consulting';
+  templateType: 'post' | 'comment' | 'consulting' | 'customer_finder_comment';
   title: string;
   description: string;
 }
@@ -22,6 +22,11 @@ const variableConfig = {
     { name: 'Biên tài liệu', value: '[biên tài liệu]' },
   ],
   comment: [
+    { name: 'Dịch vụ', value: '[dịch vụ]' },
+    { name: 'Nội dung gốc', value: '[nội dung gốc]' },
+    { name: 'Biên tài liệu', value: '[biên tài liệu]' },
+  ],
+  customer_finder_comment: [
     { name: 'Dịch vụ', value: '[dịch vụ]' },
     { name: 'Nội dung gốc', value: '[nội dung gốc]' },
     { name: 'Biên tài liệu', value: '[biên tài liệu]' },

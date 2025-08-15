@@ -1,150 +1,81 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Outlet, Navigate, useNavigate } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { SidebarProvider } from "./hooks/use-sidebar";
 import Layout from "./components/Layout";
-import Settings from "./pages/Settings";
-import Reports from "./pages/Reports";
-import Login from "./pages/Login";
-import SignUp from "./pages/SignUp";
-import ForgotPassword from "./pages/ForgotPassword";
-import UpdatePassword from "./pages/UpdatePassword";
-import Account from "./pages/Account";
-import Guide from "./pages/Guide";
-import Profile from "./pages/Profile";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import FindCustomers from "./pages/FindCustomers";
-import CreatePost from "./pages/CreatePost";
-import CreateComment from "./pages/CreateComment";
-import CreatePlan from "./pages/CreatePlan";
-import ConfigContentAI from "./pages/ConfigContentAI";
-import ConfigCreatePlan from "./pages/ConfigCreatePlan";
-import Income from "./pages/Income";
-import CustomerConsulting from "./pages/CustomerConsulting";
-import Documents from "./pages/Documents";
-import PermissionGuard from "./components/PermissionGuard";
-import { AppSettingsProvider, useAppSettings } from "./contexts/AppSettingsContext";
-import { useEffect } from "react";
+import CreatePost from "./pages/CreateContent/Post";
+import CreateComment from "./pages/CreateContent/Comment";
+import CustomerConsulting from "./pages/CreateContent/CustomerConsulting";
 import CreateQuote from "./pages/CreateQuote";
-import ConfigQuote from "./pages/ConfigQuote";
-import { supabase } from "./integrations/supabase/client";
+import CreatePlan from "./pages/CreatePlan";
+import Income from "./pages/Income";
+import ConfigScanPost from "./pages/Config/ScanPost";
+import ConfigContentAI from "./pages/Config/ContentAI";
+import ConfigCreatePlan from "./pages/Config/CreatePlan";
+import ConfigQuote from "./pages/Config/Quote";
+import Documents from "./pages/Documents";
+import Account from "./pages/Account";
+import Settings from "./pages/Settings";
+import Login from "./pages/Login";
+import { Toaster } from "@/components/ui/toaster"
 
-const queryClient = new QueryClient();
-
-const ProtectedRoute = () => {
-  const { session } = useAuth();
-  if (!session) {
-    return <Navigate to="/login" replace />;
-  }
-  return (
-    <Layout>
-      <Outlet />
-    </Layout>
-  );
+const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  return user ? <>{children}</> : <Navigate to="/login" />;
 };
 
-const HomeRedirect = () => {
-  const { hasPermission } = useAuth();
-  
-  const orderedRoutes = [
-    { path: '/find-customers', feature: 'find_customers' },
-    { path: '/create-content/post', feature: 'create_post' },
-    { path: '/income', feature: 'income' },
-    { path: '/reports', feature: 'reports' },
-  ];
-
-  for (const route of orderedRoutes) {
-    if (hasPermission(route.feature)) {
-      return <Navigate to={route.path} replace />;
-    }
-  }
-
-  return <Navigate to="/profile" replace />;
-};
-
-const PageTitleUpdater = () => {
-  const { settings, loading } = useAppSettings();
-
-  useEffect(() => {
-    if (!loading && settings?.page_title) {
-      document.title = settings.page_title;
-    }
-  }, [settings, loading]);
-
-  return null;
-};
-
-const AppContent = () => {
-  const { loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        navigate('/update-password');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+const AppRoutes = () => {
+  const { user, loading } = useAuth();
 
   if (loading) {
-    return <div className="flex h-screen w-full items-center justify-center"><p>Loading...</p></div>;
+    return <div className="flex h-screen items-center justify-center">Loading...</div>;
   }
 
   return (
-    <>
-      <PageTitleUpdater />
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/update-password" element={<UpdatePassword />} />
-        <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<HomeRedirect />} />
-          <Route path="/find-customers" element={<PermissionGuard feature="find_customers"><FindCustomers /></PermissionGuard>} />
-          <Route path="/create-content/post" element={<PermissionGuard feature="create_post"><CreatePost /></PermissionGuard>} />
-          <Route path="/create-content/comment" element={<PermissionGuard feature="create_comment"><CreateComment /></PermissionGuard>} />
-          <Route path="/create-content/customer-consulting" element={<PermissionGuard feature="customer_consulting"><CustomerConsulting /></PermissionGuard>} />
-          <Route path="/create-quote" element={<PermissionGuard feature="create_quote"><CreateQuote /></PermissionGuard>} />
-          <Route path="/create-plan" element={<PermissionGuard feature="create_plan"><CreatePlan /></PermissionGuard>} />
-          <Route path="/config/scan-post" element={<PermissionGuard feature="config_scan_post"><Index /></PermissionGuard>} />
-          <Route path="/config/content-ai" element={<PermissionGuard feature="config_content_ai"><ConfigContentAI /></PermissionGuard>} />
-          <Route path="/config/create-plan" element={<PermissionGuard feature="config_create_plan"><ConfigCreatePlan /></PermissionGuard>} />
-          <Route path="/config/quote" element={<PermissionGuard feature="config_quote"><ConfigQuote /></PermissionGuard>} />
-          <Route path="/documents" element={<PermissionGuard feature="documents"><Documents /></PermissionGuard>} />
-          <Route path="/settings" element={<PermissionGuard feature="settings"><Settings /></PermissionGuard>} />
-          <Route path="/reports" element={<PermissionGuard feature="reports"><Reports /></PermissionGuard>} />
-          <Route path="/income" element={<PermissionGuard feature="income"><Income /></PermissionGuard>} />
-          <Route path="/account" element={<PermissionGuard feature="account"><Account /></PermissionGuard>} />
-          <Route path="/guide" element={<Guide />} />
-          <Route path="/profile" element={<Profile />} />
-        </Route>
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </>
+    <Routes>
+      <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+      <Route
+        path="/*"
+        element={
+          <PrivateRoute>
+            <SidebarProvider>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/find-customers" />} />
+                  <Route path="/find-customers" element={<FindCustomers />} />
+                  <Route path="/create-content/post" element={<CreatePost />} />
+                  <Route path="/create-content/comment" element={<CreateComment />} />
+                  <Route path="/create-content/customer-consulting" element={<CustomerConsulting />} />
+                  <Route path="/create-quote" element={<CreateQuote />} />
+                  <Route path="/create-plan" element={<CreatePlan />} />
+                  <Route path="/income" element={<Income />} />
+                  <Route path="/config/scan-post" element={<ConfigScanPost />} />
+                  <Route path="/config/content-ai" element={<ConfigContentAI />} />
+                  <Route path="/config/create-plan" element={<ConfigCreatePlan />} />
+                  <Route path="/config/quote" element={<ConfigQuote />} />
+                  <Route path="/documents" element={<Documents />} />
+                  <Route path="/account" element={<Account />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Routes>
+              </Layout>
+            </SidebarProvider>
+          </PrivateRoute>
+        }
+      />
+    </Routes>
   );
 };
 
-const App = () => {
+function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <AppSettingsProvider>
-            <Toaster />
-            <Sonner position="bottom-right" toastOptions={{ classNames: { success: "bg-brand-orange-light text-brand-orange border-orange-200", error: "bg-red-100 text-red-600 border-red-200", loading: "bg-brand-orange-light text-brand-orange border-orange-200" } }} />
-            <BrowserRouter>
-              <AppContent />
-            </BrowserRouter>
-          </AppSettingsProvider>
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <Router>
+      <AuthProvider>
+        <AppRoutes />
+        <Toaster />
+      </AuthProvider>
+    </Router>
   );
-};
+}
 
 export default App;

@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { showLoading, dismissToast, showSuccess, showError } from '@/utils/toast';
-import { Upload } from 'lucide-react';
+import { Upload, Building, Phone, MapPin, Mail } from 'lucide-react';
 
 const QuoteCompanyInfo = () => {
   const [loading, setLoading] = useState(true);
@@ -17,7 +16,6 @@ const QuoteCompanyInfo = () => {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
-  const [logoFile, setLogoFile] = useState<File | null>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -82,33 +80,27 @@ const QuoteCompanyInfo = () => {
   };
 
   return (
-    <Card className="border-orange-200">
-      <CardHeader>
-        <CardTitle>Thông tin công ty trên báo giá</CardTitle>
-        <CardDescription>Cấu hình logo và thông tin sẽ hiển thị trên đầu mỗi báo giá được tạo ra.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center space-x-6">
-          {logoUrl && <img src={logoUrl} alt="Logo công ty" className="h-20 w-auto object-contain border rounded-md p-2 bg-gray-50" />}
-          <div className="space-y-2">
-            <Label htmlFor="logo-upload">Logo công ty</Label>
-            <Input id="logo-upload" type="file" accept="image/*" onChange={handleLogoUpload} disabled={isUploading} />
-            <p className="text-xs text-gray-500">Tải lên file ảnh (PNG, JPG, SVG).</p>
-          </div>
+    <div className="space-y-4 pt-4 border-t border-orange-100">
+      <div className="flex items-center space-x-6">
+        {logoUrl && <img src={logoUrl} alt="Logo công ty" className="h-20 w-auto object-contain border rounded-md p-2 bg-gray-50" />}
+        <div className="space-y-2">
+          <Label htmlFor="logo-upload" className="flex items-center space-x-2"><Upload className="h-4 w-4" /><span>Logo công ty</span></Label>
+          <Input id="logo-upload" type="file" accept="image/*" onChange={handleLogoUpload} disabled={isUploading} />
+          <p className="text-xs text-gray-500">Tải lên file ảnh (PNG, JPG, SVG).</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2"><Label>Tên công ty</Label><Input value={companyName} onChange={e => setCompanyName(e.target.value)} /></div>
-          <div className="space-y-2"><Label>Số điện thoại</Label><Input value={phone} onChange={e => setPhone(e.target.value)} /></div>
-        </div>
-        <div className="space-y-2"><Label>Địa chỉ</Label><Input value={address} onChange={e => setAddress(e.target.value)} /></div>
-        <div className="space-y-2"><Label>Email</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
-      </CardContent>
-      <CardFooter className="flex justify-end">
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2"><Label className="flex items-center space-x-2"><Building className="h-4 w-4" /><span>Tên công ty</span></Label><Input value={companyName} onChange={e => setCompanyName(e.target.value)} /></div>
+        <div className="space-y-2"><Label className="flex items-center space-x-2"><Phone className="h-4 w-4" /><span>Số điện thoại</span></Label><Input value={phone} onChange={e => setPhone(e.target.value)} /></div>
+      </div>
+      <div className="space-y-2"><Label className="flex items-center space-x-2"><MapPin className="h-4 w-4" /><span>Địa chỉ</span></Label><Input value={address} onChange={e => setAddress(e.target.value)} /></div>
+      <div className="space-y-2"><Label className="flex items-center space-x-2"><Mail className="h-4 w-4" /><span>Email</span></Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
+      <div className="flex justify-end pt-4">
         <Button onClick={handleSave} disabled={isSaving || isUploading} className="bg-brand-orange hover:bg-brand-orange/90 text-white">
           {isSaving ? 'Đang lưu...' : 'Lưu thông tin'}
         </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 };
 

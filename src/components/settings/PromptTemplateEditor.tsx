@@ -9,8 +9,8 @@ import { Tag } from 'lucide-react';
 
 interface PromptTemplateEditorProps {
   templateType: 'post' | 'comment' | 'consulting' | 'customer_finder_comment' | 'quote';
-  title: string;
-  description: string;
+  title?: string;
+  description?: string;
 }
 
 const variableConfig = {
@@ -111,6 +111,37 @@ const PromptTemplateEditor = ({ templateType, title, description }: PromptTempla
     }, 0);
   };
 
+  const editorContent = (
+    <>
+      <div>
+        <div className="flex items-center space-x-2 mb-2">
+          <Tag className="h-4 w-4 text-gray-500" />
+          <h3 className="text-sm font-medium text-gray-600">Chèn biến</h3>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {availableVariables.map((variable) => (
+            <Button
+              key={variable.name}
+              variant="outline"
+              size="sm"
+              className="text-xs bg-white hover:bg-gray-50"
+              onClick={() => handleInsertVariable(variable.value)}
+            >
+              {variable.name}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <Textarea
+        ref={textareaRef}
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        placeholder="Nhập mẫu prompt của bạn ở đây..."
+        className="min-h-[250px] text-base font-mono bg-gray-50"
+      />
+    </>
+  );
+
   if (loading) {
     return (
       <Card>
@@ -128,6 +159,19 @@ const PromptTemplateEditor = ({ templateType, title, description }: PromptTempla
     );
   }
 
+  if (!title) {
+    return (
+      <div className="space-y-4 pt-4 border-t border-orange-100">
+        {editorContent}
+        <div className="flex justify-end">
+          <Button onClick={handleSave} disabled={isSaving} className="bg-brand-orange hover:bg-brand-orange/90 text-white">
+            {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Card className="border-orange-200">
       <CardHeader>
@@ -135,32 +179,7 @@ const PromptTemplateEditor = ({ templateType, title, description }: PromptTempla
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div>
-          <div className="flex items-center space-x-2 mb-2">
-            <Tag className="h-4 w-4 text-gray-500" />
-            <h3 className="text-sm font-medium text-gray-600">Chèn biến</h3>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {availableVariables.map((variable) => (
-              <Button
-                key={variable.name}
-                variant="outline"
-                size="sm"
-                className="text-xs bg-white hover:bg-gray-50"
-                onClick={() => handleInsertVariable(variable.value)}
-              >
-                {variable.name}
-              </Button>
-            ))}
-          </div>
-        </div>
-        <Textarea
-          ref={textareaRef}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Nhập mẫu prompt của bạn ở đây..."
-          className="min-h-[250px] text-base font-mono bg-gray-50"
-        />
+        {editorContent}
       </CardContent>
       <CardFooter className="flex justify-end">
         <Button onClick={handleSave} disabled={isSaving} className="bg-brand-orange hover:bg-brand-orange/90 text-white">

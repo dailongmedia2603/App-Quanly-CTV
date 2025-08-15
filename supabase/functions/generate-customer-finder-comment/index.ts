@@ -78,11 +78,7 @@ serve(async (req) => {
     const cleanedGeneratedComment = cleanAiResponse(rawGeneratedText);
     if (!cleanedGeneratedComment) throw new Error("AI không tạo được comment hợp lệ.");
 
-    // Determine which table to update
-    const { data: fb_check } = await supabaseAdmin.from('"Bao_cao_Facebook"').select('id').eq('id', reportId).maybeSingle();
-    const tableName = fb_check ? '"Bao_cao_Facebook"' : '"Bao_cao_tong_hop"';
-
-    const { error: updateError } = await supabaseAdmin.from(tableName).update({ suggested_comment: cleanedGeneratedComment, identified_service_id: matchedService.id }).eq('id', reportId);
+    const { error: updateError } = await supabaseAdmin.from('"Bao_cao_Facebook"').update({ suggested_comment: cleanedGeneratedComment, identified_service_id: matchedService.id }).eq('id', reportId);
     if (updateError) throw new Error(`Lưu comment thất bại: ${updateError.message}`);
 
     await supabaseAdmin.from('ai_generation_logs').insert({ user_id: user.id, template_type: 'customer_finder_comment', final_prompt: finalPrompt, generated_content: rawGeneratedText, is_hidden_in_admin_history: true });

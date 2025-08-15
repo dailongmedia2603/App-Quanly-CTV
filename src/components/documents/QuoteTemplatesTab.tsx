@@ -35,6 +35,7 @@ const QuoteTemplatesTab = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedServiceFilter, setSelectedServiceFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -67,8 +68,12 @@ const QuoteTemplatesTab = () => {
   }, []);
 
   const filteredTemplates = useMemo(() => {
-    return templates.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [templates, searchTerm]);
+    return templates.filter(t => {
+      const searchMatch = t.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const serviceMatch = selectedServiceFilter === 'all' || t.service_id === selectedServiceFilter;
+      return searchMatch && serviceMatch;
+    });
+  }, [templates, searchTerm, selectedServiceFilter]);
 
   const resetForm = () => {
     setName('');
@@ -157,6 +162,13 @@ const QuoteTemplatesTab = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder="Tìm theo tên mẫu..." className="pl-10" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
             </div>
+            <Select value={selectedServiceFilter} onValueChange={setSelectedServiceFilter}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Lọc theo dịch vụ" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả dịch vụ</SelectItem>
+                {services.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
             {selectedIds.length > 0 ? (
               <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)}>
                 <Trash2 className="mr-2 h-4 w-4" /> Xóa ({selectedIds.length})

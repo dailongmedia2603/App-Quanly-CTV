@@ -36,7 +36,7 @@ const FindCustomers = () => {
   const [selectedItemDetails, setSelectedItemDetails] = useState<ReportData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
-  const [generatingCommentId, setGeneratingCommentId] = useState<string | null>(null);
+  const [generatingCommentIds, setGeneratingCommentIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchReportData = async () => {
@@ -84,7 +84,7 @@ const FindCustomers = () => {
       showError("Bài viết không có nội dung để tạo comment.");
       return;
     }
-    setGeneratingCommentId(item.id);
+    setGeneratingCommentIds(prev => new Set(prev).add(item.id));
     try {
       const { data, error } = await supabase.functions.invoke('generate-customer-finder-comment', {
         body: {
@@ -116,7 +116,11 @@ const FindCustomers = () => {
     } catch (error: any) {
       showError(`Lỗi tạo comment: ${error.message}`);
     } finally {
-      setGeneratingCommentId(null);
+      setGeneratingCommentIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(item.id);
+        return newSet;
+      });
     }
   };
 
@@ -162,10 +166,10 @@ const FindCustomers = () => {
                           {item.description}
                         </TableCell>
                         <TableCell className="max-w-sm">
-                          {generatingCommentId === item.id ? (
+                          {generatingCommentIds.has(item.id) ? (
                             <div className="flex items-center space-x-2 text-gray-500">
                               <Loader2 className="h-4 w-4 animate-spin" />
-                              <span>AI đang viết...</span>
+                              <span>Đang tạo comment...</span>
                             </div>
                           ) : item.suggested_comment ? (
                             <div className="space-y-2">

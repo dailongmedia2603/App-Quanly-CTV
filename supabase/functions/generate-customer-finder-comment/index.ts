@@ -53,7 +53,7 @@ serve(async (req) => {
     // Step 1: Fetch all services and the master prompt template
     const [servicesRes, templateRes] = await Promise.all([
         supabaseAdmin.from('document_services').select('id, name, description'),
-        supabase.from('ai_prompt_templates').select('prompt').eq('template_type', 'customer_finder_comment').single()
+        supabaseAdmin.from('ai_prompt_templates').select('prompt').eq('template_type', 'customer_finder_comment').single()
     ]);
 
     const { data: services, error: servicesError } = servicesRes;

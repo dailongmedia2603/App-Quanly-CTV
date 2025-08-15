@@ -106,7 +106,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
         isCollapsed ? "w-20" : "w-64"
       )}>
         <div className={cn("flex h-16 flex-shrink-0 items-center justify-center border-b border-gray-200 px-4")}>
-          <Link to="/"><img src="/logolistenpro.png" alt="Listen Pro Logo" className="h-14 object-contain" /></Link>
+          <Link to="/"><img src="/logodailong-ngang.png" alt="Dailong Media Logo" className="h-14 object-contain" /></Link>
         </div>
         <div className="flex-1 overflow-y-auto p-4">
           <nav className="space-y-1">

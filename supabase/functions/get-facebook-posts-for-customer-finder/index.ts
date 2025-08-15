@@ -77,11 +77,18 @@ serve(async (req) => {
       identified_service_name: servicesMap.get(report.identified_service_id) || null,
     }));
 
-    // Sort by posted_at descending, handling null dates gracefully
+    // Step 5: Robustly sort by posted_at descending, handling null or invalid dates
     allData.sort((a, b) => {
-        const dateA = a.posted_at ? new Date(a.posted_at).getTime() : 0;
-        const dateB = b.posted_at ? new Date(b.posted_at).getTime() : 0;
-        return dateB - dateA;
+      const dateA = a.posted_at ? new Date(a.posted_at) : null;
+      const dateB = b.posted_at ? new Date(b.posted_at) : null;
+
+      const timeA = dateA && !isNaN(dateA.getTime()) ? dateA.getTime() : 0;
+      const timeB = dateB && !isNaN(dateB.getTime()) ? dateB.getTime() : 0;
+
+      if (timeA === 0 && timeB !== 0) return 1; // a is invalid/null, push to end
+      if (timeB === 0 && timeA !== 0) return -1; // b is invalid/null, push to end
+
+      return timeB - timeA; // Sort descending
     });
 
     return new Response(JSON.stringify(allData), {

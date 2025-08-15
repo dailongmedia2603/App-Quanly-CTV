@@ -18,7 +18,6 @@ import remarkGfm from 'remark-gfm';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface Service {
   id: string;
@@ -332,18 +331,21 @@ const CustomerConsulting = () => {
                     </div>
                     <div className="flex items-center space-x-2">
                       <Label className="text-sm font-medium text-gray-600">Xưng hô:</Label>
-                      <ToggleGroup
-                        type="single"
-                        size="sm"
+                      <Select
                         value={customerSalutation}
                         onValueChange={(value: 'Anh' | 'Chị' | 'A/C') => {
                           if (value) handleSalutationChange(value);
                         }}
                       >
-                        <ToggleGroupItem value="Anh">Anh</ToggleGroupItem>
-                        <ToggleGroupItem value="Chị">Chị</ToggleGroupItem>
-                        <ToggleGroupItem value="A/C">A/C</ToggleGroupItem>
-                      </ToggleGroup>
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue placeholder="Chọn xưng hô" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Anh">Anh</SelectItem>
+                          <SelectItem value="Chị">Chị</SelectItem>
+                          <SelectItem value="A/C">A/C (Chưa rõ)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   <ScrollArea className="flex-grow p-4 bg-gray-50/50">

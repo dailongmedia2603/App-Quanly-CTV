@@ -63,7 +63,7 @@ export const OldContractsDialog = ({ isOpen, onOpenChange, contracts, loading, m
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-semibold">{formatCurrency(c.commission_amount)}</span>
-                          <span className="text-xs text-gray-500">({c.commission_rate * 100}%)</span>
+                          <span className="text-xs text-gray-500">({Math.round(c.commission_rate * 100)}%)</span>
                         </div>
                       </TableCell>
                     </TableRow>

@@ -40,9 +40,9 @@ const SignUp = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 lg:p-8">
-      <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 shadow-2xl rounded-2xl overflow-hidden">
-        <div className="bg-white p-8 sm:p-12 lg:p-16 flex flex-col justify-center">
-          <div className="w-full max-w-md mx-auto">
+      <div className="w-full max-w-md mx-auto shadow-2xl rounded-2xl overflow-hidden">
+        <div className="bg-white p-8 sm:p-12">
+          <div className="w-full">
             <h1 className="text-3xl font-bold text-gray-900">Đăng ký tài khoản</h1>
             <p className="mt-2 text-gray-500">Tạo tài khoản mới để bắt đầu.</p>
 
@@ -105,7 +105,7 @@ const SignUp = () => {
           </div>
         </div>
 
-        <div className="hidden lg:flex flex-col bg-blue-600 p-8 sm:p-12 lg:p-16 text-white">
+        <div className="flex flex-col bg-blue-600 p-8 sm:p-12 text-white">
             <div className="flex-grow flex flex-col items-center justify-center text-center">
                 <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-20" />
                 <div className="mt-12 bg-white/10 backdrop-blur-sm p-6 rounded-xl">
@@ -114,7 +114,7 @@ const SignUp = () => {
                     </p>
                 </div>
             </div>
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 mt-8">
                 <nav className="flex items-center justify-center space-x-6 text-sm">
                     <a href="#" className="hover:underline">Marketplace</a>
                     <a href="#" className="hover:underline">License</a>

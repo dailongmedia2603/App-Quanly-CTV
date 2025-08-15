@@ -111,28 +111,30 @@ const QuoteDisplay = ({ content }: QuoteDisplayProps) => {
       </div>
 
       <main>
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-brand-orange-light border-b-2 border-brand-orange">
-              <TableHead className="w-[35%] text-brand-orange font-bold uppercase">DANH MỤC</TableHead>
-              <TableHead className="text-brand-orange font-bold uppercase">KPI</TableHead>
-              <TableHead className="text-center text-brand-orange font-bold uppercase">SỐ LƯỢNG</TableHead>
-              <TableHead className="text-right text-brand-orange font-bold uppercase">ĐƠN GIÁ (VNĐ)</TableHead>
-              <TableHead className="text-right text-brand-orange font-bold uppercase">THÀNH TIỀN (VNĐ)</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {quoteData.items.map((item, index) => (
-              <TableRow key={index} className="border-orange-100">
-                <TableCell className="font-semibold">{item.category}</TableCell>
-                <TableCell className="text-sm text-gray-600">{item.kpi}</TableCell>
-                <TableCell className="text-center">{item.quantity}</TableCell>
-                <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
-                <TableCell className="text-right font-semibold">{formatCurrency(item.total)}</TableCell>
+        <div className="border border-orange-200 rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-brand-orange-light border-b-2 border-brand-orange hover:bg-brand-orange-light">
+                <TableHead className="w-[35%] text-brand-orange font-bold uppercase">DANH MỤC</TableHead>
+                <TableHead className="text-brand-orange font-bold uppercase">KPI</TableHead>
+                <TableHead className="text-center text-brand-orange font-bold uppercase">SỐ LƯỢNG</TableHead>
+                <TableHead className="text-right text-brand-orange font-bold uppercase">ĐƠN GIÁ (VNĐ)</TableHead>
+                <TableHead className="text-right text-brand-orange font-bold uppercase">THÀNH TIỀN (VNĐ)</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {quoteData.items.map((item, index) => (
+                <TableRow key={index} className="border-b border-orange-100 last:border-b-0">
+                  <TableCell className="font-semibold">{item.category}</TableCell>
+                  <TableCell className="text-sm text-gray-600">{item.kpi}</TableCell>
+                  <TableCell className="text-center">{item.quantity}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
+                  <TableCell className="text-right font-semibold">{formatCurrency(item.total)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </main>
 
       <footer className="mt-8">

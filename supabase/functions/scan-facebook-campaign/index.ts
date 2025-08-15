@@ -133,7 +133,7 @@ serve(async (req) => {
 
     await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', 'Bắt đầu quét nguồn Facebook...', null, 'progress');
 
-    const reportTable = '"Bao_cao_Facebook"';
+    const reportTable = 'Bao_cao_Facebook';
     
     const { data: latestPostsData, error: latestPostError } = await supabaseAdmin
         .from(reportTable)

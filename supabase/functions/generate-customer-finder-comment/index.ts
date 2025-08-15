@@ -52,7 +52,7 @@ serve(async (req) => {
 
     // Step 1: Get pre-identified service ID from the database
     const { data: reportData, error: reportError } = await supabaseAdmin
-        .from('"Bao_cao_Facebook"')
+        .from('Bao_cao_Facebook')
         .select('identified_service_id')
         .eq('id', reportId)
         .single();
@@ -112,7 +112,7 @@ serve(async (req) => {
     if (!cleanedGeneratedComment) throw new Error("AI không tạo được comment hợp lệ.");
 
     // Step 3: Save the result
-    const { error: updateError } = await supabaseAdmin.from('"Bao_cao_Facebook"').update({ suggested_comment: cleanedGeneratedComment, identified_service_id: serviceId }).eq('id', reportId);
+    const { error: updateError } = await supabaseAdmin.from('Bao_cao_Facebook').update({ suggested_comment: cleanedGeneratedComment, identified_service_id: serviceId }).eq('id', reportId);
     if (updateError) throw new Error(`Lưu comment thất bại: ${updateError.message}`);
 
     await supabaseAdmin.from('ai_generation_logs').insert({ user_id: user.id, template_type: 'customer_finder_comment', final_prompt: finalPrompt, generated_content: rawGeneratedText, is_hidden_in_admin_history: true });

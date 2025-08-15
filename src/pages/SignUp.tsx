@@ -5,11 +5,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff } from 'lucide-react';
-import { showError } from '@/utils/toast';
+import { showError, showSuccess } from '@/utils/toast';
 
-const Login = () => {
+const SignUp = () => {
   const { session } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -23,31 +22,31 @@ const Login = () => {
     }
   }, [session, navigate]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
     });
     if (error) {
-      showError('Email hoặc mật khẩu không chính xác.');
+      showError(error.message);
+    } else {
+      showSuccess('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
+      navigate('/login');
     }
-    // Navigation will be handled by the AuthContext's onAuthStateChange listener
     setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 lg:p-8">
       <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 shadow-2xl rounded-2xl overflow-hidden">
-        
-        {/* Left Panel: Form */}
         <div className="bg-white p-8 sm:p-12 lg:p-16 flex flex-col justify-center">
           <div className="w-full max-w-md mx-auto">
-            <h1 className="text-3xl font-bold text-gray-900">Đăng nhập</h1>
-            <p className="mt-2 text-gray-500">Nhập Email và mật khẩu để đăng nhập</p>
+            <h1 className="text-3xl font-bold text-gray-900">Đăng ký tài khoản</h1>
+            <p className="mt-2 text-gray-500">Tạo tài khoản mới để bắt đầu.</p>
 
-            <form onSubmit={handleLogin} className="mt-8 space-y-6">
+            <form onSubmit={handleSignUp} className="mt-8 space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="email" className="font-semibold">Email*</Label>
                 <Input
@@ -69,7 +68,7 @@ const Login = () => {
                     id="password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
+                    autoComplete="new-password"
                     required
                     placeholder="Tối thiểu 8 ký tự"
                     value={password}
@@ -86,31 +85,17 @@ const Login = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Checkbox id="remember-me" className="border-gray-400" />
-                  <Label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                    Ghi nhớ trạng thái đăng nhập
-                  </Label>
-                </div>
-                <div className="text-sm">
-                  <Link to="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
-                    Quên mật khẩu?
-                  </Link>
-                </div>
-              </div>
-
               <div>
                 <Button type="submit" className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-base font-semibold rounded-lg" disabled={loading}>
-                  {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+                  {loading ? 'Đang đăng ký...' : 'Đăng ký'}
                 </Button>
               </div>
             </form>
 
             <p className="mt-6 text-center text-sm text-gray-500">
-              Chưa có tài khoản?{' '}
-              <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500">
-                Đăng ký tài khoản
+              Đã có tài khoản?{' '}
+              <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+                Đăng nhập
               </Link>
             </p>
 
@@ -120,7 +105,6 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Right Panel: Branding */}
         <div className="hidden lg:flex flex-col bg-blue-600 p-8 sm:p-12 lg:p-16 text-white">
             <div className="flex-grow flex flex-col items-center justify-center text-center">
                 <img src="/dailong-logo.svg" alt="Dailong Media Agency Logo" className="w-auto h-20" />
@@ -144,4 +128,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default SignUp;

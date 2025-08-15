@@ -2,13 +2,16 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, Navigate, useNavigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 import Settings from "./pages/Settings";
 import Reports from "./pages/Reports";
 import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
+import ForgotPassword from "./pages/ForgotPassword";
+import UpdatePassword from "./pages/UpdatePassword";
 import Account from "./pages/Account";
 import Guide from "./pages/Guide";
 import Profile from "./pages/Profile";
@@ -27,6 +30,7 @@ import { AppSettingsProvider, useAppSettings } from "./contexts/AppSettingsConte
 import { useEffect } from "react";
 import CreateQuote from "./pages/CreateQuote";
 import ConfigQuote from "./pages/ConfigQuote";
+import { supabase } from "./integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
@@ -75,16 +79,30 @@ const PageTitleUpdater = () => {
 
 const AppContent = () => {
   const { loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        navigate('/update-password');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   if (loading) {
     return <div className="flex h-screen w-full items-center justify-center"><p>Loading...</p></div>;
   }
 
   return (
-    <BrowserRouter>
+    <>
       <PageTitleUpdater />
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/update-password" element={<UpdatePassword />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<HomeRedirect />} />
           <Route path="/find-customers" element={<PermissionGuard feature="find_customers"><FindCustomers /></PermissionGuard>} />
@@ -107,7 +125,7 @@ const AppContent = () => {
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </BrowserRouter>
+    </>
   );
 };
 
@@ -119,7 +137,9 @@ const App = () => {
           <AppSettingsProvider>
             <Toaster />
             <Sonner position="bottom-right" toastOptions={{ classNames: { success: "bg-brand-orange-light text-brand-orange border-orange-200", error: "bg-red-100 text-red-600 border-red-200", loading: "bg-brand-orange-light text-brand-orange border-orange-200" } }} />
-            <AppContent />
+            <BrowserRouter>
+              <AppContent />
+            </BrowserRouter>
           </AppSettingsProvider>
         </AuthProvider>
       </TooltipProvider>

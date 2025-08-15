@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { format } from "date-fns"
-import { vi } from "date-fns/locale"
+import { vi } from 'date-fns/locale'
 import { Calendar as CalendarIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -26,12 +26,12 @@ export function DatePicker({ date, setDate }: DatePickerProps) {
         <Button
           variant={"outline"}
           className={cn(
-            "w-full justify-start text-left font-normal",
+            "w-full justify-start text-left font-normal h-auto whitespace-normal",
             !date && "text-muted-foreground"
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP", { locale: vi }) : <span>Chọn một ngày</span>}
+          <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+          {date ? format(date, "dd/MM/yyyy", { locale: vi }) : <span>Chọn ngày</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
@@ -39,7 +39,6 @@ export function DatePicker({ date, setDate }: DatePickerProps) {
           mode="single"
           selected={date}
           onSelect={setDate}
-          locale={vi}
           initialFocus
         />
       </PopoverContent>

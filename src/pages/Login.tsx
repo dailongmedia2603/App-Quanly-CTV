@@ -125,7 +125,7 @@ const Login = () => {
             <div className="flex-grow flex flex-col items-center justify-center text-center">
                 <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-40" />
                 <div className="mt-12 bg-white/10 backdrop-blur-sm p-6 rounded-xl">
-                    <p className="text-xl font-medium uppercase">
+                    <p className="text-xl font-bold uppercase">
                         HỆ THỐNG QUẢN LÝ CỘNG TÁC VIÊN
                     </p>
                 </div>

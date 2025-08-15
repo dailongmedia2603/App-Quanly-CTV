@@ -3,6 +3,7 @@ export const permissionConfig = [
   { key: 'create_post', name: 'Tạo bài viết', actions: ['create'] },
   { key: 'create_comment', name: 'Tạo comment', actions: ['create'] },
   { key: 'customer_consulting', name: 'Tư vấn khách hàng', actions: ['use'] },
+  { key: 'create_quote', name: 'Tạo báo giá', actions: ['create'] },
   { key: 'create_plan', name: 'Tạo Plan', actions: ['read', 'create', 'update', 'delete'] },
   { key: 'income', name: 'Thu nhập', actions: ['read', 'create', 'update', 'delete'] },
   { key: 'config_scan_post', name: 'Cấu hình Quét Post', actions: ['read', 'update'] },

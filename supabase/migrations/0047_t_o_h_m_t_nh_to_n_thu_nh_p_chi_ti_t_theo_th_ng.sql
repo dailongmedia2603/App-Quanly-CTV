@@ -1,0 +1,99 @@
+CREATE OR REPLACE FUNCTION get_income_stats_for_month(
+    target_month DATE,
+    target_user_id UUID DEFAULT NULL
+)
+RETURNS TABLE (
+    fixed_salary NUMERIC,
+    new_contract_commission NUMERIC,
+    old_contract_commission NUMERIC,
+    total_income NUMERIC,
+    contract_count BIGINT,
+    actual_received NUMERIC
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    start_of_month TIMESTAMPTZ := date_trunc('month', target_month);
+    end_of_month TIMESTAMPTZ := start_of_month + INTERVAL '1 month' - INTERVAL '1 second';
+    monthly_commission_rate NUMERIC;
+    total_new_contract_value NUMERIC;
+BEGIN
+    -- Calculate commission rate and fixed salary based on NEW contracts in the target month
+    SELECT
+        COALESCE(SUM(c.contract_value), 0)
+    INTO
+        total_new_contract_value
+    FROM contracts c
+    WHERE c.start_date >= start_of_month AND c.start_date <= end_of_month
+    AND (target_user_id IS NULL OR c.user_id = target_user_id);
+
+    -- Determine fixed salary for the month
+    IF total_new_contract_value > 40000000 THEN
+        fixed_salary := 3000000;
+    ELSIF total_new_contract_value >= 20000000 THEN
+        fixed_salary := 2000000;
+    ELSIF total_new_contract_value > 10000000 THEN
+        fixed_salary := 1000000;
+    ELSE
+        fixed_salary := 0;
+    END IF;
+
+    -- Determine commission rate for the month
+    IF total_new_contract_value >= 40000000 THEN
+        monthly_commission_rate := 0.10;
+    ELSIF total_new_contract_value >= 20000000 THEN
+        monthly_commission_rate := 0.07;
+    ELSE
+        monthly_commission_rate := 0.05;
+    END IF;
+
+    -- Calculate commission from NEW contracts (started this month)
+    SELECT COALESCE(SUM(p.amount), 0) * monthly_commission_rate
+    INTO new_contract_commission
+    FROM contract_payments p
+    JOIN contracts c ON p.contract_id = c.id
+    WHERE p.payment_date >= start_of_month AND p.payment_date <= end_of_month
+    AND c.start_date >= start_of_month AND c.start_date <= end_of_month
+    AND (target_user_id IS NULL OR c.user_id = target_user_id);
+
+    -- Calculate commission from OLD contracts (started before this month)
+    WITH historical_rates AS (
+        SELECT
+            date_trunc('month', c.start_date)::date AS contract_month,
+            c.user_id,
+            CASE
+                WHEN SUM(c.contract_value) OVER (PARTITION BY date_trunc('month', c.start_date), c.user_id) >= 40000000 THEN 0.10
+                WHEN SUM(c.contract_value) OVER (PARTITION BY date_trunc('month', c.start_date), c.user_id) >= 20000000 THEN 0.07
+                ELSE 0.05
+            END AS rate
+        FROM contracts c
+        WHERE (target_user_id IS NULL OR c.user_id = target_user_id)
+    )
+    SELECT COALESCE(SUM(p.amount * hr.rate), 0)
+    INTO old_contract_commission
+    FROM contract_payments p
+    JOIN contracts c ON p.contract_id = c.id
+    JOIN historical_rates hr ON hr.contract_month = date_trunc('month', c.start_date)::date AND hr.user_id = c.user_id
+    WHERE p.payment_date >= start_of_month AND p.payment_date <= end_of_month
+    AND c.start_date < start_of_month
+    AND (target_user_id IS NULL OR c.user_id = target_user_id);
+
+    -- Final calculations
+    total_income := fixed_salary + new_contract_commission + old_contract_commission;
+    actual_received := new_contract_commission + old_contract_commission;
+
+    SELECT COUNT(*)
+    INTO contract_count
+    FROM contracts c
+    WHERE c.start_date >= start_of_month AND c.start_date <= end_of_month
+    AND (target_user_id IS NULL OR c.user_id = target_user_id);
+
+    RETURN QUERY SELECT
+        fixed_salary,
+        new_contract_commission,
+        old_contract_commission,
+        total_income,
+        contract_count,
+        actual_received;
+END;
+$$;

@@ -111,7 +111,7 @@ serve(async (req) => {
     if (updateError) throw new Error(`Lưu comment thất bại: ${updateError.message}`);
 
     // Step 6: Log and return
-    await supabaseAdmin.from('ai_generation_logs').insert({ user_id: user.id, template_type: 'customer_finder_comment', final_prompt: finalPrompt, generated_content: rawResponse, is_hidden_in_admin_history: true });
+    await supabaseAdmin.from('ai_generation_logs').insert({ user_id: user.id, template_type: 'customer_finder_comment', final_prompt: finalPrompt, generated_content: rawResponse, is_hidden_in_admin_history: false });
 
     return new Response(JSON.stringify({ comment: cleanedGeneratedComment, service: matchedService }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
 

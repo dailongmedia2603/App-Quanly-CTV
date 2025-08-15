@@ -12,10 +12,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const parseFormattedNumber = (value: string) => {
-  return Number(String(value).replace(/\./g, '').replace(/,/g, ''));
-};
-
 const formatDate = (date: Date): string => {
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -23,21 +19,25 @@ const formatDate = (date: Date): string => {
   return `${day}/${month}/${year}`;
 };
 
-const cleanAiResponse = (rawText: string): string => {
-  if (!rawText) return '';
+const cleanAndParseAiResponse = (rawText: string): any => {
+  if (!rawText) throw new Error("AI không trả về nội dung.");
+  
   let text = rawText.trim();
   
-  // Find the main header and take everything from there
-  const headerMarker = '# BÁO GIÁ DỊCH VỤ';
-  const headerIndex = text.indexOf(headerMarker);
-  if (headerIndex !== -1) {
-    text = text.substring(headerIndex);
-  }
+  const jsonStartIndex = text.indexOf('{');
+  if (jsonStartIndex === -1) throw new Error("Phản hồi của AI không chứa đối tượng JSON hợp lệ.");
+  
+  const jsonEndIndex = text.lastIndexOf('}');
+  if (jsonEndIndex === -1) throw new Error("Phản hồi của AI không chứa đối tượng JSON hợp lệ.");
 
-  // Remove markdown code block fences that Gemini often adds
-  text = text.replace(/^```(markdown|md|)\s*\n/i, '');
-  text = text.replace(/\n\s*```$/, '');
-  return text.trim();
+  const jsonString = text.substring(jsonStartIndex, jsonEndIndex + 1);
+
+  try {
+    return JSON.parse(jsonString);
+  } catch (e) {
+    console.error("Lỗi phân tích JSON từ AI:", jsonString);
+    throw new Error(`AI trả về JSON không hợp lệ: ${e.message}`);
+  }
 };
 
 serve(async (req) => {
@@ -67,7 +67,6 @@ serve(async (req) => {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({ model: settings.gemini_model });
 
-    // Fetch all necessary data in parallel
     const [pricesRes, templatesRes, promptTemplateRes] = await Promise.all([
       supabaseAdmin.from('service_prices').select('name, description, unit, price, category'),
       supabaseAdmin.from('quote_templates').select('name, content').in('service_id', serviceIds),
@@ -100,15 +99,14 @@ serve(async (req) => {
 
     const result = await model.generateContent(prompt);
     const rawGeneratedContent = result.response.text();
-    const generatedContent = cleanAiResponse(rawGeneratedContent);
+    const generatedJson = cleanAndParseAiResponse(rawGeneratedContent);
 
-    if (!generatedContent) {
-        throw new Error("AI không thể tạo nội dung báo giá. Vui lòng thử lại.");
+    if (!generatedJson || !generatedJson.summary || typeof generatedJson.summary.total === 'undefined') {
+        throw new Error("Phản hồi của AI thiếu các trường bắt buộc (summary.total).");
     }
 
-    // Extract final price from the cleaned content for storage
-    const totalMatch = generatedContent.match(/(?:TỔNG TIỀN SAU THUẾ|TỔNG CỘNG \(VNĐ\))\**:\s*([\d.,]+)/i);
-    const finalPrice = totalMatch ? parseFormattedNumber(totalMatch[1]) : null;
+    const finalPrice = generatedJson.summary.total;
+    const generatedContentString = JSON.stringify(generatedJson);
 
     const { data: savedQuote, error: saveError } = await supabaseAdmin
       .from('generated_quotes')
@@ -120,7 +118,7 @@ serve(async (req) => {
         includes_vat: includesVat,
         other_requirements: otherRequirements,
         implementation_time: implementationTime,
-        generated_content: generatedContent,
+        generated_content: generatedContentString,
         final_price: finalPrice,
       })
       .select()

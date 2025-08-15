@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -8,14 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { MultiSelectCombobox, SelectOption } from '@/components/ui/multi-select-combobox';
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
-import { Wand2, Sparkles, History, ArrowLeft, FileText, Copy, Trash2, Clock } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { Wand2, Sparkles, History, ArrowLeft, FileText, Copy, Trash2, Clock, FileDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import QuoteDisplay from '@/components/QuoteDisplay';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface Service {
   id: string;
@@ -119,6 +119,8 @@ const CreateQuote = () => {
   const [loadingServices, setLoadingServices] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedQuote, setGeneratedQuote] = useState<GeneratedQuote | null>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const quoteRef = useRef<HTMLDivElement>(null);
 
   // Form state
   const [quoteName, setQuoteName] = useState('');
@@ -178,6 +180,48 @@ const CreateQuote = () => {
     });
   };
 
+  const handleExportPdf = async () => {
+    if (!quoteRef.current) return;
+    setIsExportingPdf(true);
+    const toastId = showLoading("Đang chuẩn bị file PDF...");
+    try {
+      const canvas = await html2canvas(quoteRef.current, { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = imgWidth / imgHeight;
+      const width = pdfWidth;
+      const height = width / ratio;
+
+      let position = 0;
+      let heightLeft = height;
+
+      pdf.addImage(imgData, 'PNG', 0, position, width, height);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - height;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, width, height);
+        heightLeft -= pdfHeight;
+      }
+      
+      pdf.save(`bao-gia-${generatedQuote?.name || Date.now()}.pdf`);
+      dismissToast(toastId);
+      showSuccess("Xuất PDF thành công!");
+    } catch (error) {
+      dismissToast(toastId);
+      showError("Không thể xuất PDF. Vui lòng thử lại.");
+      console.error(error);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const handleSelectQuoteFromHistory = (quote: GeneratedQuote) => {
     setGeneratedQuote(quote);
     setView('create');
@@ -209,13 +253,23 @@ const CreateQuote = () => {
         <Card className="lg:col-span-2 border-orange-200 min-h-[600px]">
           <CardHeader className="flex flex-row items-center justify-between">
             <div><CardTitle className="flex items-center space-x-2"><Sparkles className="h-6 w-6 text-brand-orange" /><span>Báo giá được tạo ra</span></CardTitle><CardDescription>Đây là báo giá do AI tạo ra dựa trên cấu hình của bạn.</CardDescription></div>
-            {generatedQuote && <Button variant="outline" size="sm" onClick={handleCopy}><Copy className="h-4 w-4 mr-2" />Sao chép</Button>}
+            {generatedQuote && (
+              <div className="flex items-center space-x-2">
+                <Button variant="outline" size="sm" onClick={handleCopy}><Copy className="h-4 w-4 mr-2" />Sao chép</Button>
+                <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={isExportingPdf}>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  {isExportingPdf ? 'Đang xuất...' : 'Xuất PDF'}
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             {isGenerating ? (
               <div className="flex flex-col items-center justify-center text-center text-gray-500 py-20"><Sparkles className="h-12 w-12 text-brand-orange animate-pulse" /><p className="mt-4 font-semibold text-gray-700">AI đang phân tích...</p></div>
             ) : generatedQuote ? (
-              <QuoteDisplay content={generatedQuote.generated_content} />
+              <div ref={quoteRef}>
+                <QuoteDisplay content={generatedQuote.generated_content} />
+              </div>
             ) : (
               <div className="text-center text-gray-500 py-20"><Sparkles className="mx-auto h-12 w-12 text-gray-400" /><p className="mt-4 font-medium">Báo giá của bạn sẽ xuất hiện ở đây</p></div>
             )}

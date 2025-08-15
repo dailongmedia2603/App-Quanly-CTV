@@ -8,12 +8,16 @@ interface ReportWidgetProps {
   value: string;
   change?: number;
   changeType?: "week" | "month";
+  onClick?: () => void;
 }
 
-const ReportWidget = ({ icon, title, value, change, changeType = 'week' }: ReportWidgetProps) => {
+const ReportWidget = ({ icon, title, value, change, changeType = 'week', onClick }: ReportWidgetProps) => {
   const isPositive = change !== undefined && change >= 0;
   return (
-    <Card className="border-orange-200">
+    <Card 
+      className={cn("border-orange-200", onClick && "cursor-pointer hover:bg-orange-50 transition-colors")}
+      onClick={onClick}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-gray-500">{title}</CardTitle>
         <div className="text-brand-orange">{icon}</div>

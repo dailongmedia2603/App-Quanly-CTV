@@ -22,6 +22,7 @@ import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast
 import { User } from '@supabase/supabase-js';
 import { SingleSelectCombobox } from '@/components/ui/single-select-combobox';
 import { PaymentDetailsDialog } from '@/components/PaymentDetailsDialog';
+import { OldContractsDialog } from '@/components/OldContractsDialog';
 
 // Define the contract type
 interface Contract {
@@ -114,6 +115,9 @@ const Income = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [selectedContractForPayments, setSelectedContractForPayments] = useState<string | null>(null);
+  const [isOldContractsDialogOpen, setIsOldContractsDialogOpen] = useState(false);
+  const [oldContractsData, setOldContractsData] = useState<any[]>([]);
+  const [loadingOldContracts, setLoadingOldContracts] = useState(false);
 
   // Form states
   const [projectName, setProjectName] = useState('');
@@ -293,6 +297,23 @@ const Income = () => {
     else { showSuccess("Cập nhật thành công!"); fetchAllContractsAndUsers(); }
   };
 
+  const handleOldCommissionClick = async () => {
+    setIsOldContractsDialogOpen(true);
+    setLoadingOldContracts(true);
+    const targetUserId = (isSuperAdmin && selectedCollaboratorId !== 'all') ? selectedCollaboratorId : (isSuperAdmin ? null : user!.id);
+    const { data, error } = await supabase.rpc('get_old_contracts_with_payments_in_month', {
+        target_month: format(selectedDate, 'yyyy-MM-dd'),
+        target_user_id: targetUserId
+    });
+    if (error) {
+        showError("Không thể tải danh sách hợp đồng cũ.");
+        setOldContractsData([]);
+    } else {
+        setOldContractsData(data);
+    }
+    setLoadingOldContracts(false);
+  };
+
   const collaboratorOptions = allUsers.map(u => {
     const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim();
     const displayLabel = fullName || u.email || u.id;
@@ -317,7 +338,7 @@ const Income = () => {
               <ReportWidget icon={<Wallet className="h-5 w-5" />} title="Tổng thu nhập" value={formatCurrency(incomeStats?.total_income || 0)} />
               <ReportWidget icon={<Landmark className="h-5 w-5" />} title="Lương cứng" value={formatCurrency(incomeStats?.fixed_salary || 0)} />
               <ReportWidget icon={<Percent className="h-5 w-5" />} title="Hoa hồng (HĐ mới)" value={formatCurrency(incomeStats?.new_contract_commission || 0)} />
-              <ReportWidget icon={<History className="h-5 w-5" />} title="Hoa hồng (HĐ cũ)" value={formatCurrency(incomeStats?.old_contract_commission || 0)} />
+              <ReportWidget icon={<History className="h-5 w-5" />} title="Hoa hồng (HĐ cũ)" value={formatCurrency(incomeStats?.old_contract_commission || 0)} onClick={handleOldCommissionClick} />
               <ReportWidget icon={<CheckCircle className="h-5 w-5" />} title="Tổng hoa hồng thực nhận" value={formatCurrency(incomeStats?.actual_received || 0)} />
             </div>
             <Card><CardHeader><CardTitle>Danh sách hợp đồng trong tháng</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Tên dự án</TableHead><TableHead>Link hợp đồng</TableHead><TableHead>Giá trị</TableHead><TableHead>Đã thanh toán</TableHead><TableHead>Còn nợ</TableHead><TableHead>Tiến độ</TableHead>{isSuperAdmin && <TableHead>Cộng tác viên</TableHead>}</TableRow></TableHeader><TableBody>{loadingAll ? <TableRow><TableCell colSpan={isSuperAdmin ? 7 : 6} className="h-24 text-center">Đang tải...</TableCell></TableRow> : monthlyContracts.length === 0 ? <TableRow><TableCell colSpan={isSuperAdmin ? 7 : 6} className="h-24 text-center">Không có hợp đồng nào trong tháng này.</TableCell></TableRow> : (monthlyContracts.map((contract) => (<TableRow key={contract.id}><TableCell className="font-medium">{contract.project_name}</TableCell><TableCell>{contract.contract_link ? (<Button variant="link" asChild className="p-0 h-auto text-brand-orange hover:text-brand-orange/80"><a href={contract.contract_link} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1"><LinkIcon className="h-4 w-4" /><span>Xem</span></a></Button>) : (<span className="text-gray-400">N/A</span>)}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell>{formatCurrency(contract.total_paid)}</TableCell><TableCell>{formatCurrency(contract.contract_value - contract.total_paid)}</TableCell><TableCell><Badge variant={contract.status === 'completed' ? 'default' : 'secondary'} className={cn(contract.status === 'completed' ? 'bg-green-500 text-white' : 'bg-yellow-100 text-yellow-800')}>{contract.status === 'completed' ? 'Hoàn thành' : 'Đang chạy'}</Badge></TableCell>{isSuperAdmin && <TableCell><div><div className="font-medium leading-snug">{contract.collaborator_name}</div>{contract.collaborator_name !== contract.collaborator_email && (<div className="text-xs text-gray-500 leading-snug">{contract.collaborator_email}</div>)}</div></TableCell>}</TableRow>)))}</TableBody></Table></CardContent></Card>
@@ -329,6 +350,7 @@ const Income = () => {
         </Tabs>
       </div>
       <PaymentDetailsDialog isOpen={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen} contractId={selectedContractForPayments} onPaymentsUpdate={fetchAllContractsAndUsers} />
+      <OldContractsDialog isOpen={isOldContractsDialogOpen} onOpenChange={setIsOldContractsDialogOpen} contracts={oldContractsData} loading={loadingOldContracts} month={format(selectedDate, 'MMMM yyyy', { locale: vi })} />
       <Dialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>{editingContract ? 'Sửa hợp đồng' : 'Tạo hợp đồng mới'}</DialogTitle></DialogHeader><div className="grid grid-cols-2 gap-4 py-4"><div className="space-y-2 col-span-2"><Label htmlFor="project-name">Tên dự án</Label><Input id="project-name" value={projectName} onChange={e => setProjectName(e.target.value)} /></div>{isSuperAdmin && (<div className="space-y-2 col-span-2"><Label htmlFor="collaborator" className="flex items-center"><UsersIcon className="h-4 w-4 mr-2" />Cộng tác viên</Label><SingleSelectCombobox options={allUsers.map(u => ({ value: u.id, label: <div><div className="font-medium leading-snug">{`${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email}</div>{u.email && <div className="text-xs text-gray-500 leading-snug">{u.email}</div>}</div>, searchValue: `${u.first_name || ''} ${u.last_name || ''} ${u.email}`.trim() }))} selected={collaboratorId} onChange={setCollaboratorId} placeholder="Chọn cộng tác viên..." searchPlaceholder="Tìm kiếm..." emptyPlaceholder="Không tìm thấy." /></div>)}<div className="space-y-2 col-span-2"><Label htmlFor="contract-link">Link hợp đồng</Label><Input id="contract-link" value={contractLink} onChange={e => setContractLink(e.target.value)} placeholder="https://..." /></div><div className="space-y-2"><Label htmlFor="contract-value">Giá trị hợp đồng (VND)</Label><Input id="contract-value" type="text" value={formatNumberWithDots(contractValue)} onChange={e => setContractValue(parseFormattedNumber(e.target.value))} /></div><div className="space-y-2"><Label>Trạng thái</Label><Select value={status} onValueChange={v => setStatus(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ongoing">Đang chạy</SelectItem><SelectItem value="completed">Hoàn thành</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label>Ngày bắt đầu</Label><DatePicker date={startDate} setDate={setStartDate} /></div><div className="space-y-2"><Label>Ngày kết thúc (tùy chọn)</Label><DatePicker date={endDate} setDate={setEndDate} /></div></div><DialogFooter><Button variant="outline" onClick={() => setIsContractDialogOpen(false)}>Hủy</Button><Button onClick={handleSaveContract} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? 'Đang lưu...' : 'Lưu'}</Button></DialogFooter></DialogContent></Dialog>
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Xác nhận xóa</AlertDialogTitle><AlertDialogDescription>Bạn có chắc muốn xóa hợp đồng "{contractToDelete?.project_name}" không? Hành động này không thể hoàn tác.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Hủy</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} disabled={isSubmitting} className="bg-red-600 hover:bg-red-700">Xóa</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </>

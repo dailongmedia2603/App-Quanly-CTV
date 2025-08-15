@@ -252,7 +252,11 @@ const Income = () => {
       
       const totalCommission = totalContractValue * monthlyCommissionRate;
       const totalIncome = fixedSalary + totalCommission;
-      return { totalIncome, fixedSalary, totalCommission, contractCount };
+      
+      const totalPaidAmount = monthlyContracts.reduce((acc, contract) => acc + contract.paid_amount, 0);
+      const actualReceived = totalPaidAmount * monthlyCommissionRate;
+
+      return { totalIncome, fixedSalary, totalCommission, contractCount, actualReceived };
     }
 
     // Logic for "All collaborators"
@@ -265,6 +269,7 @@ const Income = () => {
 
     let totalFixedSalary = 0;
     let totalCommissionForAll = 0;
+    let totalActualReceived = 0;
 
     for (const userId in contractsByUser) {
       const userContracts = contractsByUser[userId];
@@ -281,10 +286,13 @@ const Income = () => {
       else if (totalContractValue >= 20000000) monthlyCommissionRate = 0.07;
       
       totalCommissionForAll += totalContractValue * monthlyCommissionRate;
+
+      const totalPaidAmountForUser = userContracts.reduce((acc, contract) => acc + contract.paid_amount, 0);
+      totalActualReceived += totalPaidAmountForUser * monthlyCommissionRate;
     }
 
     const totalIncome = totalFixedSalary + totalCommissionForAll;
-    return { totalIncome, fixedSalary: totalFixedSalary, totalCommission: totalCommissionForAll, contractCount };
+    return { totalIncome, fixedSalary: totalFixedSalary, totalCommission: totalCommissionForAll, contractCount, actualReceived: totalActualReceived };
   }, [monthlyContracts, isSuperAdmin, selectedCollaboratorId]);
 
   const allContractsStats = useMemo(() => {
@@ -461,10 +469,11 @@ const Income = () => {
         </div>
 
         <TabsContent value="income" className="space-y-4 pt-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <ReportWidget icon={<Wallet className="h-5 w-5" />} title="Tổng thu nhập" value={formatCurrency(monthlyStats.totalIncome)} />
             <ReportWidget icon={<Landmark className="h-5 w-5" />} title="Lương cứng" value={formatCurrency(monthlyStats.fixedSalary)} />
             <ReportWidget icon={<Percent className="h-5 w-5" />} title="Hoa hồng" value={formatCurrency(monthlyStats.totalCommission)} />
+            <ReportWidget icon={<CheckCircle className="h-5 w-5" />} title="Thực nhận" value={formatCurrency(monthlyStats.actualReceived)} />
             <ReportWidget icon={<FileText className="h-5 w-5" />} title="Hợp đồng" value={monthlyStats.contractCount.toString()} />
           </div>
           <Card>

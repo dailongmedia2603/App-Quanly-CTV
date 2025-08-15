@@ -50,7 +50,7 @@ serve(async (req) => {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({ model: settings.gemini_model });
 
-    // Step 1: Fetch all services and the comment prompt template
+    // Step 1: Fetch all services and the master prompt template
     const [servicesRes, templateRes] = await Promise.all([
         supabaseAdmin.from('document_services').select('id, name, description'),
         supabase.from('ai_prompt_templates').select('prompt').eq('template_type', 'customer_finder_comment').single()
@@ -64,7 +64,7 @@ serve(async (req) => {
         throw new Error("Không tìm thấy mẫu prompt cho 'Tìm khách hàng'. Vui lòng tạo một mẫu trong Cấu hình > Content AI.");
     }
 
-    // Step 2: Construct the master prompt
+    // Step 2: Construct the dynamic parts of the prompt
     const { data: documents } = await supabaseAdmin.from('documents').select('title, content, service_id');
     const documentsByService = (documents || []).reduce((acc: any, doc: any) => {
         if (!acc[doc.service_id]) acc[doc.service_id] = [];
@@ -77,42 +77,12 @@ serve(async (req) => {
         return `ID: ${s.id}\nTên dịch vụ: ${s.name}\nMô tả: ${s.description || 'Không có'}\n${serviceDocs}`;
     }).join('\n---\n');
 
-    const diversityInstruction = `LƯU Ý QUAN TRỌNG: Để đảm bảo mỗi comment là duy nhất, hãy thêm vào một yếu tố ngẫu nhiên và sáng tạo. Ví dụ: bắt đầu bằng một lời chào khác lạ, đặt một câu hỏi tinh tế liên quan đến chi tiết trong bài viết, hoặc sử dụng một giọng văn hơi khác biệt (ví dụ: chuyên nghiệp, thân thiện, hài hước nhẹ nhàng). Tuyệt đối không lặp lại comment đã tạo trước đó cho cùng một bài viết.`;
+    // Step 3: Assemble the final prompt by replacing variables in the master template
+    const finalPrompt = templateData.prompt
+        .replace(/\[nội dung gốc\]/gi, postContent)
+        .replace(/\[danh sách dịch vụ và tài liệu\]/gi, serviceAndDocsPrompt);
 
-    const finalPrompt = `
-        Bạn là một trợ lý AI chuyên viết comment quảng cáo. Nhiệm vụ của bạn là:
-        1. Đọc nội dung bài viết gốc.
-        2. Đọc danh sách các dịch vụ có sẵn và tài liệu tham khảo của chúng.
-        3. Chọn ra MỘT dịch vụ phù hợp NHẤT để quảng cáo trong bối cảnh bài viết gốc.
-        4. Dựa vào mẫu prompt comment, viết một comment tự nhiên, hấp dẫn để giới thiệu dịch vụ bạn đã chọn.
-        5. ${diversityInstruction}
-
-        BÀI VIẾT GỐC:
-        """
-        ${postContent}
-        """
-
-        DANH SÁCH DỊCH VỤ VÀ TÀI LIỆU:
-        """
-        ${serviceAndDocsPrompt}
-        """
-
-        MẪU PROMPT COMMENT (sử dụng làm kim chỉ nam để viết comment):
-        """
-        ${templateData.prompt.replace(/\[dịch vụ\]/gi, '{tên dịch vụ đã chọn}').replace(/\[nội dung gốc\]/gi, '{bài viết gốc}').replace(/\[biên tài liệu\]/gi, '{tài liệu tham khảo của dịch vụ đã chọn}')}
-        """
-
-        YÊU CẦU ĐẦU RA:
-        Chỉ trả về một đối tượng JSON hợp lệ với hai khóa:
-        - "service_id": (string) ID của dịch vụ bạn đã chọn.
-        - "comment": (string) Nội dung comment bạn đã viết.
-
-        Ví dụ: { "service_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "comment": "Chào bạn, mình thấy bạn đang quan tâm..." }
-        
-        JSON response:
-    `;
-
-    // Step 3: Call AI
+    // Step 4: Call AI
     const result = await model.generateContent(finalPrompt);
     const rawResponse = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
     
@@ -133,14 +103,14 @@ serve(async (req) => {
     
     const matchedService = services.find(s => s.id === identifiedServiceId);
 
-    // Step 4: Save the result
+    // Step 5: Save the result
     const { error: updateError } = await supabaseAdmin
         .from('Bao_cao_Facebook')
         .update({ suggested_comment: cleanedGeneratedComment, identified_service_id: identifiedServiceId })
         .eq('id', reportId);
     if (updateError) throw new Error(`Lưu comment thất bại: ${updateError.message}`);
 
-    // Step 5: Log and return
+    // Step 6: Log and return
     await supabaseAdmin.from('ai_generation_logs').insert({ user_id: user.id, template_type: 'customer_finder_comment', final_prompt: finalPrompt, generated_content: rawResponse, is_hidden_in_admin_history: true });
 
     return new Response(JSON.stringify({ comment: cleanedGeneratedComment, service: matchedService }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });

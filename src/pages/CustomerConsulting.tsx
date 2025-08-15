@@ -18,6 +18,7 @@ import remarkGfm from 'remark-gfm';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface Service {
   id: string;
@@ -30,6 +31,7 @@ interface Session {
   created_at: string;
   service_id: string;
   service_name?: string;
+  customer_salutation: 'Anh' | 'Chị' | 'A/C';
 }
 
 interface Message {
@@ -55,6 +57,7 @@ const CustomerConsulting = () => {
   const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
   const [regenerateDirection, setRegenerateDirection] = useState('');
   const [messageToRegenerate, setMessageToRegenerate] = useState<Message | null>(null);
+  const [customerSalutation, setCustomerSalutation] = useState<'Anh' | 'Chị' | 'A/C'>('A/C');
 
   const fetchServicesAndSessions = async () => {
     const [servicesRes, sessionsRes] = await Promise.all([
@@ -83,6 +86,7 @@ const CustomerConsulting = () => {
   const handleSelectSession = async (session: Session) => {
     setActiveSession(session);
     setSelectedServiceId(session.service_id);
+    setCustomerSalutation(session.customer_salutation || 'A/C');
     const { data, error } = await supabase.from('consulting_messages').select('*').eq('session_id', session.id).order('created_at');
     if (error) showError("Không thể tải tin nhắn.");
     else setMessages(data as Message[]);
@@ -134,7 +138,8 @@ const CustomerConsulting = () => {
       body: {
         sessionId: activeSession.id,
         serviceId: activeSession.service_id,
-        messages: [...messages, customerMessage].map(({ role, content }) => ({ role, content }))
+        messages: [...messages, customerMessage].map(({ role, content }) => ({ role, content })),
+        customerSalutation,
       }
     });
 
@@ -192,7 +197,6 @@ const CustomerConsulting = () => {
   };
 
   const handleCopy = (content: string) => {
-    // Remove bold markers (like **) but keep the content and list markers.
     const plainText = content.replace(/(\*\*|__)(.*?)\1/g, '$2');
     navigator.clipboard.writeText(plainText).then(() => {
         showSuccess("Đã sao chép nội dung!");
@@ -223,6 +227,7 @@ const CustomerConsulting = () => {
               serviceId: activeSession.service_id,
               messages: historyForPrompt.map(({ role, content }) => ({ role, content })),
               regenerateDirection: regenerateDirection,
+              customerSalutation,
           }
       });
 
@@ -238,6 +243,27 @@ const CustomerConsulting = () => {
           setMessageToRegenerate(null);
       }
       setIsReplying(false);
+  };
+
+  const handleSalutationChange = async (salutation: 'Anh' | 'Chị' | 'A/C') => {
+    if (!activeSession || !salutation) return;
+
+    const oldSalutation = customerSalutation;
+    setCustomerSalutation(salutation);
+
+    const { error } = await supabase
+      .from('consulting_sessions')
+      .update({ customer_salutation: salutation })
+      .eq('id', activeSession.id);
+
+    if (error) {
+      showError("Không thể cập nhật xưng hô.");
+      setCustomerSalutation(oldSalutation); // Revert on failure
+    } else {
+      const updatedSession = { ...activeSession, customer_salutation: salutation };
+      setActiveSession(updatedSession);
+      setSessions(sessions.map(s => s.id === activeSession.id ? updatedSession : s));
+    }
   };
 
   return (
@@ -299,9 +325,26 @@ const CustomerConsulting = () => {
             <div className="flex flex-col h-full">
               {activeSession ? (
                 <>
-                  <div className="p-4 border-b flex-shrink-0">
-                    <h3 className="font-bold">{activeSession.title}</h3>
-                    <p className="text-sm text-gray-500">Dịch vụ: {services.find(s => s.id === activeSession.service_id)?.name}</p>
+                  <div className="p-4 border-b flex-shrink-0 flex items-center justify-between">
+                    <div>
+                      <h3 className="font-bold">{activeSession.title}</h3>
+                      <p className="text-sm text-gray-500">Dịch vụ: {services.find(s => s.id === activeSession.service_id)?.name}</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Label className="text-sm font-medium text-gray-600">Xưng hô:</Label>
+                      <ToggleGroup
+                        type="single"
+                        size="sm"
+                        value={customerSalutation}
+                        onValueChange={(value: 'Anh' | 'Chị' | 'A/C') => {
+                          if (value) handleSalutationChange(value);
+                        }}
+                      >
+                        <ToggleGroupItem value="Anh">Anh</ToggleGroupItem>
+                        <ToggleGroupItem value="Chị">Chị</ToggleGroupItem>
+                        <ToggleGroupItem value="A/C">A/C</ToggleGroupItem>
+                      </ToggleGroup>
+                    </div>
                   </div>
                   <ScrollArea className="flex-grow p-4 bg-gray-50/50">
                     <div className="space-y-6">

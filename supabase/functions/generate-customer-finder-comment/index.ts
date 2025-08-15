@@ -50,16 +50,49 @@ serve(async (req) => {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({ model: settings.gemini_model });
 
-    const { data: services, error: servicesError } = await supabaseAdmin.from('document_services').select('id, name, description');
-    if (servicesError || !services || services.length === 0) throw new Error("Không tìm thấy dịch vụ nào để đối chiếu.");
+    // Step 1: Get pre-identified service ID from the database
+    const { data: reportData, error: reportError } = await supabaseAdmin
+        .from('"Bao_cao_Facebook"')
+        .select('identified_service_id')
+        .eq('id', reportId)
+        .single();
 
-    const serviceListForPrompt = services.map(s => `ID: ${s.id}\nTên dịch vụ: ${s.name}\nMô tả: ${s.description || 'Không có'}`).join('\n---\n');
-    const serviceIdentificationPrompt = `Dựa vào nội dung bài viết sau, hãy xác định dịch vụ phù hợp nhất từ danh sách. Chỉ trả về ID của dịch vụ.\n\nBÀI VIẾT:\n"""${postContent}"""\n\nDANH SÁCH DỊCH VỤ:\n"""${serviceListForPrompt}"""\n\nID DỊCH VỤ PHÙ HỢP NHẤT:`;
-    const serviceIdResult = await model.generateContent(serviceIdentificationPrompt);
-    const identifiedServiceId = serviceIdResult.response.text().trim();
-    const matchedService = services.find(s => s.id === identifiedServiceId);
-    if (!matchedService) throw new Error("AI không thể xác định được dịch vụ phù hợp.");
+    if (reportError) throw new Error(`Không tìm thấy báo cáo với ID: ${reportId}. Lỗi: ${reportError.message}`);
+    
+    let serviceId = reportData.identified_service_id;
+    let matchedService;
 
+    // Fallback: If service ID is missing (for old data), identify it now.
+    if (!serviceId) {
+        console.warn(`Service ID not found for report ${reportId}. Running identification on-the-fly.`);
+        const { data: services, error: servicesError } = await supabaseAdmin.from('document_services').select('id, name, description');
+        if (servicesError || !services || services.length === 0) throw new Error("Không tìm thấy dịch vụ nào để đối chiếu.");
+
+        const serviceListForPrompt = services.map(s => `ID: ${s.id}\nTên dịch vụ: ${s.name}\nMô tả: ${s.description || 'Không có'}`).join('\n---\n');
+        const serviceIdentificationPrompt = `Dựa vào nội dung bài viết sau, hãy xác định dịch vụ phù hợp nhất từ danh sách. Chỉ trả về ID của dịch vụ.\n\nBÀI VIẾT:\n"""${postContent}"""\n\nDANH SÁCH DỊCH VỤ:\n"""${serviceListForPrompt}"""\n\nID DỊCH VỤ PHÙ HỢP NHẤT:`;
+        
+        const serviceIdResult = await model.generateContent(serviceIdentificationPrompt);
+        const rawServiceIdResponse = serviceIdResult.response.text().trim();
+        
+        const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+        const match = rawServiceIdResponse.match(uuidRegex);
+        const foundServiceId = match ? match[0] : null;
+
+        matchedService = services.find(s => s.id === foundServiceId);
+        if (!matchedService) {
+            console.error(`AI failed to identify a valid service. Raw response: "${rawServiceIdResponse}"`);
+            throw new Error("AI không thể xác định được dịch vụ phù hợp.");
+        }
+        serviceId = matchedService.id;
+    } else {
+        const { data, error } = await supabaseAdmin.from('document_services').select('*').eq('id', serviceId).single();
+        if (error) throw new Error(`Lỗi khi lấy dịch vụ đã xác định: ${error.message}`);
+        matchedService = data;
+    }
+
+    if (!matchedService) throw new Error("Không thể xác định dịch vụ để tạo comment.");
+
+    // Step 2: Generate Comment
     const { data: documents } = await supabaseAdmin.from('documents').select('title, ai_prompt, content').eq('service_id', matchedService.id);
     const documentContent = (documents && documents.length > 0) ? documents.map(doc => `Tên tài liệu: ${doc.title}\nYêu cầu AI khi đọc: ${doc.ai_prompt || 'Không có'}\nNội dung chi tiết:\n${doc.content || 'Không có'}`).join('\n\n---\n\n') : "Không có tài liệu tham khảo.";
 
@@ -78,7 +111,8 @@ serve(async (req) => {
     const cleanedGeneratedComment = cleanAiResponse(rawGeneratedText);
     if (!cleanedGeneratedComment) throw new Error("AI không tạo được comment hợp lệ.");
 
-    const { error: updateError } = await supabaseAdmin.from('"Bao_cao_Facebook"').update({ suggested_comment: cleanedGeneratedComment, identified_service_id: matchedService.id }).eq('id', reportId);
+    // Step 3: Save the result
+    const { error: updateError } = await supabaseAdmin.from('"Bao_cao_Facebook"').update({ suggested_comment: cleanedGeneratedComment, identified_service_id: serviceId }).eq('id', reportId);
     if (updateError) throw new Error(`Lưu comment thất bại: ${updateError.message}`);
 
     await supabaseAdmin.from('ai_generation_logs').insert({ user_id: user.id, template_type: 'customer_finder_comment', final_prompt: finalPrompt, generated_content: rawGeneratedText, is_hidden_in_admin_history: true });

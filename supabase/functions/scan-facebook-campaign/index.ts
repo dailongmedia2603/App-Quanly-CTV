@@ -309,68 +309,67 @@ serve(async (req) => {
     }
     await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(2/4) Phân tích và lọc xong.`, null, 'progress');
 
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(3/4) AI đang tạo comment đề xuất cho ${finalResults.length} bài viết...`, null, 'progress');
-    const commentGenerationPromises = finalResults.map(async (post) => {
-        if (!gemini_model || !post.content) {
-            return { ...post, suggested_comment: null };
+    // NEW: Service Identification Step
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(3/4) AI đang xác định dịch vụ phù hợp cho ${finalResults.length} bài viết...`, null, 'progress');
+    
+    const { data: services, error: servicesError } = await supabaseAdmin.from('document_services').select('id, name, description');
+    if (servicesError || !services || services.length === 0) {
+        throw new Error("Không tìm thấy dịch vụ nào để đối chiếu.");
+    }
+    const serviceListForPrompt = services.map(s => `ID: ${s.id}\nTên dịch vụ: ${s.name}\nMô tả: ${s.description || 'Không có'}`).join('\n---\n');
+    const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+    const identificationPromises = finalResults.map(async (post) => {
+        if (!post.content) {
+            return { ...post, identified_service_id: null };
         }
         
         const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
         if (apiKeyError || !geminiApiKey) {
-            console.error("Could not retrieve a valid Gemini API key for comment generation on post:", post.source_url);
-            return { ...post, suggested_comment: 'AI comment generation failed due to API key issue.' };
+            console.error("Could not retrieve a valid Gemini API key for service identification on post:", post.source_url);
+            return { ...post, identified_service_id: null };
         }
 
-        const prompt = `
-            You are a helpful and professional marketing assistant. 
-            Based on the following Facebook post, write a short, friendly, and natural-sounding comment to introduce a relevant service.
-            The service we offer is related to these keywords: "${post.keywords_found?.join(', ')}".
-            The comment should be engaging and encourage a response. Do not use hashtags.
-
-            Post Content:
-            ---
-            ${post.content}
-            ---
-
-            Your response must be a single string containing only the suggested comment in Vietnamese.
-        `;
+        const prompt = `Dựa vào nội dung bài viết sau, hãy xác định dịch vụ phù hợp nhất từ danh sách. Chỉ trả về ID của dịch vụ.\n\nBÀI VIẾT:\n"""${post.content}"""\n\nDANH SÁCH DỊCH VỤ:\n"""${serviceListForPrompt}"""\n\nID DỊCH VỤ PHÙ HỢP NHẤT:`;
 
         try {
             const genAI = new GoogleGenerativeAI(geminiApiKey);
             const model = genAI.getGenerativeModel({ model: gemini_model });
             const result = await model.generateContent(prompt);
-            const comment = result.response.text().trim();
-            return { ...post, suggested_comment: comment };
+            const rawResponse = result.response.text().trim();
+            const match = rawResponse.match(uuidRegex);
+            const serviceId = match ? match[0] : null;
+            return { ...post, identified_service_id: serviceId };
         } catch (e) {
-            console.error("Error generating suggested comment for post:", post.source_url, e);
-            return { ...post, suggested_comment: 'AI comment generation failed.' };
+            console.error("Error identifying service for post:", post.source_url, e);
+            return { ...post, identified_service_id: null };
         }
     });
 
-    const resultsWithComments = await Promise.all(commentGenerationPromises);
+    const resultsWithServices = await Promise.all(identificationPromises);
 
-    if (resultsWithComments.length > 0) {
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(4/4) Đang lưu ${resultsWithComments.length} kết quả vào báo cáo...`, null, 'progress');
+    if (resultsWithServices.length > 0) {
+        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(4/4) Đang lưu ${resultsWithServices.length} kết quả vào báo cáo...`, null, 'progress');
         
         const { error: insertError } = await supabaseAdmin
             .from(reportTable)
-            .insert(resultsWithComments);
+            .insert(resultsWithServices);
 
         if (insertError) {
             await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'error', `(4/4) Lưu kết quả thất bại.`, null, 'final');
             throw new Error(`Thêm dữ liệu báo cáo thất bại: ${insertError.message}`);
         }
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(4/4) Đã lưu ${resultsWithComments.length} kết quả.`, null, 'progress');
+        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(4/4) Đã lưu ${resultsWithServices.length} kết quả.`, null, 'progress');
     }
     
-    const successMessage = `Quét Facebook hoàn tất. Đã tìm thấy và xử lý ${resultsWithComments.length} bài viết mới.`;
+    const successMessage = `Quét Facebook hoàn tất. Đã tìm thấy và xử lý ${resultsWithServices.length} bài viết mới.`;
     await logScan(supabaseAdmin, campaign_id_from_req, user_id_from_req, 'success', successMessage, { 
         since: sinceTimestamp,
         "since (readable)": formatTimestampForHumans(sinceTimestamp),
         until: untilTimestamp,
         "until (readable)": formatTimestampForHumans(untilTimestamp),
         api_calls: apiCallDetails, 
-        found_posts: resultsWithComments.length,
+        found_posts: resultsWithServices.length,
     }, 'final');
 
     return new Response(JSON.stringify({ success: true, message: successMessage }), {

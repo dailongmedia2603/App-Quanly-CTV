@@ -84,7 +84,7 @@ serve(async (req) => {
 
     const prompt = promptTemplateData.prompt
       .replace(/\[budget\]/gi, budget.toLocaleString('vi-VN'))
-      .replace(/\[vat_info\]/gi, includesVat ? "Báo giá CÓ bao gồm 10% VAT." : "Báo giá KHÔNG bao gồm VAT.")
+      .replace(/\[vat_info\]/gi, includesVat ? "Báo giá CÓ bao gồm 8% VAT." : "Báo giá KHÔNG bao gồm VAT.")
       .replace(/\[other_requirements\]/gi, otherRequirements || "Không có.")
       .replace(/\[service_prices\]/gi, servicePricesText)
       .replace(/\[quote_templates\]/gi, quoteTemplatesText);

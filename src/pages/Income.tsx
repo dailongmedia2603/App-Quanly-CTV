@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import ReportWidget from '@/components/ReportWidget';
-import { Wallet, Landmark, Percent, FileText, Handshake, ChevronLeft, ChevronRight, Plus, Search, MoreHorizontal, Pencil, Trash2, Loader, CheckCircle, CalendarPlus, Link as LinkIcon, Users as UsersIcon, History } from 'lucide-react';
+import { Wallet, Landmark, Percent, FileText, Handshake, ChevronLeft, ChevronRight, Plus, Search, MoreHorizontal, Pencil, Trash2, Loader, CheckCircle, CalendarPlus, Link as LinkIcon, Users as UsersIcon, History, Clock } from 'lucide-react';
 import { startOfMonth, endOfMonth, format, subMonths, addMonths } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -30,7 +30,7 @@ interface Contract {
   project_name: string;
   contract_value: number;
   commission_rate: number;
-  status: 'ongoing' | 'completed';
+  status: 'ongoing' | 'completed' | 'not_started';
   commission_paid: boolean;
   start_date: string;
   end_date: string | null;
@@ -73,7 +73,7 @@ const parseFormattedNumber = (value: string) => {
 };
 
 const EditableStatusCell = ({ contract, onUpdate, canEdit }: { contract: Contract; onUpdate: (id: string, updates: Partial<Contract>) => void; canEdit: boolean }) => {
-  const handleStatusChange = (newStatus: 'ongoing' | 'completed') => {
+  const handleStatusChange = (newStatus: 'ongoing' | 'completed' | 'not_started') => {
     if (newStatus !== contract.status) {
       onUpdate(contract.id, { status: newStatus });
     }
@@ -83,11 +83,14 @@ const EditableStatusCell = ({ contract, onUpdate, canEdit }: { contract: Contrac
     <Select value={contract.status} onValueChange={handleStatusChange} disabled={!canEdit}>
       <SelectTrigger className={cn(
         "w-[120px] border-0 focus:ring-0 focus:ring-offset-0",
-        contract.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+        contract.status === 'completed' ? 'bg-green-100 text-green-800' :
+        contract.status === 'ongoing' ? 'bg-yellow-100 text-yellow-800' :
+        'bg-gray-100 text-gray-800'
       )}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
+        <SelectItem value="not_started">Chưa chạy</SelectItem>
         <SelectItem value="ongoing">Đang chạy</SelectItem>
         <SelectItem value="completed">Hoàn thành</SelectItem>
       </SelectContent>
@@ -123,7 +126,7 @@ const Income = () => {
   const [projectName, setProjectName] = useState('');
   const [contractValue, setContractValue] = useState(0);
   const [commissionRate, setCommissionRate] = useState(0.05);
-  const [status, setStatus] = useState<'ongoing' | 'completed'>('ongoing');
+  const [status, setStatus] = useState<'ongoing' | 'completed' | 'not_started'>('not_started');
   const [commissionPaid, setCommissionPaid] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>();
@@ -218,10 +221,11 @@ const Income = () => {
   const allContractsStats = useMemo(() => {
     const total = collaboratorFilteredContracts.length;
     const totalValue = collaboratorFilteredContracts.reduce((sum, c) => sum + c.contract_value, 0);
+    const notStarted = collaboratorFilteredContracts.filter(c => c.status === 'not_started').length;
     const ongoing = collaboratorFilteredContracts.filter(c => c.status === 'ongoing').length;
     const completed = collaboratorFilteredContracts.filter(c => c.status === 'completed').length;
     const thisMonth = collaboratorFilteredContracts.filter(c => new Date(c.created_at) >= startOfMonth(new Date())).length;
-    return { total, totalValue, ongoing, completed, thisMonth };
+    return { total, totalValue, notStarted, ongoing, completed, thisMonth };
   }, [collaboratorFilteredContracts]);
 
   const filteredContracts = useMemo(() => {
@@ -233,7 +237,7 @@ const Income = () => {
   };
 
   const resetForm = () => {
-    setProjectName(''); setContractValue(0); setStatus('ongoing');
+    setProjectName(''); setContractValue(0); setStatus('not_started');
     setCommissionPaid(false); setStartDate(new Date()); setEndDate(undefined);
     setContractLink(''); setCollaboratorId(isSuperAdmin ? undefined : user!.id);
   };
@@ -342,12 +346,13 @@ const Income = () => {
               <ReportWidget icon={<History className="h-5 w-5" />} title="Hoa hồng (HĐ cũ)" value={formatCurrency(incomeStats?.old_contract_commission || 0)} onClick={handleOldCommissionClick} />
               <ReportWidget icon={<CheckCircle className="h-5 w-5" />} title="Tổng hoa hồng thực nhận" value={formatCurrency(incomeStats?.actual_received || 0)} />
             </div>
-            <Card><CardHeader><CardTitle>Danh sách hợp đồng trong tháng</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Tên dự án</TableHead><TableHead>Link hợp đồng</TableHead><TableHead>Giá trị</TableHead><TableHead>Đã thanh toán</TableHead><TableHead>Còn nợ</TableHead><TableHead>Tiến độ</TableHead>{isSuperAdmin && <TableHead>Cộng tác viên</TableHead>}</TableRow></TableHeader><TableBody>{loadingAll ? <TableRow><TableCell colSpan={isSuperAdmin ? 7 : 6} className="h-24 text-center">Đang tải...</TableCell></TableRow> : monthlyContracts.length === 0 ? <TableRow><TableCell colSpan={isSuperAdmin ? 7 : 6} className="h-24 text-center">Không có hợp đồng nào trong tháng này.</TableCell></TableRow> : (monthlyContracts.map((contract) => (<TableRow key={contract.id}><TableCell className="font-medium">{contract.project_name}</TableCell><TableCell>{contract.contract_link ? (<Button variant="link" asChild className="p-0 h-auto text-brand-orange hover:text-brand-orange/80"><a href={contract.contract_link} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1"><LinkIcon className="h-4 w-4" /><span>Xem</span></a></Button>) : (<span className="text-gray-400">N/A</span>)}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell>{formatCurrency(contract.total_paid)}</TableCell><TableCell>{formatCurrency(contract.contract_value - contract.total_paid)}</TableCell><TableCell><Badge variant={contract.status === 'completed' ? 'default' : 'secondary'} className={cn(contract.status === 'completed' ? 'bg-green-500 text-white' : 'bg-yellow-100 text-yellow-800')}>{contract.status === 'completed' ? 'Hoàn thành' : 'Đang chạy'}</Badge></TableCell>{isSuperAdmin && <TableCell><div><div className="font-medium leading-snug">{contract.collaborator_name}</div>{contract.collaborator_name !== contract.collaborator_email && (<div className="text-xs text-gray-500 leading-snug">{contract.collaborator_email}</div>)}</div></TableCell>}</TableRow>)))}</TableBody></Table></CardContent></Card>
+            <Card><CardHeader><CardTitle>Danh sách hợp đồng trong tháng</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Tên dự án</TableHead><TableHead>Link hợp đồng</TableHead><TableHead>Giá trị</TableHead><TableHead>Đã thanh toán</TableHead><TableHead>Còn nợ</TableHead><TableHead>Tiến độ</TableHead>{isSuperAdmin && <TableHead>Cộng tác viên</TableHead>}</TableRow></TableHeader><TableBody>{loadingAll ? <TableRow><TableCell colSpan={isSuperAdmin ? 7 : 6} className="h-24 text-center">Đang tải...</TableCell></TableRow> : monthlyContracts.length === 0 ? <TableRow><TableCell colSpan={isSuperAdmin ? 7 : 6} className="h-24 text-center">Không có hợp đồng nào trong tháng này.</TableCell></TableRow> : (monthlyContracts.map((contract) => (<TableRow key={contract.id}><TableCell className="font-medium">{contract.project_name}</TableCell><TableCell>{contract.contract_link ? (<Button variant="link" asChild className="p-0 h-auto text-brand-orange hover:text-brand-orange/80"><a href={contract.contract_link} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1"><LinkIcon className="h-4 w-4" /><span>Xem</span></a></Button>) : (<span className="text-gray-400">N/A</span>)}</TableCell><TableCell>{formatCurrency(contract.contract_value)}</TableCell><TableCell>{formatCurrency(contract.total_paid)}</TableCell><TableCell>{formatCurrency(contract.contract_value - contract.total_paid)}</TableCell><TableCell><Badge variant={contract.status === 'completed' ? 'default' : 'secondary'} className={cn(contract.status === 'completed' ? 'bg-green-500 text-white' : contract.status === 'ongoing' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800')}>{contract.status === 'completed' ? 'Hoàn thành' : contract.status === 'ongoing' ? 'Đang chạy' : 'Chưa chạy'}</Badge></TableCell>{isSuperAdmin && <TableCell><div><div className="font-medium leading-snug">{contract.collaborator_name}</div>{contract.collaborator_name !== contract.collaborator_email && (<div className="text-xs text-gray-500 leading-snug">{contract.collaborator_email}</div>)}</div></TableCell>}</TableRow>)))}</TableBody></Table></CardContent></Card>
           </TabsContent>
           <TabsContent value="contracts" className="space-y-4 pt-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
                 <ReportWidget icon={<Handshake className="h-5 w-5" />} title="Tổng Hợp đồng" value={allContractsStats.total.toString()} />
                 <ReportWidget icon={<Wallet className="h-5 w-5" />} title="Tổng giá trị" value={formatCurrency(allContractsStats.totalValue)} />
+                <ReportWidget icon={<Clock className="h-5 w-5" />} title="Chưa chạy" value={allContractsStats.notStarted.toString()} />
                 <ReportWidget icon={<Loader className="h-5 w-5" />} title="Đang chạy" value={allContractsStats.ongoing.toString()} />
                 <ReportWidget icon={<CheckCircle className="h-5 w-5" />} title="Hoàn thành" value={allContractsStats.completed.toString()} />
                 <ReportWidget icon={<CalendarPlus className="h-5 w-5" />} title="HĐ trong tháng" value={allContractsStats.thisMonth.toString()} />
@@ -358,7 +363,7 @@ const Income = () => {
       </div>
       <PaymentDetailsDialog isOpen={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen} contractId={selectedContractForPayments} onPaymentsUpdate={fetchAllContractsAndUsers} />
       <OldContractsDialog isOpen={isOldContractsDialogOpen} onOpenChange={setIsOldContractsDialogOpen} contracts={oldContractsData} loading={loadingOldContracts} selectedDate={selectedDate} />
-      <Dialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>{editingContract ? 'Sửa hợp đồng' : 'Tạo hợp đồng mới'}</DialogTitle></DialogHeader><div className="grid grid-cols-2 gap-4 py-4"><div className="space-y-2 col-span-2"><Label htmlFor="project-name">Tên dự án</Label><Input id="project-name" value={projectName} onChange={e => setProjectName(e.target.value)} /></div>{isSuperAdmin && (<div className="space-y-2 col-span-2"><Label htmlFor="collaborator" className="flex items-center"><UsersIcon className="h-4 w-4 mr-2" />Cộng tác viên</Label><SingleSelectCombobox options={allUsers.map(u => ({ value: u.id, label: <div><div className="font-medium leading-snug">{`${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email}</div>{u.email && <div className="text-xs text-gray-500 leading-snug">{u.email}</div>}</div>, searchValue: `${u.first_name || ''} ${u.last_name || ''} ${u.email}`.trim() }))} selected={collaboratorId} onChange={setCollaboratorId} placeholder="Chọn cộng tác viên..." searchPlaceholder="Tìm kiếm..." emptyPlaceholder="Không tìm thấy." /></div>)}<div className="space-y-2 col-span-2"><Label htmlFor="contract-link">Link hợp đồng</Label><Input id="contract-link" value={contractLink} onChange={e => setContractLink(e.target.value)} placeholder="https://..." /></div><div className="space-y-2"><Label htmlFor="contract-value">Giá trị hợp đồng (VND)</Label><Input id="contract-value" type="text" value={formatNumberWithDots(contractValue)} onChange={e => setContractValue(parseFormattedNumber(e.target.value))} /></div><div className="space-y-2"><Label>Trạng thái</Label><Select value={status} onValueChange={v => setStatus(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ongoing">Đang chạy</SelectItem><SelectItem value="completed">Hoàn thành</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label>Ngày bắt đầu</Label><DatePicker date={startDate} setDate={setStartDate} /></div><div className="space-y-2"><Label>Ngày kết thúc (tùy chọn)</Label><DatePicker date={endDate} setDate={setEndDate} /></div></div><DialogFooter><Button variant="outline" onClick={() => setIsContractDialogOpen(false)}>Hủy</Button><Button onClick={handleSaveContract} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? 'Đang lưu...' : 'Lưu'}</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>{editingContract ? 'Sửa hợp đồng' : 'Tạo hợp đồng mới'}</DialogTitle></DialogHeader><div className="grid grid-cols-2 gap-4 py-4"><div className="space-y-2 col-span-2"><Label htmlFor="project-name">Tên dự án</Label><Input id="project-name" value={projectName} onChange={e => setProjectName(e.target.value)} /></div>{isSuperAdmin && (<div className="space-y-2 col-span-2"><Label htmlFor="collaborator" className="flex items-center"><UsersIcon className="h-4 w-4 mr-2" />Cộng tác viên</Label><SingleSelectCombobox options={allUsers.map(u => ({ value: u.id, label: <div><div className="font-medium leading-snug">{`${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email}</div>{u.email && <div className="text-xs text-gray-500 leading-snug">{u.email}</div>}</div>, searchValue: `${u.first_name || ''} ${u.last_name || ''} ${u.email}`.trim() }))} selected={collaboratorId} onChange={setCollaboratorId} placeholder="Chọn cộng tác viên..." searchPlaceholder="Tìm kiếm..." emptyPlaceholder="Không tìm thấy." /></div>)}<div className="space-y-2 col-span-2"><Label htmlFor="contract-link">Link hợp đồng</Label><Input id="contract-link" value={contractLink} onChange={e => setContractLink(e.target.value)} placeholder="https://..." /></div><div className="space-y-2"><Label htmlFor="contract-value">Giá trị hợp đồng (VND)</Label><Input id="contract-value" type="text" value={formatNumberWithDots(contractValue)} onChange={e => setContractValue(parseFormattedNumber(e.target.value))} /></div><div className="space-y-2"><Label>Trạng thái</Label><Select value={status} onValueChange={v => setStatus(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="not_started">Chưa chạy</SelectItem><SelectItem value="ongoing">Đang chạy</SelectItem><SelectItem value="completed">Hoàn thành</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label>Ngày bắt đầu</Label><DatePicker date={startDate} setDate={setStartDate} /></div><div className="space-y-2"><Label>Ngày kết thúc (tùy chọn)</Label><DatePicker date={endDate} setDate={setEndDate} /></div></div><DialogFooter><Button variant="outline" onClick={() => setIsContractDialogOpen(false)}>Hủy</Button><Button onClick={handleSaveContract} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? 'Đang lưu...' : 'Lưu'}</Button></DialogFooter></DialogContent></Dialog>
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Xác nhận xóa</AlertDialogTitle><AlertDialogDescription>Bạn có chắc muốn xóa hợp đồng "{contractToDelete?.project_name}" không? Hành động này không thể hoàn tác.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Hủy</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} disabled={isSubmitting} className="bg-red-600 hover:bg-red-700">Xóa</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </>
   );

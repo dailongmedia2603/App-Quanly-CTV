@@ -20,12 +20,12 @@ interface OldContractsDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   contracts: OldContract[];
   loading: boolean;
-  month: string;
+  selectedDate: Date;
 }
 
 const formatCurrency = (value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 
-export const OldContractsDialog = ({ isOpen, onOpenChange, contracts, loading, month }: OldContractsDialogProps) => {
+export const OldContractsDialog = ({ isOpen, onOpenChange, contracts, loading, selectedDate }: OldContractsDialogProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
@@ -35,7 +35,7 @@ export const OldContractsDialog = ({ isOpen, onOpenChange, contracts, loading, m
             Hợp đồng cũ có thanh toán
           </DialogTitle>
           <DialogDescription>
-            Danh sách các hợp đồng cũ có ghi nhận thanh toán trong tháng {month}.
+            Danh sách các hợp đồng cũ có ghi nhận thanh toán trong {format(selectedDate, 'MMMM yyyy', { locale: vi })}.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
@@ -45,7 +45,7 @@ export const OldContractsDialog = ({ isOpen, onOpenChange, contracts, loading, m
                 <TableRow>
                   <TableHead className="flex items-center"><FileText className="h-4 w-4 mr-2" />Tên dự án</TableHead>
                   <TableHead><Calendar className="inline-block h-4 w-4 mr-2" />Tháng bắt đầu HĐ</TableHead>
-                  <TableHead><Wallet className="inline-block h-4 w-4 mr-2" />Thanh toán trong tháng {month}</TableHead>
+                  <TableHead><Wallet className="inline-block h-4 w-4 mr-2" />Thanh toán trong tháng {format(selectedDate, 'MM/yy')}</TableHead>
                   <TableHead><Percent className="inline-block h-4 w-4 mr-2" />Hoa hồng</TableHead>
                 </TableRow>
               </TableHeader>

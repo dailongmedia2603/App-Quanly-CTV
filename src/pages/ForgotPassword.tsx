@@ -26,9 +26,9 @@ const ForgotPassword = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 lg:p-8">
-      <div className="w-full max-w-md mx-auto shadow-2xl rounded-2xl overflow-hidden">
-        <div className="bg-white p-8 sm:p-12">
-          <div className="w-full">
+      <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 shadow-2xl rounded-2xl overflow-hidden">
+        <div className="bg-white p-8 sm:p-12 lg:p-16 flex flex-col justify-center">
+          <div className="w-full max-w-md mx-auto">
             <h1 className="text-3xl font-bold text-gray-900">Quên mật khẩu</h1>
             <p className="mt-2 text-gray-500">Nhập email của bạn để nhận hướng dẫn đặt lại mật khẩu.</p>
 
@@ -62,22 +62,14 @@ const ForgotPassword = () => {
             </p>
           </div>
         </div>
-        <div className="flex flex-col bg-blue-600 p-8 sm:p-12 text-white">
+        <div className="hidden lg:flex flex-col bg-blue-600 p-8 sm:p-12 lg:p-16 text-white">
             <div className="flex-grow flex flex-col items-center justify-center text-center">
-                <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-20" />
+                <img src="/logodailong-ngang.png" alt="Dailong Media Agency Logo" className="w-auto h-20" />
                 <div className="mt-12 bg-white/10 backdrop-blur-sm p-6 rounded-xl">
-                    <p className="text-xl font-bold uppercase">
+                    <p className="text-xl font-medium uppercase">
                         HỆ THỐNG QUẢN LÝ CỘNG TÁC VIÊN
                     </p>
                 </div>
-            </div>
-            <div className="flex-shrink-0 mt-8">
-                <nav className="flex items-center justify-center space-x-6 text-sm">
-                    <a href="#" className="hover:underline">Marketplace</a>
-                    <a href="#" className="hover:underline">License</a>
-                    <a href="#" className="hover:underline">Terms of Use</a>
-                    <a href="#" className="hover:underline">Blog</a>
-                </nav>
             </div>
         </div>
       </div>

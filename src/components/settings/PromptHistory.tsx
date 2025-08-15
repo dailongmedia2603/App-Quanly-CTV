@@ -20,7 +20,7 @@ interface Log {
 }
 
 interface PromptHistoryProps {
-  templateType: 'post' | 'comment' | 'consulting' | 'customer_finder_comment';
+  templateType: 'post' | 'comment' | 'consulting' | 'customer_finder_comment' | 'quote';
 }
 
 const PromptHistory = ({ templateType }: PromptHistoryProps) => {

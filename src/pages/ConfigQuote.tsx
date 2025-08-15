@@ -2,6 +2,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import PromptTemplateEditor from "@/components/settings/PromptTemplateEditor";
 import QuoteCompanyInfo from "@/components/settings/QuoteCompanyInfo";
 import { Building, Bot } from "lucide-react";
+import PromptHistory from "@/components/settings/PromptHistory";
 
 const ConfigQuote = () => {
   return (
@@ -42,6 +43,7 @@ const ConfigQuote = () => {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+      <PromptHistory templateType="quote" />
     </div>
   );
 };

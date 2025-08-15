@@ -107,7 +107,7 @@ const SignUp = () => {
 
         <div className="hidden lg:flex flex-col bg-blue-600 p-8 sm:p-12 lg:p-16 text-white">
             <div className="flex-grow flex flex-col items-center justify-center text-center">
-                <img src="/dailong-logo-white.svg" alt="Dailong Media Agency Logo" className="w-auto h-20" />
+                <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-20" />
                 <div className="mt-12 bg-white/10 backdrop-blur-sm p-6 rounded-xl">
                     <p className="text-xl font-bold uppercase">
                         HỆ THỐNG QUẢN LÝ CỘNG TÁC VIÊN

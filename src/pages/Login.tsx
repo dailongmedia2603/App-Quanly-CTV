@@ -39,7 +39,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 lg:p-8">
-      <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 shadow-2xl rounded-2xl overflow-hidden">
+      <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg-grid-cols-2 shadow-2xl rounded-2xl overflow-hidden">
         
         {/* Left Panel: Form */}
         <div className="bg-white p-8 sm:p-12 lg:p-16 flex flex-col justify-center">
@@ -123,7 +123,7 @@ const Login = () => {
         {/* Right Panel: Branding */}
         <div className="hidden lg:flex flex-col bg-blue-600 p-8 sm:p-12 lg:p-16 text-white">
             <div className="flex-grow flex flex-col items-center justify-center text-center">
-                <img src="/dailong-logo-white.svg" alt="Dailong Media Agency Logo" className="w-auto h-20" />
+                <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-20" />
                 <div className="mt-12 bg-white/10 backdrop-blur-sm p-6 rounded-xl">
                     <p className="text-xl font-bold uppercase">
                         HỆ THỐNG QUẢN LÝ CỘNG TÁC VIÊN

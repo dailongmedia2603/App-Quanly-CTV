@@ -158,7 +158,7 @@ serve(async (req) => {
     const allPostsData = [];
     const apiCallDetails = [];
 
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(1/4) Đang lấy bài viết từ ${facebookGroupIds.length} group...`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(1/3) Đang lấy bài viết từ ${facebookGroupIds.length} group...`, null, 'progress');
     for (const groupId of facebookGroupIds) {
         let url = `${facebook_api_url.replace(/\/$/, '')}/${groupId}/feed?fields=message,created_time,id,permalink_url,from&access_token=${facebook_api_token}&limit=100`;
         if (sinceTimestamp) {
@@ -205,7 +205,7 @@ serve(async (req) => {
             allPostsData.push(...posts.map((post: any) => ({ ...post, campaign_id: campaign.id })));
         }
     }
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(1/4) Đã lấy xong ${allPostsData.length} bài viết.`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(1/3) Đã lấy xong ${allPostsData.length} bài viết.`, null, 'progress');
 
     let newPostsData = allPostsData;
     if (allPostsData.length > 0) {
@@ -226,7 +226,7 @@ serve(async (req) => {
     }
 
     let filteredPosts = [];
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/4) Đang lọc ${newPostsData.length} bài viết mới...`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/3) Đang lọc ${newPostsData.length} bài viết mới...`, null, 'progress');
     if (keywords.length > 0) {
         for (const post of newPostsData) {
             const foundKeywords = findKeywords(post.message, keywords);
@@ -240,7 +240,7 @@ serve(async (req) => {
 
     let finalResults = [];
     if (campaign.ai_filter_enabled && campaign.ai_prompt && gemini_model) {
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/4) AI đang phân tích ${filteredPosts.length} bài viết...`, null, 'progress');
+        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/3) AI đang phân tích ${filteredPosts.length} bài viết...`, null, 'progress');
         
         for (const post of filteredPosts) {
             const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
@@ -306,69 +306,30 @@ serve(async (req) => {
             source_post_id: post.id,
         }));
     }
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(2/4) Phân tích và lọc xong.`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(2/3) Phân tích và lọc xong.`, null, 'progress');
 
-    // NEW: Service Identification Step
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(3/4) AI đang xác định dịch vụ phù hợp cho ${finalResults.length} bài viết...`, null, 'progress');
-    
-    const { data: services, error: servicesError } = await supabaseAdmin.from('document_services').select('id, name, description');
-    if (servicesError || !services || services.length === 0) {
-        throw new Error("Không tìm thấy dịch vụ nào để đối chiếu.");
-    }
-    const serviceListForPrompt = services.map(s => `ID: ${s.id}\nTên dịch vụ: ${s.name}\nMô tả: ${s.description || 'Không có'}`).join('\n---\n');
-    const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-
-    const identificationPromises = finalResults.map(async (post) => {
-        if (!post.content) {
-            return { ...post, identified_service_id: null };
-        }
-        
-        const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
-        if (apiKeyError || !geminiApiKey) {
-            console.error("Could not retrieve a valid Gemini API key for service identification on post:", post.source_url);
-            return { ...post, identified_service_id: null };
-        }
-
-        const prompt = `Dựa vào nội dung bài viết sau, hãy xác định dịch vụ phù hợp nhất từ danh sách. Chỉ trả về ID của dịch vụ.\n\nBÀI VIẾT:\n"""${post.content}"""\n\nDANH SÁCH DỊCH VỤ:\n"""${serviceListForPrompt}"""\n\nID DỊCH VỤ PHÙ HỢP NHẤT:`;
-
-        try {
-            const genAI = new GoogleGenerativeAI(geminiApiKey);
-            const model = genAI.getGenerativeModel({ model: gemini_model });
-            const result = await model.generateContent(prompt);
-            const rawResponse = result.response.text().trim();
-            const match = rawResponse.match(uuidRegex);
-            const serviceId = match ? match[0] : null;
-            return { ...post, identified_service_id: serviceId };
-        } catch (e) {
-            console.error("Error identifying service for post:", post.source_url, e);
-            return { ...post, identified_service_id: null };
-        }
-    });
-
-    const resultsWithServices = await Promise.all(identificationPromises);
-
-    if (resultsWithServices.length > 0) {
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(4/4) Đang lưu ${resultsWithServices.length} kết quả vào báo cáo...`, null, 'progress');
+    if (finalResults.length > 0) {
+        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(3/3) Đang lưu ${finalResults.length} kết quả vào báo cáo...`, null, 'progress');
         
         const { error: insertError } = await supabaseAdmin
             .from(reportTable)
-            .insert(resultsWithServices);
+            .insert(finalResults);
 
         if (insertError) {
-            await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'error', `(4/4) Lưu kết quả thất bại.`, null, 'final');
+            await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'error', `(3/3) Lưu kết quả thất bại.`, null, 'final');
             throw new Error(`Thêm dữ liệu báo cáo thất bại: ${insertError.message}`);
         }
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(4/4) Đã lưu ${resultsWithServices.length} kết quả.`, null, 'progress');
+        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(3/3) Đã lưu ${finalResults.length} kết quả.`, null, 'progress');
     }
     
-    const successMessage = `Quét Facebook hoàn tất. Đã tìm thấy và xử lý ${resultsWithServices.length} bài viết mới.`;
+    const successMessage = `Quét Facebook hoàn tất. Đã tìm thấy và xử lý ${finalResults.length} bài viết mới.`;
     await logScan(supabaseAdmin, campaign_id_from_req, user_id_from_req, 'success', successMessage, { 
         since: sinceTimestamp,
         "since (readable)": formatTimestampForHumans(sinceTimestamp),
         until: untilTimestamp,
         "until (readable)": formatTimestampForHumans(untilTimestamp),
         api_calls: apiCallDetails, 
-        found_posts: resultsWithServices.length,
+        found_posts: finalResults.length,
     }, 'final');
 
     return new Response(JSON.stringify({ success: true, message: successMessage }), {

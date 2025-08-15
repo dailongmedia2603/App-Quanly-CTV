@@ -20,7 +20,7 @@ const cleanAiResponse = (rawText: string): string => {
   if (markerIndex !== -1) {
     text = text.substring(markerIndex + contentMarker.length).trim();
   }
-  text = text.replace(/^```(markdown|md|)\s*\n/i, '');
+  text = text.replace(/^```(json|markdown|md|)\s*\n/i, '');
   text = text.replace(/\n\s*```$/, '');
   return text;
 };
@@ -50,74 +50,99 @@ serve(async (req) => {
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({ model: settings.gemini_model });
 
-    // Step 1: Get pre-identified service ID from the database
-    const { data: reportData, error: reportError } = await supabaseAdmin
-        .from('Bao_cao_Facebook')
-        .select('identified_service_id')
-        .eq('id', reportId)
-        .single();
+    // Step 1: Fetch all services and the comment prompt template
+    const [servicesRes, templateRes] = await Promise.all([
+        supabaseAdmin.from('document_services').select('id, name, description'),
+        supabase.from('ai_prompt_templates').select('prompt').eq('template_type', 'comment').single()
+    ]);
 
-    if (reportError) throw new Error(`Không tìm thấy báo cáo với ID: ${reportId}. Lỗi: ${reportError.message}`);
-    
-    let serviceId = reportData.identified_service_id;
-    let matchedService;
+    const { data: services, error: servicesError } = servicesRes;
+    if (servicesError || !services || services.length === 0) throw new Error("Không tìm thấy dịch vụ nào để đối chiếu.");
 
-    // Fallback: If service ID is missing (for old data), identify it now.
-    if (!serviceId) {
-        console.warn(`Service ID not found for report ${reportId}. Running identification on-the-fly.`);
-        const { data: services, error: servicesError } = await supabaseAdmin.from('document_services').select('id, name, description');
-        if (servicesError || !services || services.length === 0) throw new Error("Không tìm thấy dịch vụ nào để đối chiếu.");
+    const { data: templateData, error: templateError } = templateRes;
+    if (templateError || !templateData?.prompt) throw new Error("Không tìm thấy mẫu prompt cho 'comment'.");
 
-        const serviceListForPrompt = services.map(s => `ID: ${s.id}\nTên dịch vụ: ${s.name}\nMô tả: ${s.description || 'Không có'}`).join('\n---\n');
-        const serviceIdentificationPrompt = `Dựa vào nội dung bài viết sau, hãy xác định dịch vụ phù hợp nhất từ danh sách. Chỉ trả về ID của dịch vụ.\n\nBÀI VIẾT:\n"""${postContent}"""\n\nDANH SÁCH DỊCH VỤ:\n"""${serviceListForPrompt}"""\n\nID DỊCH VỤ PHÙ HỢP NHẤT:`;
-        
-        const serviceIdResult = await model.generateContent(serviceIdentificationPrompt);
-        const rawServiceIdResponse = serviceIdResult.response.text().trim();
-        
-        const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-        const match = rawServiceIdResponse.match(uuidRegex);
-        const foundServiceId = match ? match[0] : null;
+    // Step 2: Construct the master prompt
+    const { data: documents } = await supabaseAdmin.from('documents').select('title, content, service_id');
+    const documentsByService = (documents || []).reduce((acc: any, doc: any) => {
+        if (!acc[doc.service_id]) acc[doc.service_id] = [];
+        acc[doc.service_id].push(`Tài liệu: ${doc.title}\nNội dung: ${doc.content}`);
+        return acc;
+    }, {});
 
-        matchedService = services.find(s => s.id === foundServiceId);
-        if (!matchedService) {
-            console.error(`AI failed to identify a valid service. Raw response: "${rawServiceIdResponse}"`);
-            throw new Error("AI không thể xác định được dịch vụ phù hợp.");
-        }
-        serviceId = matchedService.id;
-    } else {
-        const { data, error } = await supabaseAdmin.from('document_services').select('*').eq('id', serviceId).single();
-        if (error) throw new Error(`Lỗi khi lấy dịch vụ đã xác định: ${error.message}`);
-        matchedService = data;
-    }
-
-    if (!matchedService) throw new Error("Không thể xác định dịch vụ để tạo comment.");
-
-    // Step 2: Generate Comment
-    const { data: documents } = await supabaseAdmin.from('documents').select('title, ai_prompt, content').eq('service_id', matchedService.id);
-    const documentContent = (documents && documents.length > 0) ? documents.map(doc => `Tên tài liệu: ${doc.title}\nYêu cầu AI khi đọc: ${doc.ai_prompt || 'Không có'}\nNội dung chi tiết:\n${doc.content || 'Không có'}`).join('\n\n---\n\n') : "Không có tài liệu tham khảo.";
-
-    const { data: templateData } = await supabase.from('ai_prompt_templates').select('prompt').eq('template_type', 'comment').single();
-    if (!templateData?.prompt) throw new Error("Không tìm thấy mẫu prompt cho 'comment'.");
+    const serviceAndDocsPrompt = services.map(s => {
+        const serviceDocs = documentsByService[s.id] ? documentsByService[s.id].join('\n\n') : 'Không có tài liệu tham khảo.';
+        return `ID: ${s.id}\nTên dịch vụ: ${s.name}\nMô tả: ${s.description || 'Không có'}\n${serviceDocs}`;
+    }).join('\n---\n');
 
     const diversityInstruction = `LƯU Ý QUAN TRỌNG: Để đảm bảo mỗi comment là duy nhất, hãy thêm vào một yếu tố ngẫu nhiên và sáng tạo. Ví dụ: bắt đầu bằng một lời chào khác lạ, đặt một câu hỏi tinh tế liên quan đến chi tiết trong bài viết, hoặc sử dụng một giọng văn hơi khác biệt (ví dụ: chuyên nghiệp, thân thiện, hài hước nhẹ nhàng). Tuyệt đối không lặp lại comment đã tạo trước đó cho cùng một bài viết.`;
-    let finalPrompt = `${diversityInstruction}\n\n${templateData.prompt}`
-        .replace(/\[dịch vụ\]/gi, `${matchedService.name}${matchedService.description ? ` (Mô tả: ${matchedService.description})` : ''}`)
-        .replace(/\[nội dung gốc\]/gi, postContent)
-        .replace(/\[biên tài liệu\]/gi, documentContent);
-    finalPrompt += `\n\n---\nQUAN TRỌNG: Trả lời theo cấu trúc sau:\n**[NỘI DUNG COMMENT]**\n(Nội dung comment của bạn ở đây)`;
 
-    const commentResult = await model.generateContent(finalPrompt);
-    const rawGeneratedText = commentResult.response.text();
-    const cleanedGeneratedComment = cleanAiResponse(rawGeneratedText);
-    if (!cleanedGeneratedComment) throw new Error("AI không tạo được comment hợp lệ.");
+    const finalPrompt = `
+        Bạn là một trợ lý AI chuyên viết comment quảng cáo. Nhiệm vụ của bạn là:
+        1. Đọc nội dung bài viết gốc.
+        2. Đọc danh sách các dịch vụ có sẵn và tài liệu tham khảo của chúng.
+        3. Chọn ra MỘT dịch vụ phù hợp NHẤT để quảng cáo trong bối cảnh bài viết gốc.
+        4. Dựa vào mẫu prompt comment, viết một comment tự nhiên, hấp dẫn để giới thiệu dịch vụ bạn đã chọn.
+        5. ${diversityInstruction}
 
-    // Step 3: Save the result
-    const { error: updateError } = await supabaseAdmin.from('Bao_cao_Facebook').update({ suggested_comment: cleanedGeneratedComment, identified_service_id: serviceId }).eq('id', reportId);
+        BÀI VIẾT GỐC:
+        """
+        ${postContent}
+        """
+
+        DANH SÁCH DỊCH VỤ VÀ TÀI LIỆU:
+        """
+        ${serviceAndDocsPrompt}
+        """
+
+        MẪU PROMPT COMMENT (sử dụng làm kim chỉ nam để viết comment):
+        """
+        ${templateData.prompt.replace(/\[dịch vụ\]/gi, '{tên dịch vụ đã chọn}').replace(/\[nội dung gốc\]/gi, '{bài viết gốc}').replace(/\[biên tài liệu\]/gi, '{tài liệu tham khảo của dịch vụ đã chọn}')}
+        """
+
+        YÊU CẦU ĐẦU RA:
+        Chỉ trả về một đối tượng JSON hợp lệ với hai khóa:
+        - "service_id": (string) ID của dịch vụ bạn đã chọn.
+        - "comment": (string) Nội dung comment bạn đã viết.
+
+        Ví dụ: { "service_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", "comment": "Chào bạn, mình thấy bạn đang quan tâm..." }
+        
+        JSON response:
+    `;
+
+    // Step 3: Call AI
+    const result = await model.generateContent(finalPrompt);
+    const rawResponse = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    let aiResult;
+    try {
+        aiResult = JSON.parse(rawResponse);
+    } catch (e) {
+        console.error("Failed to parse AI JSON response:", rawResponse);
+        throw new Error("AI đã trả về một định dạng không hợp lệ.");
+    }
+
+    const { service_id: identifiedServiceId, comment: generatedComment } = aiResult;
+    const cleanedGeneratedComment = cleanAiResponse(generatedComment);
+
+    if (!identifiedServiceId || !cleanedGeneratedComment || !services.some(s => s.id === identifiedServiceId)) {
+        throw new Error("AI không thể xác định dịch vụ hoặc tạo comment hợp lệ.");
+    }
+    
+    const matchedService = services.find(s => s.id === identifiedServiceId);
+
+    // Step 4: Save the result
+    const { error: updateError } = await supabaseAdmin
+        .from('Bao_cao_Facebook')
+        .update({ suggested_comment: cleanedGeneratedComment, identified_service_id: identifiedServiceId })
+        .eq('id', reportId);
     if (updateError) throw new Error(`Lưu comment thất bại: ${updateError.message}`);
 
-    await supabaseAdmin.from('ai_generation_logs').insert({ user_id: user.id, template_type: 'customer_finder_comment', final_prompt: finalPrompt, generated_content: rawGeneratedText, is_hidden_in_admin_history: true });
+    // Step 5: Log and return
+    await supabaseAdmin.from('ai_generation_logs').insert({ user_id: user.id, template_type: 'customer_finder_comment', final_prompt: finalPrompt, generated_content: rawResponse, is_hidden_in_admin_history: true });
 
     return new Response(JSON.stringify({ comment: cleanedGeneratedComment, service: matchedService }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+
   } catch (error) {
     console.error('Lỗi Edge function:', error);
     return new Response(JSON.stringify({ error: error.message }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 });

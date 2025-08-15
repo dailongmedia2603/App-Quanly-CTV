@@ -150,6 +150,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
             )}
 
             {hasPermission('documents') && <NavLink to="/documents" icon={FolderKanban} isCollapsed={isCollapsed}>Tài liệu</NavLink>}
+            {hasPermission('reports') && <NavLink to="/reports" icon={FileBarChart} isCollapsed={isCollapsed}>Báo cáo</NavLink>}
             {hasPermission('account') && <NavLink to="/account" icon={Users} isCollapsed={isCollapsed}>Tài khoản</NavLink>}
             {hasPermission('settings') && <NavLink to="/settings" icon={Settings} isCollapsed={isCollapsed}>Settings</NavLink>}
           </nav>

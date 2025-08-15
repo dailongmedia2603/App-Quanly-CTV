@@ -24,8 +24,14 @@ const ForgotPassword = () => {
     setLoading(false);
   };
 
+  const backgroundStyle = {
+    backgroundColor: '#f3f4f6',
+    backgroundImage: 'radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px)',
+    backgroundSize: '16px 16px',
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 lg:p-8">
+    <div className="min-h-screen flex items-center justify-center p-4 lg:p-8" style={backgroundStyle}>
       <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 shadow-2xl rounded-2xl overflow-hidden">
         <div className="bg-white p-8 sm:p-12 lg:p-16 flex flex-col justify-center">
           <div className="w-full max-w-md mx-auto">

@@ -1,0 +1,1 @@
+CREATE POLICY "Allow authenticated users to read prompt templates" ON public.ai_prompt_templates FOR SELECT TO authenticated USING (true);

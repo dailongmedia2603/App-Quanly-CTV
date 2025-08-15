@@ -16,6 +16,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   useEffect(() => {
     if (session) {
@@ -23,9 +24,24 @@ const Login = () => {
     }
   }, [session, navigate]);
 
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    if (rememberMe) {
+      localStorage.setItem('rememberedEmail', email);
+    } else {
+      localStorage.removeItem('rememberedEmail');
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -88,7 +104,12 @@ const Login = () => {
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <Checkbox id="remember-me" className="border-gray-400" />
+                  <Checkbox
+                    id="remember-me"
+                    className="border-gray-400"
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  />
                   <Label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
                     Ghi nhớ trạng thái đăng nhập
                   </Label>

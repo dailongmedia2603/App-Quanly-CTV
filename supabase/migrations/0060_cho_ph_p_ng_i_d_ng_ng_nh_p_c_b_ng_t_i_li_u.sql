@@ -1,0 +1,1 @@
+CREATE POLICY "Allow authenticated users to read documents" ON public.documents FOR SELECT TO authenticated USING (true);

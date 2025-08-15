@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Home, SlidersHorizontal, FilePieChart, CircleDollarSign, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog, FolderKanban, UserCheck, FileSpreadsheet } from "lucide-react";
+import { Home, SlidersHorizontal, FilePieChart, CircleDollarSign, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog, FolderKanban, UserCheck, FileSpreadsheet, FileBarChart } from "lucide-react";
 import * as Icons from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -142,6 +142,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
                       {hasPermission('config_scan_post') && <SubNavLink to="/config/scan-post">Quét Post</SubNavLink>}
                       {hasPermission('config_content_ai') && <SubNavLink to="/config/content-ai">Content AI</SubNavLink>}
                       {hasPermission('config_create_plan') && <SubNavLink to="/config/create-plan">Tạo plan</SubNavLink>}
+                      {hasPermission('config_quote') && <SubNavLink to="/config/quote">Báo giá</SubNavLink>}
                     </nav>
                   </AccordionContent>
                 </AccordionItem></Accordion>

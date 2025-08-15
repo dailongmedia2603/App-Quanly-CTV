@@ -60,9 +60,10 @@ serve(async (req) => {
     const model = genAI.getGenerativeModel({ model: settings.gemini_model });
 
     // Fetch all necessary data in parallel
-    const [pricesRes, templatesRes] = await Promise.all([
+    const [pricesRes, templatesRes, promptTemplateRes] = await Promise.all([
       supabaseAdmin.from('service_prices').select('name, description, unit, price, category'),
-      supabaseAdmin.from('quote_templates').select('name, content').in('service_id', serviceIds)
+      supabaseAdmin.from('quote_templates').select('name, content').in('service_id', serviceIds),
+      supabaseAdmin.from('ai_prompt_templates').select('prompt').eq('template_type', 'quote').single()
     ]);
 
     const { data: servicePrices, error: pricesError } = pricesRes;
@@ -71,45 +72,22 @@ serve(async (req) => {
     const { data: quoteTemplates, error: templatesError } = templatesRes;
     if (templatesError) console.error("Lỗi tải mẫu báo giá:", templatesError.message);
 
+    const { data: promptTemplateData, error: promptTemplateError } = promptTemplateRes;
+    if (promptTemplateError || !promptTemplateData?.prompt) {
+      throw new Error("Không tìm thấy mẫu prompt cho việc tạo báo giá. Vui lòng cấu hình trong Cài đặt.");
+    }
+
     const servicePricesText = servicePrices.map(p => `- ${p.name} (${p.category || 'N/A'}): ${p.price.toLocaleString('vi-VN')} VNĐ/${p.unit || 'lần'}. Mô tả: ${p.description || 'Không có'}`).join('\n');
     const quoteTemplatesText = quoteTemplates && quoteTemplates.length > 0
       ? quoteTemplates.map(t => `--- MẪU: ${t.name} ---\n${t.content}`).join('\n\n')
       : "Không có mẫu báo giá tham khảo.";
 
-    const prompt = `
-      Bạn là một chuyên gia kinh doanh và tạo báo giá chuyên nghiệp.
-      Nhiệm vụ của bạn là tạo một báo giá chi tiết, hấp dẫn và tối ưu cho khách hàng dựa trên các thông tin sau:
-
-      1.  **Ngân sách của khách hàng:** ${budget.toLocaleString('vi-VN')} VNĐ. Cố gắng tạo báo giá có tổng tiền gần với ngân sách này nhất có thể, có thể cao hơn hoặc thấp hơn một chút nhưng không quá 10%.
-      2.  **Dịch vụ khách hàng quan tâm:** (Dựa trên ID đã chọn, AI sẽ tự phân tích từ bảng giá)
-      3.  **Thuế:** ${includesVat ? "Báo giá CÓ bao gồm 10% VAT." : "Báo giá KHÔNG bao gồm VAT."}
-      4.  **Yêu cầu khác từ khách hàng:** ${otherRequirements || "Không có."}
-
-      **DỮ LIỆU THAM KHẢO:**
-
-      **A. Bảng giá dịch vụ chi tiết:**
-      ${servicePricesText}
-
-      **B. Các mẫu báo giá đã làm trước đây (để tham khảo văn phong và cấu trúc):**
-      ${quoteTemplatesText}
-
-      **YÊU CẦU ĐẦU RA:**
-      Hãy tạo ra một báo giá hoàn chỉnh bằng định dạng Markdown. Báo giá phải bao gồm các phần sau:
-      -   Tiêu đề: "BÁO GIÁ DỊCH VỤ"
-      -   Thông tin cơ bản: Ngày báo giá, Mã báo giá (tự tạo).
-      -   Bảng chi tiết các hạng mục dịch vụ. Bảng này PHẢI có các cột: "Hạng mục", "Mô tả chi tiết", "Số lượng", "Đơn vị", "Đơn giá (VNĐ)", "Thành tiền (VNĐ)".
-      -   Phần tổng kết chi phí:
-          -   Cộng dịch vụ (VNĐ)
-          -   Thuế VAT (10% nếu có)
-          -   **TỔNG CỘNG (VNĐ)**
-      -   Ghi chú (nếu cần).
-
-      **QUAN TRỌNG:**
-      -   Hãy lựa chọn các dịch vụ và số lượng phù hợp nhất từ Bảng giá để tối ưu trong ngân sách khách hàng đưa ra.
-      -   Phần "Mô tả chi tiết" phải giải thích rõ ràng giá trị và lợi ích của từng hạng mục.
-      -   Tất cả các con số phải được định dạng có dấu chấm ngăn cách hàng nghìn (ví dụ: 1.000.000).
-      -   Giữ văn phong chuyên nghiệp, thuyết phục.
-    `;
+    const prompt = promptTemplateData.prompt
+      .replace(/\[budget\]/gi, budget.toLocaleString('vi-VN'))
+      .replace(/\[vat_info\]/gi, includesVat ? "Báo giá CÓ bao gồm 10% VAT." : "Báo giá KHÔNG bao gồm VAT.")
+      .replace(/\[other_requirements\]/gi, otherRequirements || "Không có.")
+      .replace(/\[service_prices\]/gi, servicePricesText)
+      .replace(/\[quote_templates\]/gi, quoteTemplatesText);
 
     const result = await model.generateContent(prompt);
     const rawGeneratedContent = result.response.text();

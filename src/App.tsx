@@ -26,6 +26,7 @@ import PermissionGuard from "./components/PermissionGuard";
 import { AppSettingsProvider, useAppSettings } from "./contexts/AppSettingsContext";
 import { useEffect } from "react";
 import CreateQuote from "./pages/CreateQuote";
+import ConfigQuote from "./pages/ConfigQuote";
 
 const queryClient = new QueryClient();
 
@@ -95,6 +96,7 @@ const AppContent = () => {
           <Route path="/config/scan-post" element={<PermissionGuard feature="config_scan_post"><Index /></PermissionGuard>} />
           <Route path="/config/content-ai" element={<PermissionGuard feature="config_content_ai"><ConfigContentAI /></PermissionGuard>} />
           <Route path="/config/create-plan" element={<PermissionGuard feature="config_create_plan"><ConfigCreatePlan /></PermissionGuard>} />
+          <Route path="/config/quote" element={<PermissionGuard feature="config_quote"><ConfigQuote /></PermissionGuard>} />
           <Route path="/documents" element={<PermissionGuard feature="documents"><Documents /></PermissionGuard>} />
           <Route path="/settings" element={<PermissionGuard feature="settings"><Settings /></PermissionGuard>} />
           <Route path="/reports" element={<PermissionGuard feature="reports"><Reports /></PermissionGuard>} />

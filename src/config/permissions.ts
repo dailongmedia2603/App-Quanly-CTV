@@ -9,6 +9,7 @@ export const permissionConfig = [
   { key: 'config_scan_post', name: 'Cấu hình Quét Post', actions: ['read', 'update'] },
   { key: 'config_content_ai', name: 'Cấu hình Content AI', actions: ['read', 'update'] },
   { key: 'config_create_plan', name: 'Cấu hình Tạo Plan', actions: ['read', 'update'] },
+  { key: 'config_quote', name: 'Cấu hình Báo giá', actions: ['read', 'update'] },
   { key: 'documents', name: 'Tài liệu', actions: ['read', 'create', 'update', 'delete'] },
   { key: 'reports', name: 'Báo cáo', actions: ['read', 'delete'] },
   { key: 'account', name: 'Tài khoản', actions: ['read', 'create', 'update', 'delete', 'assign_roles'] },

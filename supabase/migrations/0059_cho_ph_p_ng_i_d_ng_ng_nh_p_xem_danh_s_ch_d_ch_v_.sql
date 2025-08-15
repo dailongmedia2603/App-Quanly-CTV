@@ -1,0 +1,1 @@
+CREATE POLICY "Allow authenticated users to read services" ON public.document_services FOR SELECT TO authenticated USING (true);

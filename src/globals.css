@@ -62,7 +62,9 @@
 @layer utilities {
   .bg-dotted-pattern {
     background-color: #f3f4f6; /* bg-gray-100 */
-    background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px);
-    background-size: 16px 16px;
+    background-image:
+      linear-gradient(to right, rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+    background-size: 24px 24px;
   }
 }

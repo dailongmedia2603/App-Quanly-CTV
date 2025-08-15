@@ -135,20 +135,19 @@ serve(async (req) => {
 
     const reportTable = '"Bao_cao_Facebook"';
     
-    const { data: latestPostData, error: latestPostError } = await supabaseAdmin
+    const { data: latestPostsData, error: latestPostError } = await supabaseAdmin
         .from(reportTable)
         .select('posted_at')
         .eq('campaign_id', campaign.id)
         .not('posted_at', 'is', null)
         .order('posted_at', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
 
-    if (latestPostError && latestPostError.code !== 'PGRST116') {
+    if (latestPostError) {
         throw new Error(`Lỗi khi lấy bài viết cuối cùng: ${latestPostError.message}`);
     }
 
-    const lastPostTime = latestPostData ? latestPostData.posted_at : null;
+    const lastPostTime = (latestPostsData && latestPostsData.length > 0) ? latestPostsData[0].posted_at : null;
     sinceTimestamp = lastPostTime 
         ? toUnixTimestamp(lastPostTime)! + 1 
         : toUnixTimestamp(campaign.scan_start_date);

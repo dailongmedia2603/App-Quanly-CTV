@@ -1,0 +1,18 @@
+<svg width="400" height="100" viewBox="0 0 400 100" xmlns="http://www.w3.org/2000/svg" fill="white">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;800&display=swap');
+    .title { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 48px; letter-spacing: 0.05em; }
+    .subtitle { font-family: 'Inter', sans-serif; font-weight: 400; font-size: 16px; letter-spacing: 0.25em; }
+  </style>
+  <g transform="translate(0, 10)">
+    <text x="0" y="50" class="title">DAILONG</text>
+    <text x="0" y="75" class="subtitle">MEDIA AGENCY</text>
+  </g>
+  <g transform="translate(290, 45)">
+    <circle cx="10" cy="10" r="8" />
+    <circle cx="40" cy="0" r="5" />
+    <circle cx="40" cy="30" r="6" />
+    <line x1="16" y1="14" x2="37" y2="3" stroke="white" stroke-width="2.5"/>
+    <line x1="16" y1="14" x2="37" y2="27" stroke="white" stroke-width="2.5"/>
+  </g>
+</svg>

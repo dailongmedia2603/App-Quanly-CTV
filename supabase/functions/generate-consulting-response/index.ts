@@ -88,6 +88,18 @@ serve(async (req) => {
             .join('\n\n---\n\n');
     }
 
+    let quoteTemplatesContent = "Không có mẫu báo giá tham khảo cho dịch vụ này.";
+    const { data: quoteTemplates } = await supabase
+        .from('quote_templates')
+        .select('name, content')
+        .eq('service_id', serviceId);
+
+    if (quoteTemplates && quoteTemplates.length > 0) {
+        quoteTemplatesContent = quoteTemplates
+            .map(t => `--- MẪU BÁO GIÁ: ${t.name} ---\n${t.content}`)
+            .join('\n\n');
+    }
+
     const latestUserMessage = messages[messages.length - 1].content;
     const historyMessages = messages.slice(0, -1);
 
@@ -104,7 +116,8 @@ serve(async (req) => {
         .replace(/\[dịch vụ\]/gi, serviceForPrompt)
         .replace(/\[lịch sử trò chuyện\]/gi, chatHistory || 'Đây là tin nhắn đầu tiên trong cuộc trò chuyện.')
         .replace(/\[tin nhắn cần trả lời\]/gi, latestUserMessage)
-        .replace(/\[biên tài liệu\]/gi, documentContent);
+        .replace(/\[biên tài liệu\]/gi, documentContent)
+        .replace(/\[báo giá dịch vụ\]/gi, quoteTemplatesContent);
 
     if (customerSalutation) {
         finalPrompt = `QUAN TRỌNG: Khách hàng là "${customerSalutation}". Hãy xưng hô cho phù hợp trong câu trả lời của bạn (ví dụ: "Chào ${customerSalutation}", "Dạ ${customerSalutation} ạ", "bên em gửi ${customerSalutation}").\n\n---\n\n${finalPrompt}`;

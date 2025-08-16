@@ -36,6 +36,7 @@ const variableConfig = {
     { name: 'Lịch sử trò chuyện', value: '[lịch sử trò chuyện]' },
     { name: 'Tin nhắn cần trả lời', value: '[tin nhắn cần trả lời]' },
     { name: 'Biên tài liệu', value: '[biên tài liệu]' },
+    { name: 'Báo giá dịch vụ', value: '[báo giá dịch vụ]' },
   ],
   quote: [
     { name: 'Ngân sách', value: '[budget]' },

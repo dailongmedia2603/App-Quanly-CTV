@@ -89,6 +89,18 @@ serve(async (req) => {
             .join('\n\n---\n\n');
     }
 
+    let quoteTemplatesContent = "Không có mẫu báo giá tham khảo cho dịch vụ này.";
+    const { data: quoteTemplates } = await supabase
+        .from('quote_templates')
+        .select('name, content')
+        .eq('service_id', serviceId);
+
+    if (quoteTemplates && quoteTemplates.length > 0) {
+        quoteTemplatesContent = quoteTemplates
+            .map(t => `--- MẪU BÁO GIÁ: ${t.name} ---\n${t.content}`)
+            .join('\n\n');
+    }
+
     // Find the last user message in the provided history
     let lastUserMessageContent = '';
     let historyForPrompt: Message[] = [];
@@ -118,7 +130,8 @@ serve(async (req) => {
         .replace(/\[dịch vụ\]/gi, serviceForPrompt)
         .replace(/\[lịch sử trò chuyện\]/gi, chatHistory || 'Đây là tin nhắn đầu tiên trong cuộc trò chuyện.')
         .replace(/\[tin nhắn cần trả lời\]/gi, lastUserMessageContent)
-        .replace(/\[biên tài liệu\]/gi, documentContent);
+        .replace(/\[biên tài liệu\]/gi, documentContent)
+        .replace(/\[báo giá dịch vụ\]/gi, quoteTemplatesContent);
 
     finalPrompt = `Hãy viết lại câu trả lời của bạn dựa trên định hướng mới sau: "${regenerateDirection || 'Hãy viết lại theo một cách khác.'}".\n\n${finalPrompt}`;
 

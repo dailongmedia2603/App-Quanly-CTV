@@ -8,6 +8,13 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { DatePicker } from '../ui/date-picker';
 import { Label } from '../ui/label';
 import { format, subDays } from 'date-fns';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 interface UserActivityStat {
   user_id: string;
@@ -23,10 +30,22 @@ interface UserActivityStat {
 const UserActivityReport = () => {
   const [stats, setStats] = useState<UserActivityStat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState<'today' | 'yesterday' | 'custom'>('today');
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
-    from: subDays(new Date(), 29),
+    from: new Date(),
     to: new Date(),
   });
+
+  useEffect(() => {
+    if (filterType === 'today') {
+      const today = new Date();
+      setDateRange({ from: today, to: today });
+    } else if (filterType === 'yesterday') {
+      const yesterday = subDays(new Date(), 1);
+      setDateRange({ from: yesterday, to: yesterday });
+    }
+    // For 'custom', dateRange is managed by the DatePickers
+  }, [filterType]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -57,25 +76,45 @@ const UserActivityReport = () => {
     return name.substring(0, 2).toUpperCase();
   };
 
+  const filterLabels = {
+    today: 'Hôm nay',
+    yesterday: 'Hôm qua',
+    custom: 'Tuỳ chỉnh'
+  };
+
   return (
     <Card className="border-orange-200">
-      <CardHeader>
-        <CardTitle>Hoạt động User</CardTitle>
-        <CardDescription>
-          Phân tích tần suất và các hành động chính của người dùng trên hệ thống.
-        </CardDescription>
+      <CardHeader className="flex flex-row items-start justify-between">
+        <div>
+          <CardTitle>Hoạt động User</CardTitle>
+          <CardDescription>
+            Phân tích tần suất và các hành động chính của người dùng trên hệ thống.
+          </CardDescription>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">{filterLabels[filterType]}</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => setFilterType('today')}>Hôm nay</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setFilterType('yesterday')}>Hôm qua</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setFilterType('custom')}>Tuỳ chỉnh</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center space-x-4">
-          <div className="grid gap-2">
-            <Label>Từ ngày</Label>
-            <DatePicker date={dateRange.from} setDate={(date) => date && setDateRange(prev => ({ ...prev, from: date }))} />
+        {filterType === 'custom' && (
+          <div className="flex items-center space-x-4">
+            <div className="grid gap-2">
+              <Label>Từ ngày</Label>
+              <DatePicker date={dateRange.from} setDate={(date) => date && setDateRange(prev => ({ ...prev, from: date }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Đến ngày</Label>
+              <DatePicker date={dateRange.to} setDate={(date) => date && setDateRange(prev => ({ ...prev, to: date }))} />
+            </div>
           </div>
-          <div className="grid gap-2">
-            <Label>Đến ngày</Label>
-            <DatePicker date={dateRange.to} setDate={(date) => date && setDateRange(prev => ({ ...prev, to: date }))} />
-          </div>
-        </div>
+        )}
         {loading ? (
           <div className="space-y-2">
             {[...Array(5)].map((_, i) => (

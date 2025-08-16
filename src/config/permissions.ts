@@ -11,7 +11,7 @@ export const permissionConfig = [
   { key: 'config_create_plan', name: 'Cấu hình Tạo Plan', actions: ['read', 'update'] },
   { key: 'config_quote', name: 'Cấu hình Báo giá', actions: ['read', 'update'] },
   { key: 'documents', name: 'Tài liệu', actions: ['read', 'create', 'update', 'delete'] },
-  { key: 'reports', name: 'Báo cáo', actions: ['read', 'delete'] },
+  { key: 'performance_reports', name: 'Báo cáo hiệu suất', actions: ['read'] },
   { key: 'account', name: 'Tài khoản', actions: ['read', 'create', 'update', 'delete', 'assign_roles'] },
   { key: 'settings', name: 'Settings', actions: ['read', 'update'] },
 ];

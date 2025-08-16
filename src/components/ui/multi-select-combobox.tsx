@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, X, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "./badge";
 
 export interface SelectOption {
   value: string;
@@ -40,65 +40,52 @@ export function MultiSelectCombobox({
   selected,
   onChange,
   className,
-  placeholder = "Chọn...",
-  searchPlaceholder = "Tìm kiếm...",
-  emptyPlaceholder = "Không tìm thấy.",
+  placeholder = "Select options...",
+  searchPlaceholder = "Search...",
+  emptyPlaceholder = "No options found.",
 }: MultiSelectComboboxProps) {
   const [open, setOpen] = React.useState(false);
 
-  const handleUnselect = (e: React.MouseEvent, item: string) => {
-    e.stopPropagation();
+  const handleUnselect = (item: string) => {
     onChange(selected.filter((i) => i !== item));
   };
 
-  const selectedOptions = options.filter((option) =>
-    selected.includes(option.value)
-  );
-
-  const truncateLabel = (label: string) => {
-    const words = label.split(' ');
-    if (words.length > 2) {
-      return words.slice(0, 2).join(' ') + '...';
-    }
-    return label;
-  };
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={true}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn(
-            "w-full justify-between h-auto min-h-10 font-normal",
-            className
-          )}
+          className={cn("w-full justify-between", className)}
           onClick={() => setOpen(!open)}
         >
           <div className="flex gap-1 flex-wrap">
-            {selectedOptions.length > 0 ? (
-              selectedOptions.map((option) => (
-                <Badge
-                  variant="secondary"
-                  key={option.value}
-                  className="bg-brand-orange-light text-brand-orange border border-orange-200 hover:bg-orange-200"
-                  onClick={(e) => handleUnselect(e, option.value)}
-                >
-                  <span title={option.label}>
-                    {truncateLabel(option.label)}
-                  </span>
-                  <X className="ml-1 h-3 w-3 cursor-pointer shrink-0" />
-                </Badge>
-              ))
+            {selected.length > 0 ? (
+              options
+                .filter((option) => selected.includes(option.value))
+                .map((option) => (
+                  <Badge
+                    variant="secondary"
+                    key={option.value}
+                    className="mr-1 mb-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleUnselect(option.value);
+                    }}
+                  >
+                    {option.label}
+                    <X className="ml-1 h-4 w-4" />
+                  </Badge>
+                ))
             ) : (
-              <span className="text-muted-foreground">{placeholder}</span>
+              <span>{placeholder}</span>
             )}
           </div>
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+      <PopoverContent className="w-full p-0">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>

@@ -44,7 +44,7 @@ const PerformanceReport = () => {
       </div>
 
       <Tabs defaultValue="income_overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-xl rounded-lg border border-orange-200 p-0 bg-white">
+        <TabsList className="grid w-full grid-cols-3 max-w-xl rounded-lg border border-orange-200 p-0 bg-white overflow-hidden">
           <TabsTrigger value="income_overview" className="flex-1 flex items-center justify-center space-x-2 py-2.5 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-l-md">
             <BarChart className="h-4 w-4" />
             <span>Tổng quan Thu nhập</span>

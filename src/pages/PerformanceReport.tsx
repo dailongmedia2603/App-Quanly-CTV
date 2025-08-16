@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Users, Award, Activity } from "lucide-react";
 import ReportWidget from "@/components/ReportWidget";
-import IncomeOverviewReport from "@/components/performance/IncomeOverviewReport";
 import CollaboratorRanking from "@/components/performance/CollaboratorRanking";
 import UserActivityReport from "@/components/performance/UserActivityReport";
 import { format } from 'date-fns';
@@ -111,13 +109,9 @@ const PerformanceReport = () => {
         )}
       </div>
 
-      <Tabs defaultValue="income_overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-xl rounded-lg border border-orange-200 p-0 bg-white overflow-hidden">
-          <TabsTrigger value="income_overview" className="flex-1 flex items-center justify-center space-x-2 py-2.5 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-l-md">
-            <BarChart className="h-4 w-4" />
-            <span>Tổng quan Thu nhập</span>
-          </TabsTrigger>
-          <TabsTrigger value="ranking" className="flex-1 flex items-center justify-center space-x-2 py-2.5 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold">
+      <Tabs defaultValue="ranking" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-xl rounded-lg border border-orange-200 p-0 bg-white overflow-hidden">
+          <TabsTrigger value="ranking" className="flex-1 flex items-center justify-center space-x-2 py-2.5 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-l-md">
             <Award className="h-4 w-4" />
             <span>Xếp hạng CTV</span>
           </TabsTrigger>
@@ -126,9 +120,6 @@ const PerformanceReport = () => {
             <span>Hoạt động User</span>
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="income_overview" className="pt-6">
-          <IncomeOverviewReport />
-        </TabsContent>
         <TabsContent value="ranking" className="pt-6">
           <CollaboratorRanking />
         </TabsContent>

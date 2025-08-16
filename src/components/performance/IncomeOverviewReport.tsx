@@ -81,8 +81,7 @@ const IncomeOverviewReport = () => {
           <p className="font-medium">Chọn tháng:</p>
           <DatePicker
             date={month}
-            onChange={(d) => d && setMonth(startOfMonth(d))}
-            isMonthPicker
+            setDate={(d) => d && setMonth(startOfMonth(d))}
           />
         </div>
 

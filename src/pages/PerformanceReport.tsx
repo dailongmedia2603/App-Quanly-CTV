@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Users, Award, Activity } from "lucide-react";
@@ -5,8 +7,72 @@ import ReportWidget from "@/components/ReportWidget";
 import IncomeOverviewReport from "@/components/performance/IncomeOverviewReport";
 import CollaboratorRanking from "@/components/performance/CollaboratorRanking";
 import UserActivityReport from "@/components/performance/UserActivityReport";
+import { format } from 'date-fns';
+import { showError } from '@/utils/toast';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const formatCurrency = (value: number) => {
+  if (typeof value !== 'number') return '0đ';
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+};
 
 const PerformanceReport = () => {
+  const [widgetData, setWidgetData] = useState({
+    totalRevenue: 0,
+    activeCtvCount: 0,
+    topCollaborator: 'N/A',
+    todayActivityCount: 0,
+  });
+  const [loadingWidgets, setLoadingWidgets] = useState(true);
+
+  useEffect(() => {
+    const fetchWidgetData = async () => {
+      setLoadingWidgets(true);
+      try {
+        const today = new Date();
+        const currentMonth = format(today, 'yyyy-MM-dd');
+
+        const [revenueRes, usersRes, activityRes, incomeRes] = await Promise.all([
+          supabase.rpc('get_monthly_revenue', { target_month: currentMonth }),
+          supabase.functions.invoke("admin-get-users-with-roles"),
+          supabase.rpc('get_user_activity_stats', { start_date: currentMonth, end_date: currentMonth }),
+          supabase.rpc('get_all_income_stats_for_month', { target_month: currentMonth })
+        ]);
+
+        const totalRevenue = revenueRes.data || 0;
+        const activeCtvCount = usersRes.data?.users?.length || 0;
+
+        let todayActivityCount = 0;
+        if (activityRes.data) {
+          todayActivityCount = activityRes.data.reduce((sum: number, user: any) => {
+            return sum + user.post_count + user.comment_count + user.consulting_session_count + user.total_messages_count;
+          }, 0);
+        }
+
+        let topCollaborator = 'N/A';
+        if (incomeRes.data && incomeRes.data.length > 0) {
+          const top = incomeRes.data.reduce((prev: any, current: any) => (prev.total_income > current.total_income) ? prev : current);
+          topCollaborator = top.full_name;
+        }
+
+        setWidgetData({
+          totalRevenue,
+          activeCtvCount,
+          topCollaborator,
+          todayActivityCount,
+        });
+
+      } catch (error) {
+        console.error("Error fetching widget data:", error);
+        showError("Không thể tải dữ liệu cho các widget.");
+      } finally {
+        setLoadingWidgets(false);
+      }
+    };
+
+    fetchWidgetData();
+  }, []);
+
   return (
     <div className="space-y-6">
       <div>
@@ -17,30 +83,32 @@ const PerformanceReport = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <ReportWidget
-          icon={<BarChart className="h-5 w-5" />}
-          title="Tổng doanh thu tháng này"
-          value="125.000.000đ"
-          change={15}
-          changeType="month"
-        />
-        <ReportWidget
-          icon={<Users className="h-5 w-5" />}
-          title="CTV hoạt động"
-          value="12"
-        />
-        <ReportWidget
-          icon={<Award className="h-5 w-5" />}
-          title="CTV xuất sắc nhất"
-          value="Hữu Long"
-        />
-        <ReportWidget
-          icon={<Activity className="h-5 w-5" />}
-          title="Hoạt động hôm nay"
-          value="156"
-          change={-5}
-          changeType="week"
-        />
+        {loadingWidgets ? (
+          [...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)
+        ) : (
+          <>
+            <ReportWidget
+              icon={<BarChart className="h-5 w-5" />}
+              title="Tổng doanh thu tháng này"
+              value={formatCurrency(widgetData.totalRevenue)}
+            />
+            <ReportWidget
+              icon={<Users className="h-5 w-5" />}
+              title="CTV hoạt động"
+              value={widgetData.activeCtvCount.toString()}
+            />
+            <ReportWidget
+              icon={<Award className="h-5 w-5" />}
+              title="CTV xuất sắc nhất"
+              value={widgetData.topCollaborator}
+            />
+            <ReportWidget
+              icon={<Activity className="h-5 w-5" />}
+              title="Hoạt động hôm nay"
+              value={widgetData.todayActivityCount.toString()}
+            />
+          </>
+        )}
       </div>
 
       <Tabs defaultValue="income_overview" className="w-full">

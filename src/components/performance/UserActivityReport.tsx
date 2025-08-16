@@ -5,6 +5,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { showError } from '@/utils/toast';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { DatePicker } from '../ui/date-picker';
+import { Label } from '../ui/label';
+import { format, subDays } from 'date-fns';
 
 interface UserActivityStat {
   user_id: string;
@@ -20,11 +23,18 @@ interface UserActivityStat {
 const UserActivityReport = () => {
   const [stats, setStats] = useState<UserActivityStat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+    from: subDays(new Date(), 29),
+    to: new Date(),
+  });
 
   useEffect(() => {
     const fetchStats = async () => {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_user_activity_stats');
+      const { data, error } = await supabase.rpc('get_user_activity_stats', {
+        start_date: format(dateRange.from, 'yyyy-MM-dd'),
+        end_date: format(dateRange.to, 'yyyy-MM-dd'),
+      });
 
       if (error) {
         showError(`Không thể tải dữ liệu hoạt động: ${error.message}`);
@@ -36,7 +46,7 @@ const UserActivityReport = () => {
     };
 
     fetchStats();
-  }, []);
+  }, [dateRange]);
 
   const getInitials = (name: string) => {
     if (!name) return '?';
@@ -55,7 +65,17 @@ const UserActivityReport = () => {
           Phân tích tần suất và các hành động chính của người dùng trên hệ thống.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <div className="flex items-center space-x-4">
+          <div className="grid gap-2">
+            <Label>Từ ngày</Label>
+            <DatePicker date={dateRange.from} setDate={(date) => date && setDateRange(prev => ({ ...prev, from: date }))} />
+          </div>
+          <div className="grid gap-2">
+            <Label>Đến ngày</Label>
+            <DatePicker date={dateRange.to} setDate={(date) => date && setDateRange(prev => ({ ...prev, to: date }))} />
+          </div>
+        </div>
         {loading ? (
           <div className="space-y-2">
             {[...Array(5)].map((_, i) => (

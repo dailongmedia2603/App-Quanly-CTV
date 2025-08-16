@@ -110,14 +110,16 @@ const ServicesTab = () => {
     setIsSubmitting(true);
     const toastId = showLoading("Đang xóa...");
     const { error } = await supabase.from('document_services').delete().eq('id', serviceToDelete.id);
+    
     dismissToast(toastId);
+    setIsDeleteAlertOpen(false);
+
     if (error) {
       showError(`Xóa thất bại: ${error.message}`);
     } else {
       showSuccess("Xóa dịch vụ thành công!");
       fetchServices();
     }
-    setIsDeleteAlertOpen(false);
     setIsSubmitting(false);
   };
 

@@ -81,15 +81,17 @@ const UsersTab = ({ users, allRoles, loading, isSuperAdmin, onUsersAndRolesUpdat
     setIsSubmitting(true);
     const toastId = showLoading("Đang xóa tài khoản...");
     const { error } = await supabase.functions.invoke("admin-delete-user", { body: { user_id: userToDelete.id } });
+    
     dismissToast(toastId);
+    setIsDeleteDialogOpen(false);
+    setUserToDelete(null);
+
     if (error) {
       showError(`Xóa thất bại: ${error.message}`);
     } else {
       showSuccess("Xóa tài khoản thành công!");
       onUsersAndRolesUpdate();
     }
-    setIsDeleteDialogOpen(false);
-    setUserToDelete(null);
     setIsSubmitting(false);
   };
 

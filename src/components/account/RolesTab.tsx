@@ -94,15 +94,17 @@ const RolesTab = ({ allRoles, loading, onUsersAndRolesUpdate, onEditRole, isSupe
     setIsSubmitting(true);
     const toastId = showLoading("Đang xóa vai trò...");
     const { error } = await supabase.functions.invoke("admin-delete-role", { body: { role_id: roleToDelete.id } });
+    
     dismissToast(toastId);
+    setIsDeleteAlertOpen(false);
+    setRoleToDelete(null);
+
     if (error) {
       showError(`Xóa thất bại: ${error.message}`);
     } else {
       showSuccess("Xóa vai trò thành công!");
       onUsersAndRolesUpdate();
     }
-    setIsDeleteAlertOpen(false);
-    setRoleToDelete(null);
     setIsSubmitting(false);
   };
 

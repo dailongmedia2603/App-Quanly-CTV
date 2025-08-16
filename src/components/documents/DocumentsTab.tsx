@@ -132,7 +132,10 @@ const DocumentsTab = () => {
     setIsSubmitting(true);
     const toastId = showLoading(`Đang xóa ${selectedIds.length} tài liệu...`);
     const { error } = await supabase.from('documents').delete().in('id', selectedIds);
+    
     dismissToast(toastId);
+    setIsDeleteAlertOpen(false);
+
     if (error) {
       showError(`Xóa thất bại: ${error.message}`);
     } else {
@@ -140,7 +143,6 @@ const DocumentsTab = () => {
       setSelectedIds([]);
       fetchData();
     }
-    setIsDeleteAlertOpen(false);
     setIsSubmitting(false);
   };
 

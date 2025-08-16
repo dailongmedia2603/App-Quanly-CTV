@@ -127,7 +127,10 @@ const QuoteTemplatesTab = () => {
     setIsSubmitting(true);
     const toastId = showLoading(`Đang xóa ${selectedIds.length} mẫu...`);
     const { error } = await supabase.from('quote_templates').delete().in('id', selectedIds);
+    
     dismissToast(toastId);
+    setIsDeleteAlertOpen(false);
+
     if (error) {
       showError(`Xóa thất bại: ${error.message}`);
     } else {
@@ -135,7 +138,6 @@ const QuoteTemplatesTab = () => {
       setSelectedIds([]);
       fetchData();
     }
-    setIsDeleteAlertOpen(false);
     setIsSubmitting(false);
   };
 

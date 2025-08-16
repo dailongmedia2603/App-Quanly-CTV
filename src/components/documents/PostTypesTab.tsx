@@ -118,14 +118,16 @@ const PostTypesTab = () => {
     setIsSubmitting(true);
     const toastId = showLoading("Đang xóa...");
     const { error } = await supabase.from('document_post_types').delete().eq('id', postTypeToDelete.id);
+    
     dismissToast(toastId);
+    setIsDeleteAlertOpen(false);
+
     if (error) {
       showError(`Xóa thất bại: ${error.message}`);
     } else {
       showSuccess("Xóa dạng bài thành công!");
       fetchPostTypes();
     }
-    setIsDeleteAlertOpen(false);
     setIsSubmitting(false);
   };
 

@@ -7,7 +7,6 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 import Settings from "./pages/Settings";
-import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -31,6 +30,7 @@ import { useEffect } from "react";
 import CreateQuote from "./pages/CreateQuote";
 import ConfigQuote from "./pages/ConfigQuote";
 import { supabase } from "./integrations/supabase/client";
+import PerformanceReport from "./pages/PerformanceReport";
 
 const queryClient = new QueryClient();
 
@@ -53,7 +53,7 @@ const HomeRedirect = () => {
     { path: '/find-customers', feature: 'find_customers' },
     { path: '/create-content/post', feature: 'create_post' },
     { path: '/income', feature: 'income' },
-    { path: '/reports', feature: 'reports' },
+    { path: '/performance-report', feature: 'performance_reports' },
   ];
 
   for (const route of orderedRoutes) {
@@ -117,7 +117,7 @@ const AppContent = () => {
           <Route path="/config/quote" element={<PermissionGuard feature="config_quote"><ConfigQuote /></PermissionGuard>} />
           <Route path="/documents" element={<PermissionGuard feature="documents"><Documents /></PermissionGuard>} />
           <Route path="/settings" element={<PermissionGuard feature="settings"><Settings /></PermissionGuard>} />
-          <Route path="/reports" element={<PermissionGuard feature="reports"><Reports /></PermissionGuard>} />
+          <Route path="/performance-report" element={<PermissionGuard feature="performance_reports"><PerformanceReport /></PermissionGuard>} />
           <Route path="/income" element={<PermissionGuard feature="income"><Income /></PermissionGuard>} />
           <Route path="/account" element={<PermissionGuard feature="account"><Account /></PermissionGuard>} />
           <Route path="/guide" element={<Guide />} />

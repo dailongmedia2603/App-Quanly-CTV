@@ -79,12 +79,12 @@ const UsersTab = ({ users, allRoles, loading, isSuperAdmin, onUsersAndRolesUpdat
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
     setIsSubmitting(true);
+    setIsDeleteDialogOpen(false);
     const toastId = showLoading("Đang xóa tài khoản...");
+    
     const { error } = await supabase.functions.invoke("admin-delete-user", { body: { user_id: userToDelete.id } });
     
     dismissToast(toastId);
-    setIsDeleteDialogOpen(false);
-    setUserToDelete(null);
 
     if (error) {
       showError(`Xóa thất bại: ${error.message}`);
@@ -92,6 +92,7 @@ const UsersTab = ({ users, allRoles, loading, isSuperAdmin, onUsersAndRolesUpdat
       showSuccess("Xóa tài khoản thành công!");
       onUsersAndRolesUpdate();
     }
+    setUserToDelete(null);
     setIsSubmitting(false);
   };
 

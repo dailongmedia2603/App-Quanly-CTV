@@ -64,12 +64,18 @@ const QuoteHistoryView = ({ onBack, onSelectQuote }: { onBack: () => void, onSel
 
   const handleDelete = async () => {
     if (!quoteToDelete) return;
-    const toastId = showLoading("Đang xóa...");
-    const { error } = await supabase.from('generated_quotes').delete().eq('id', quoteToDelete.id);
-    dismissToast(toastId);
-    if (error) showError("Xóa thất bại.");
-    else { showSuccess("Đã xóa báo giá."); fetchHistory(); }
     setQuoteToDelete(null);
+    const toastId = showLoading("Đang xóa...");
+    
+    const { error } = await supabase.from('generated_quotes').delete().eq('id', quoteToDelete.id);
+    
+    dismissToast(toastId);
+    if (error) {
+      showError("Xóa thất bại.");
+    } else {
+      showSuccess("Đã xóa báo giá.");
+      fetchHistory();
+    }
   };
 
   return (

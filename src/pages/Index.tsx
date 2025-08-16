@@ -115,12 +115,12 @@ const ListGroupTab = ({ groups, loading, refetch }: { groups: FacebookGroup[], l
   const handleDeleteGroup = async () => {
     if (!groupToDelete) return;
     setIsSubmitting(true);
+    setIsDeleteAlertOpen(false);
     const toastId = showLoading("Đang xóa group...");
+    
     const { error } = await supabase.from("list_nguon_facebook").delete().eq("id", groupToDelete.id);
     
     dismissToast(toastId);
-    setIsDeleteAlertOpen(false);
-    setGroupToDelete(null);
 
     if (error) {
       showError(`Xóa thất bại: ${error.message}`);
@@ -128,6 +128,7 @@ const ListGroupTab = ({ groups, loading, refetch }: { groups: FacebookGroup[], l
       showSuccess("Xóa group thành công!");
       refetch();
     }
+    setGroupToDelete(null);
     setIsSubmitting(false);
   };
 
@@ -353,12 +354,12 @@ const Index = () => {
   const handleConfirmDelete = async () => {
     if (!deletingCampaign) return;
     setIsDeleting(true);
+    setIsDeleteDialogOpen(false);
     const toastId = showLoading("Đang xóa chiến dịch...");
+    
     const { error } = await supabase.from('danh_sach_chien_dich').delete().eq('id', deletingCampaign.id);
     
     dismissToast(toastId);
-    setIsDeleteDialogOpen(false);
-    setDeletingCampaign(null);
 
     if (error) {
       showError(`Xóa thất bại: ${error.message}`);
@@ -366,6 +367,7 @@ const Index = () => {
       showSuccess("Xóa chiến dịch thành công!");
       fetchCampaigns();
     }
+    setDeletingCampaign(null);
     setIsDeleting(false);
   };
 

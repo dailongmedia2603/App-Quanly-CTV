@@ -285,12 +285,19 @@ const Income = () => {
   const confirmDelete = async () => {
     if (!contractToDelete) return;
     setIsSubmitting(true);
-    const toastId = showLoading("Đang xóa...");
-    const { error } = await supabase.from('contracts').delete().eq('id', contractToDelete.id);
-    dismissToast(toastId);
-    if (error) showError(`Xóa thất bại: ${error.message}`);
-    else { showSuccess("Xóa hợp đồng thành công!"); fetchAllContractsAndUsers(); }
     setIsDeleteAlertOpen(false);
+    const toastId = showLoading("Đang xóa...");
+    
+    const { error } = await supabase.from('contracts').delete().eq('id', contractToDelete.id);
+    
+    dismissToast(toastId);
+    if (error) {
+      showError(`Xóa thất bại: ${error.message}`);
+    } else {
+      showSuccess("Xóa hợp đồng thành công!");
+      fetchAllContractsAndUsers();
+    }
+    setContractToDelete(null);
     setIsSubmitting(false);
   };
 

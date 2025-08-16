@@ -186,8 +186,11 @@ const CustomerConsulting = () => {
 
   const confirmDeleteSession = async () => {
     if (!sessionToDelete) return;
+    setIsDeleteAlertOpen(false);
     const toastId = showLoading("Đang xóa cuộc trò chuyện...");
+    
     const { error } = await supabase.from('consulting_sessions').delete().eq('id', sessionToDelete.id);
+    
     dismissToast(toastId);
     if (error) {
         showError(`Xóa thất bại: ${error.message}`);
@@ -199,7 +202,6 @@ const CustomerConsulting = () => {
             setMessages([]);
         }
     }
-    setIsDeleteAlertOpen(false);
     setSessionToDelete(null);
   };
 
@@ -486,7 +488,7 @@ const CustomerConsulting = () => {
                 <Button onClick={handleRegenerateMessage} className="bg-brand-orange hover:bg-brand-orange/90 text-white">Tạo lại</Button>
             </DialogFooter>
         </DialogContent>
-    </Dialog>
+      </Dialog>
     </>
   );
 };

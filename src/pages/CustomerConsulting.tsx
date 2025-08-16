@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
@@ -18,6 +18,8 @@ import remarkGfm from 'remark-gfm';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { MultiSelectCombobox, SelectOption } from '@/components/ui/multi-select-combobox';
+import { Badge } from '@/components/ui/badge';
 
 interface Service {
   id: string;
@@ -28,8 +30,8 @@ interface Session {
   id: string;
   title: string;
   created_at: string;
-  service_id: string;
-  service_name?: string;
+  service_ids: string[];
+  service_names?: string[];
   customer_salutation: 'Anh' | 'Chị' | 'A/C';
 }
 
@@ -57,11 +59,16 @@ const CustomerConsulting = () => {
   const [regenerateDirection, setRegenerateDirection] = useState('');
   const [messageToRegenerate, setMessageToRegenerate] = useState<Message | null>(null);
   const [customerSalutation, setCustomerSalutation] = useState<'Anh' | 'Chị' | 'A/C'>('A/C');
+  
+  const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
+  const [tempSelectedServiceIds, setTempSelectedServiceIds] = useState<string[]>([]);
+
+  const serviceOptions = useMemo<SelectOption[]>(() => services.map(s => ({ value: s.id, label: s.name })), [services]);
 
   const fetchServicesAndSessions = async () => {
     const [servicesRes, sessionsRes] = await Promise.all([
       supabase.from('document_services').select('id, name'),
-      supabase.from('consulting_sessions').select('*, service:document_services(name)').order('created_at', { ascending: false })
+      supabase.from('consulting_sessions').select('*').order('created_at', { ascending: false })
     ]);
 
     if (servicesRes.error) showError("Không thể tải dịch vụ.");
@@ -69,7 +76,8 @@ const CustomerConsulting = () => {
 
     if (sessionsRes.error) showError("Không thể tải lịch sử chat.");
     else {
-      const formattedSessions = sessionsRes.data.map(s => ({ ...s, service_name: s.service?.name || 'Không rõ' }));
+      const serviceMap = new Map(servicesRes.data.map((s: Service) => [s.id, s.name]));
+      const formattedSessions = sessionsRes.data.map(s => ({ ...s, service_names: s.service_ids?.map((id: string) => serviceMap.get(id) || 'Không rõ') || [] }));
       setSessions(formattedSessions as Session[]);
     }
   };
@@ -84,7 +92,6 @@ const CustomerConsulting = () => {
 
   const handleSelectSession = async (session: Session) => {
     setActiveSession(session);
-    setSelectedServiceId(session.service_id);
     setCustomerSalutation(session.customer_salutation || 'A/C');
     const { data, error } = await supabase.from('consulting_messages').select('*').eq('session_id', session.id).order('created_at');
     if (error) showError("Không thể tải tin nhắn.");
@@ -101,14 +108,15 @@ const CustomerConsulting = () => {
     
     const { data, error } = await supabase.from('consulting_sessions').insert({
       user_id: user!.id,
-      service_id: selectedServiceId,
+      service_ids: [selectedServiceId],
       title: newTitle
-    }).select('*, service:document_services(name)').single();
+    }).select('*').single();
 
     if (error) {
       showError("Không thể tạo cuộc trò chuyện mới.");
     } else {
-      const formattedSession = { ...data, service_name: data.service?.name || 'Không rõ' };
+      const serviceMap = new Map(services.map(s => [s.id, s.name]));
+      const formattedSession = { ...data, service_names: data.service_ids?.map((id: string) => serviceMap.get(id) || 'Không rõ') || [] };
       setSessions([formattedSession as Session, ...sessions]);
       handleSelectSession(formattedSession as Session);
     }
@@ -136,7 +144,7 @@ const CustomerConsulting = () => {
     const { data, error } = await supabase.functions.invoke('generate-consulting-response', {
       body: {
         sessionId: activeSession.id,
-        serviceId: activeSession.service_id,
+        serviceIds: activeSession.service_ids,
         messages: [...messages, customerMessage].map(({ role, content }) => ({ role, content })),
         customerSalutation,
       }
@@ -223,7 +231,7 @@ const CustomerConsulting = () => {
           body: {
               messageId: messageToRegenerate.id,
               sessionId: activeSession.id,
-              serviceId: activeSession.service_id,
+              serviceIds: activeSession.service_ids,
               messages: historyForPrompt.map(({ role, content }) => ({ role, content })),
               regenerateDirection: regenerateDirection,
               customerSalutation,
@@ -262,6 +270,30 @@ const CustomerConsulting = () => {
       const updatedSession = { ...activeSession, customer_salutation: salutation };
       setActiveSession(updatedSession);
       setSessions(sessions.map(s => s.id === activeSession.id ? updatedSession : s));
+    }
+  };
+
+  const handleUpdateSessionServices = async () => {
+    if (!activeSession) return;
+    const toastId = showLoading("Đang cập nhật dịch vụ...");
+    const { error } = await supabase
+        .from('consulting_sessions')
+        .update({ service_ids: tempSelectedServiceIds })
+        .eq('id', activeSession.id);
+    dismissToast(toastId);
+    if (error) {
+        showError("Cập nhật thất bại.");
+    } else {
+        showSuccess("Đã cập nhật dịch vụ.");
+        const serviceMap = new Map(services.map(s => [s.id, s.name]));
+        const updatedSession = {
+            ...activeSession,
+            service_ids: tempSelectedServiceIds,
+            service_names: tempSelectedServiceIds.map(id => serviceMap.get(id) || 'Không rõ')
+        };
+        setActiveSession(updatedSession);
+        setSessions(sessions.map(s => s.id === activeSession.id ? updatedSession : s));
+        setIsAddServiceOpen(false);
     }
   };
 
@@ -305,7 +337,7 @@ const CustomerConsulting = () => {
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-sm truncate">{session.title}</p>
-                            <p className="text-xs text-gray-500">{session.service_name} - {format(new Date(session.created_at), 'dd/MM/yy')}</p>
+                            <p className="text-xs text-gray-500">{session.service_names?.join(', ')} - {format(new Date(session.created_at), 'dd/MM/yy')}</p>
                           </div>
                           <div className="flex items-center flex-shrink-0">
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setEditingTitle({ id: session.id, title: session.title }); }}><Pencil className="h-3 w-3" /></Button>
@@ -327,7 +359,28 @@ const CustomerConsulting = () => {
                   <div className="p-4 border-b flex-shrink-0 flex items-center justify-between">
                     <div>
                       <h3 className="font-bold">{activeSession.title}</h3>
-                      <p className="text-sm text-gray-500">Dịch vụ: {services.find(s => s.id === activeSession.service_id)?.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-sm text-gray-500">Dịch vụ:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {activeSession.service_names?.map(name => <Badge key={name} variant="secondary">{name}</Badge>)}
+                        </div>
+                        <Dialog open={isAddServiceOpen} onOpenChange={setIsAddServiceOpen}>
+                          <DialogTrigger asChild>
+                            <Button size="icon" variant="outline" className="h-6 w-6 ml-2" onClick={() => setTempSelectedServiceIds(activeSession.service_ids || [])}><Plus className="h-4 w-4" /></Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader><DialogTitle>Thêm/Bớt dịch vụ</DialogTitle></DialogHeader>
+                            <div className="py-4">
+                              <Label>Chọn các dịch vụ cho cuộc trò chuyện này</Label>
+                              <MultiSelectCombobox options={serviceOptions} selected={tempSelectedServiceIds} onChange={setTempSelectedServiceIds} placeholder="Chọn dịch vụ..." searchPlaceholder="Tìm dịch vụ..." emptyPlaceholder="Không tìm thấy." />
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setIsAddServiceOpen(false)}>Hủy</Button>
+                              <Button onClick={handleUpdateSessionServices} className="bg-brand-orange hover:bg-brand-orange/90 text-white">Lưu</Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Label className="text-sm font-medium text-gray-600">Xưng hô:</Label>

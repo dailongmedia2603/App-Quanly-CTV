@@ -24,8 +24,8 @@ serve(async (req) => {
   }
 
   try {
-    const { messageId, sessionId, serviceId, messages, regenerateDirection, customerSalutation } = await req.json();
-    if (!messageId || !sessionId || !serviceId || !messages) {
+    const { messageId, sessionId, serviceIds, messages, regenerateDirection, customerSalutation } = await req.json();
+    if (!messageId || !sessionId || !serviceIds || serviceIds.length === 0 || !messages) {
       throw new Error("Yêu cầu thiếu thông tin cần thiết.");
     }
 
@@ -69,19 +69,18 @@ serve(async (req) => {
         throw new Error("Không tìm thấy mẫu prompt cho việc tư vấn.");
     }
 
-    const { data: serviceData, error: serviceError } = await supabase
+    const { data: serviceData, error: serviceError } = await supabaseAdmin
         .from('document_services')
         .select('name, description')
-        .eq('id', serviceId)
-        .single();
-    if (serviceError || !serviceData) throw new Error(`Could not find service with ID: ${serviceId}`);
-    const serviceForPrompt = `${serviceData.name}${serviceData.description ? ` (Mô tả: ${serviceData.description})` : ''}`;
+        .in('id', serviceIds);
+    if (serviceError || !serviceData) throw new Error(`Could not find services with IDs: ${serviceIds.join(', ')}`);
+    const serviceForPrompt = serviceData.map(s => `${s.name}${s.description ? ` (Mô tả: ${s.description})` : ''}`).join('; ');
 
     let documentContent = "Không có tài liệu tham khảo.";
-    const { data: documents } = await supabase
+    const { data: documents } = await supabaseAdmin
         .from('documents')
         .select('title, ai_prompt, content')
-        .eq('service_id', serviceId);
+        .in('service_id', serviceIds);
     
     if (documents && documents.length > 0) {
         documentContent = documents
@@ -89,11 +88,11 @@ serve(async (req) => {
             .join('\n\n---\n\n');
     }
 
-    let quoteTemplatesContent = "Không có mẫu báo giá tham khảo cho dịch vụ này.";
-    const { data: quoteTemplates } = await supabase
+    let quoteTemplatesContent = "Không có mẫu báo giá tham khảo cho các dịch vụ này.";
+    const { data: quoteTemplates } = await supabaseAdmin
         .from('quote_templates')
         .select('name, content')
-        .eq('service_id', serviceId);
+        .in('service_id', serviceIds);
 
     if (quoteTemplates && quoteTemplates.length > 0) {
         quoteTemplatesContent = quoteTemplates

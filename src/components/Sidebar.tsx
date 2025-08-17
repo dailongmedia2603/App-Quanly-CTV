@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Home, SlidersHorizontal, FilePieChart, CircleDollarSign, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog, FolderKanban, UserCheck, FileSpreadsheet, FileBarChart } from "lucide-react";
+import { Home, SlidersHorizontal, FilePieChart, CircleDollarSign, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog, FolderKanban, UserCheck, FileSpreadsheet, FileBarChart, Briefcase } from "lucide-react";
 import * as Icons from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -131,6 +131,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
             {hasPermission('create_quote') && <NavLink to="/create-quote" icon={FileSpreadsheet} isCollapsed={isCollapsed}>Tạo báo giá</NavLink>}
             {hasPermission('create_plan') && <NavLink to="/create-plan" icon={ClipboardList} isCollapsed={isCollapsed}>Tạo Plan</NavLink>}
             {hasPermission('income') && <NavLink to="/income" icon={CircleDollarSign} isCollapsed={isCollapsed}>Thu nhập</NavLink>}
+            {hasPermission('public_services') && <NavLink to="/services" icon={Briefcase} isCollapsed={isCollapsed}>Dịch vụ</NavLink>}
 
             {(hasPermission('config_scan_post') || hasPermission('config_content_ai') || hasPermission('config_create_plan')) && (
               isCollapsed ? (

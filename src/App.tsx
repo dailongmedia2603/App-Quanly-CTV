@@ -30,6 +30,7 @@ import CreateQuote from "./pages/CreateQuote";
 import ConfigQuote from "./pages/ConfigQuote";
 import { supabase } from "./integrations/supabase/client";
 import PerformanceReport from "./pages/PerformanceReport";
+import PublicServices from "./pages/PublicServices";
 
 const queryClient = new QueryClient();
 
@@ -115,6 +116,7 @@ const AppContent = () => {
           <Route path="/config/create-plan" element={<PermissionGuard feature="config_create_plan"><ConfigCreatePlan /></PermissionGuard>} />
           <Route path="/config/quote" element={<PermissionGuard feature="config_quote"><ConfigQuote /></PermissionGuard>} />
           <Route path="/documents" element={<PermissionGuard feature="documents"><Documents /></PermissionGuard>} />
+          <Route path="/services" element={<PermissionGuard feature="public_services"><PublicServices /></PermissionGuard>} />
           <Route path="/settings" element={<PermissionGuard feature="settings"><Settings /></PermissionGuard>} />
           <Route path="/performance-report" element={<PermissionGuard feature="performance_reports"><PerformanceReport /></PermissionGuard>} />
           <Route path="/income" element={<PermissionGuard feature="income"><Income /></PermissionGuard>} />

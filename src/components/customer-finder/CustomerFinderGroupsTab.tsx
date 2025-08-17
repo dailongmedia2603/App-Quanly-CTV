@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from '@/components/ui/badge';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
-import { Plus, ExternalLink, Pencil, Trash2, Folder, FolderPlus } from 'lucide-react';
+import { Plus, ExternalLink, Pencil, Trash2, Folder, FolderPlus, Hash, Users, Link as LinkIcon, Settings2 } from 'lucide-react';
 
 interface Group {
   id: string;
@@ -118,14 +119,23 @@ const CustomerFinderGroupsTab = () => {
               <AccordionItem value={category.id} key={category.id} className="border border-orange-100 rounded-lg bg-white/50">
                 <AccordionTrigger className="p-4 hover:no-underline">
                   <div className="flex justify-between items-center w-full">
-                    <div className="flex items-center space-x-3"><Folder className="h-5 w-5 text-brand-orange" /><span className="font-semibold text-base text-gray-800">{category.name}</span></div>
+                    <div className="flex items-center space-x-3">
+                      <Folder className="h-5 w-5 text-brand-orange" />
+                      <span className="font-semibold text-base text-gray-800">{category.name}</span>
+                      <Badge className="bg-brand-orange text-white">{category.customer_finder_groups.length}</Badge>
+                    </div>
                     {isSuperAdmin && <div className="flex items-center space-x-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingCategory(category); setCategoryName(category.name); setIsCategoryDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={(e) => { e.stopPropagation(); setItemToDelete({ type: 'category', data: category }); setIsDeleteAlertOpen(true); }}><Trash2 className="h-4 w-4" /></Button></div>}
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-4 pb-4">
                   <div className="pl-8 border-l-2 border-orange-100">
                     <Table>
-                      <TableHeader><TableRow><TableHead className="w-[50px]">STT</TableHead><TableHead>Tên group</TableHead><TableHead className="text-center">Link</TableHead>{isSuperAdmin && <TableHead className="text-right">Hành động</TableHead>}</TableRow></TableHeader>
+                      <TableHeader><TableRow>
+                        <TableHead className="w-[80px]"><div className="flex items-center space-x-2"><Hash className="h-4 w-4" /><span>STT</span></div></TableHead>
+                        <TableHead><div className="flex items-center space-x-2"><Users className="h-4 w-4" /><span>Tên group</span></div></TableHead>
+                        <TableHead className="text-center"><div className="flex items-center justify-center space-x-2"><LinkIcon className="h-4 w-4" /><span>Link</span></div></TableHead>
+                        {isSuperAdmin && <TableHead className="text-right"><div className="flex items-center justify-end space-x-2"><Settings2 className="h-4 w-4" /><span>Hành động</span></div></TableHead>}
+                      </TableRow></TableHeader>
                       <TableBody>
                         {category.customer_finder_groups.length === 0 ? <TableRow><TableCell colSpan={4} className="text-center h-16">Chưa có group nào trong nhóm này.</TableCell></TableRow> : (
                           category.customer_finder_groups.map((group, index) => (

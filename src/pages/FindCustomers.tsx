@@ -29,6 +29,15 @@ interface ReportData {
   posted_date_string: string | null;
 }
 
+const stripMarkdown = (markdown: string): string => {
+  if (!markdown) return '';
+  return markdown
+    .replace(/#+\s/g, '') // Headers
+    .replace(/(\*\*|__)(.*?)\1/g, '$2') // Bold
+    .replace(/(\*|_)(.*?)\1/g, '$2')   // Italic
+    .replace(/~~(.*?)~~/g, '$1'); // Strikethrough
+};
+
 const FindCustomers = () => {
   const [reportData, setReportData] = useState<ReportData[]>([]);
   const [loadingReports, setLoadingReports] = useState(true);
@@ -71,7 +80,8 @@ const FindCustomers = () => {
 
   const handleCopyComment = (comment: string | null | undefined) => {
     if (!comment) return;
-    navigator.clipboard.writeText(comment).then(() => {
+    const plainText = stripMarkdown(comment);
+    navigator.clipboard.writeText(plainText).then(() => {
       showSuccess("Đã sao chép comment!");
     }).catch(err => {
       showError("Không thể sao chép.");

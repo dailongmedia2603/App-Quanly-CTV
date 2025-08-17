@@ -67,6 +67,15 @@ const cleanAiResponseForDisplay = (rawText: string): string => {
   return text;
 };
 
+const stripMarkdown = (markdown: string): string => {
+  if (!markdown) return '';
+  return markdown
+    .replace(/#+\s/g, '') // Headers
+    .replace(/(\*\*|__)(.*?)\1/g, '$2') // Bold
+    .replace(/(\*|_)(.*?)\1/g, '$2')   // Italic
+    .replace(/~~(.*?)~~/g, '$1'); // Strikethrough
+};
+
 const getCommentSnippet = (content: string): string => {
   if (!content) return 'Comment không có nội dung';
   const cleanedContent = cleanAiResponseForDisplay(content);
@@ -103,8 +112,9 @@ const CommentHistoryView = ({ onBack }: { onBack: () => void }) => {
 
   const handleCopy = (content: string) => {
     const cleanedContent = cleanAiResponseForDisplay(content);
-    if (!cleanedContent) return;
-    navigator.clipboard.writeText(cleanedContent).then(() => {
+    const plainText = stripMarkdown(cleanedContent);
+    if (!plainText) return;
+    navigator.clipboard.writeText(plainText).then(() => {
       showSuccess("Đã sao chép comment!");
     }).catch(err => {
       showError("Không thể sao chép.");
@@ -228,7 +238,8 @@ const CreateComment = () => {
 
   const handleCopy = () => {
     if (!generatedComment) return;
-    navigator.clipboard.writeText(generatedComment).then(() => {
+    const plainText = stripMarkdown(generatedComment);
+    navigator.clipboard.writeText(plainText).then(() => {
       showSuccess("Đã sao chép comment!");
     }).catch(err => {
       showError("Không thể sao chép.");

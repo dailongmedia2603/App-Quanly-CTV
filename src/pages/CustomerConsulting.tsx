@@ -41,6 +41,15 @@ interface Message {
   content: string;
 }
 
+const stripMarkdown = (markdown: string): string => {
+  if (!markdown) return '';
+  return markdown
+    .replace(/#+\s/g, '') // Headers
+    .replace(/(\*\*|__)(.*?)\1/g, '$2') // Bold
+    .replace(/(\*|_)(.*?)\1/g, '$2')   // Italic
+    .replace(/~~(.*?)~~/g, '$1'); // Strikethrough
+};
+
 const CustomerConsulting = () => {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -206,7 +215,7 @@ const CustomerConsulting = () => {
   };
 
   const handleCopy = (content: string) => {
-    const plainText = content.replace(/(\*\*|__)(.*?)\1/g, '$2');
+    const plainText = stripMarkdown(content);
     navigator.clipboard.writeText(plainText).then(() => {
         showSuccess("Đã sao chép nội dung!");
     }).catch(err => {

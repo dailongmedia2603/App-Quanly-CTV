@@ -283,7 +283,8 @@ const CreatePost = () => {
   };
 
   const handleCopy = () => {
-    const plainText = stripMarkdown(generatedPost);
+    const cleanedContent = cleanAiResponseForDisplay(generatedPost);
+    const plainText = stripMarkdown(cleanedContent);
     navigator.clipboard.writeText(plainText).then(() => {
       showSuccess("Đã sao chép nội dung!");
     }).catch(err => {

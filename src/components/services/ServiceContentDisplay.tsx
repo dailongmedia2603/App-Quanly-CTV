@@ -120,7 +120,7 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
           )
         )}
       </div>
-      <Accordion type="multiple" defaultValue={['info', 'pricing']} className="w-full space-y-4">
+      <Accordion type="multiple" className="w-full space-y-4">
         <AccordionItem value="info" className="border border-orange-100 rounded-lg bg-white/50">
           <AccordionTrigger className="p-4 hover:no-underline">
             <h2 className="text-xl font-semibold flex items-center space-x-3">

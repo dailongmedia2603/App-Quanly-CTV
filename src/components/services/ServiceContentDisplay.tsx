@@ -7,6 +7,7 @@ import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast
 import { Briefcase, Info, CircleDollarSign, Pencil, Save } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 interface ServiceContentDisplayProps {
   serviceId: string | null;
@@ -84,12 +85,8 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
         <Skeleton className="h-8 w-1/2" />
         <Skeleton className="h-4 w-1/3" />
         <div className="space-y-4 pt-4">
-          <Skeleton className="h-6 w-1/4" />
-          <Skeleton className="h-20 w-full" />
-        </div>
-        <div className="space-y-4 pt-4">
-          <Skeleton className="h-6 w-1/4" />
-          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
         </div>
       </div>
     );
@@ -107,7 +104,7 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
 
   return (
     <div className="p-8 h-full overflow-y-auto">
-      <div className="flex justify-between items-start mb-4">
+      <div className="flex justify-between items-start mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">{details.name}</h1>
           <p className="text-gray-500">Thông tin chi tiết và báo giá</p>
@@ -123,24 +120,42 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
           )
         )}
       </div>
-      <div className="space-y-8">
-        <div>
-          <h2 className="text-xl font-semibold flex items-center space-x-2 mb-2"><Info className="h-5 w-5 text-brand-orange" /><span>Thông tin dịch vụ</span></h2>
-          {isEditing ? (
-            <Textarea value={infoContent} onChange={e => setInfoContent(e.target.value)} className="min-h-[200px]" />
-          ) : (
-            <div className="prose max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{infoContent || "Chưa có nội dung."}</ReactMarkdown></div>
-          )}
-        </div>
-        <div>
-          <h2 className="text-xl font-semibold flex items-center space-x-2 mb-2"><CircleDollarSign className="h-5 w-5 text-brand-orange" /><span>Báo giá</span></h2>
-          {isEditing ? (
-            <Textarea value={pricingContent} onChange={e => setPricingContent(e.target.value)} className="min-h-[200px]" />
-          ) : (
-            <div className="prose max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{pricingContent || "Chưa có nội dung."}</ReactMarkdown></div>
-          )}
-        </div>
-      </div>
+      <Accordion type="multiple" defaultValue={['info', 'pricing']} className="w-full space-y-4">
+        <AccordionItem value="info" className="border border-orange-100 rounded-lg bg-white/50">
+          <AccordionTrigger className="p-4 hover:no-underline">
+            <h2 className="text-xl font-semibold flex items-center space-x-3">
+              <Info className="h-5 w-5 text-brand-orange" />
+              <span>Thông tin dịch vụ</span>
+            </h2>
+          </AccordionTrigger>
+          <AccordionContent className="px-4 pb-4">
+            <div className="pl-8 border-l-2 border-orange-100">
+              {isEditing ? (
+                <Textarea value={infoContent} onChange={e => setInfoContent(e.target.value)} className="min-h-[200px]" />
+              ) : (
+                <div className="prose max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{infoContent || "Chưa có nội dung."}</ReactMarkdown></div>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="pricing" className="border border-orange-100 rounded-lg bg-white/50">
+          <AccordionTrigger className="p-4 hover:no-underline">
+            <h2 className="text-xl font-semibold flex items-center space-x-3">
+              <CircleDollarSign className="h-5 w-5 text-brand-orange" />
+              <span>Báo giá</span>
+            </h2>
+          </AccordionTrigger>
+          <AccordionContent className="px-4 pb-4">
+            <div className="pl-8 border-l-2 border-orange-100">
+              {isEditing ? (
+                <Textarea value={pricingContent} onChange={e => setPricingContent(e.target.value)} className="min-h-[200px]" />
+              ) : (
+                <div className="prose max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{pricingContent || "Chưa có nội dung."}</ReactMarkdown></div>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 };

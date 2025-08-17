@@ -66,22 +66,3 @@
     background-size: 16px 16px;
   }
 }
-
-@layer components {
-  /* Custom styles for .prose to ensure consistent rendering */
-  .prose table {
-    @apply w-full my-4 text-sm border-collapse border border-gray-300;
-  }
-  .prose thead {
-    @apply bg-gray-100;
-  }
-  .prose th, .prose td {
-    @apply border border-gray-300 px-3 py-2;
-  }
-  .prose th {
-    @apply font-semibold text-left;
-  }
-  .prose strong {
-    @apply font-bold text-gray-900;
-  }
-}

@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
-import { Briefcase, Info, CircleDollarSign, Pencil, Save } from 'lucide-react';
+import { Briefcase, Info, CircleDollarSign, Pencil, Save, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface ServiceContentDisplayProps {
   serviceId: string | null;
@@ -20,6 +22,7 @@ interface ServiceDetails {
   name: string;
   service_info_content: string | null;
   pricing_content: string | null;
+  pricing_image_url: string | null;
 }
 
 const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceContentDisplayProps) => {
@@ -28,6 +31,8 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
   const [isEditing, setIsEditing] = useState(false);
   const [infoContent, setInfoContent] = useState('');
   const [pricingContent, setPricingContent] = useState('');
+  const [pricingImageUrl, setPricingImageUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (!serviceId) {
@@ -51,6 +56,7 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
         setDetails(data);
         setInfoContent(data.service_info_content || '');
         setPricingContent(data.pricing_content || '');
+        setPricingImageUrl(data.pricing_image_url || null);
       }
       setLoading(false);
     };
@@ -65,7 +71,8 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
       .from('service_details')
       .update({
         service_info_content: infoContent,
-        pricing_content: pricingContent
+        pricing_content: pricingContent,
+        pricing_image_url: pricingImageUrl
       })
       .eq('id', details.id);
     
@@ -77,6 +84,34 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
       setIsEditing(false);
       onDataChange(); // Notify parent to refetch data
     }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const toastId = showLoading("Đang tải ảnh lên...");
+
+    const filePath = `public/${Date.now()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage
+      .from('service_pricing_images')
+      .upload(filePath, file);
+
+    dismissToast(toastId);
+    if (uploadError) {
+      showError(`Tải ảnh thất bại: ${uploadError.message}`);
+      setIsUploading(false);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('service_pricing_images')
+      .getPublicUrl(filePath);
+    
+    setPricingImageUrl(publicUrl);
+    showSuccess("Tải ảnh lên thành công!");
+    setIsUploading(false);
   };
 
   if (loading) {
@@ -148,9 +183,39 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
           <AccordionContent className="px-4 pb-4">
             <div className="pl-8 border-l-2 border-orange-100">
               {isEditing ? (
-                <Textarea value={pricingContent} onChange={e => setPricingContent(e.target.value)} className="min-h-[200px]" />
+                <div className="space-y-4">
+                  <Textarea value={pricingContent} onChange={e => setPricingContent(e.target.value)} className="min-h-[150px]" placeholder="Nhập nội dung báo giá..." />
+                  <div>
+                    <Label>Ảnh báo giá</Label>
+                    {pricingImageUrl ? (
+                      <div className="relative mt-2 w-fit">
+                        <img src={pricingImageUrl} alt="Báo giá" className="max-w-sm rounded-md border" />
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                          onClick={() => setPricingImageUrl(null)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="mt-2">
+                        <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploading} />
+                        {isUploading && <p className="text-sm text-gray-500 mt-1">Đang tải lên...</p>}
+                      </div>
+                    )}
+                  </div>
+                </div>
               ) : (
-                <div className="prose max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{pricingContent || "Chưa có nội dung."}</ReactMarkdown></div>
+                <div>
+                  {pricingImageUrl && <img src={pricingImageUrl} alt="Báo giá" className="max-w-full rounded-md border mb-4" />}
+                  <div className="prose max-w-none">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {pricingContent || (!pricingImageUrl ? "Chưa có nội dung." : "")}
+                    </ReactMarkdown>
+                  </div>
+                </div>
               )}
             </div>
           </AccordionContent>

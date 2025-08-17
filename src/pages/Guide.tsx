@@ -1,60 +1,52 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-const HelpPage = () => {
+const Guide = () => {
   const guides = [
     {
-      title: "1. Tìm kiếm khách hàng",
-      description: "Công cụ tự động quét các hội nhóm Facebook để tìm kiếm khách hàng tiềm năng dựa trên các từ khóa và chiến dịch bạn thiết lập.",
+      title: "1. Tìm kiếm khách hàng: Trợ lý săn tìm cơ hội 24/7",
+      description: "Thay vì tốn hàng giờ lướt Facebook, công cụ này sẽ tự động tìm kiếm và mang những khách hàng tiềm năng nhất đến cho bạn.",
       steps: [
-        "<strong>Tạo chiến dịch:</strong> Truy cập menu <strong>Tìm khách hàng &gt; Danh sách chiến dịch</strong> và nhấn <strong>'Tạo chiến dịch mới'</strong>.",
-        "<strong>Điền thông tin:</strong> Đặt tên, chọn nguồn (các group Facebook đã có), và nhập các <strong>từ khóa</strong> liên quan đến dịch vụ (ví dụ: 'cần thiết kế logo', 'tìm đơn vị marketing', 'báo giá website').",
-        "<strong>Thiết lập quét:</strong> Chọn tần suất quét và thời gian bắt đầu/kết thúc. Nên bật <strong>'Bộ lọc AI'</strong> để hệ thống phân tích và đánh giá bài viết một cách thông minh, giúp bạn tập trung vào những khách hàng tiềm năng nhất.",
-        "<strong>Xem kết quả:</strong> Vào mục <strong>Tìm khách hàng &gt; Báo cáo Facebook</strong>. Tại đây, hệ thống sẽ liệt kê tất cả bài viết phù hợp được tìm thấy.",
-        "<strong>Hành động:</strong> Bạn có thể xem nội dung bài viết, đánh giá của AI về mức độ tiềm năng, và sử dụng <strong>'Bình luận gợi ý'</strong> do AI tạo ra để tương tác nhanh chóng và chuyên nghiệp."
+        "<strong>Bước 1: Thiết lập 'radar' của bạn (Tạo chiến dịch):</strong> Hãy coi mỗi chiến dịch như một 'radar' chuyên biệt. Bạn vào menu <strong>Quét & Tìm khách hàng</strong> và tạo một chiến dịch mới.",
+        "<strong>Bước 2: Nhập 'tín hiệu' (Điền thông tin):</strong> Đặt tên cho chiến dịch, chọn các group Facebook bạn muốn quét và nhập các từ khóa liên quan. Đây là những 'tín hiệu' mà radar của bạn sẽ dò tìm (ví dụ: 'cần thiết kế logo', 'tìm đơn vị marketing').",
+        "<strong>Bước 3: Tối ưu hóa (Thiết lập quét & AI):</strong> Bật <strong>'Bộ lọc AI'</strong> giống như việc trang bị cho radar của bạn một bộ não thông minh. AI sẽ tự động phân tích và đánh giá mức độ tiềm năng của mỗi bài viết, giúp bạn tiết kiệm thời gian.",
+        "<strong>Bước 4: Xem 'chiến lợi phẩm' (Xem kết quả):</strong> Vào mục <strong>Tìm khách hàng</strong>, tất cả các 'mục tiêu' tiềm năng sẽ được liệt kê rõ ràng, kèm theo đánh giá từ AI.",
+        "<strong>Bước 5: Tiếp cận thông minh (Hành động):</strong> Không cần phải suy nghĩ nên bắt đầu từ đâu. AI đã gợi ý sẵn một bình luận chuyên nghiệp. Bạn chỉ cần sao chép, chỉnh sửa một chút cho phù hợp và tương tác với khách hàng."
       ]
     },
     {
-      title: "2. Tạo bài viết (AI Content)",
-      description: "Sử dụng trí tuệ nhân tạo (AI) để nhanh chóng soạn thảo các bài viết quảng cáo, chia sẻ kiến thức chuyên nghiệp để đăng lên trang cá nhân hoặc các hội nhóm.",
+      title: "2. Tạo bài viết: Nhà sáng tạo nội dung cá nhân của bạn",
+      description: "Hết ý tưởng viết bài? Công cụ này sẽ là nguồn cảm hứng vô tận, giúp bạn tạo ra những bài viết chất lượng để quảng bá dịch vụ trên trang cá nhân hoặc các hội nhóm chỉ trong vài giây.",
       steps: [
-        "Truy cập menu <strong>Công cụ AI &gt; Tạo bài viết</strong>.",
-        "<strong>Chọn Dịch vụ:</strong> Lựa chọn dịch vụ bạn muốn quảng bá (ví dụ: Thiết kế Website, Quản trị Fanpage).",
-        "<strong>Chọn Loại bài viết:</strong> Xác định mục tiêu của bài viết (ví dụ: Bài viết quảng cáo, Bài viết chia sẻ kiến thức, Bài viết giới thiệu).",
-        "<strong>Thêm yêu cầu:</strong> Cung cấp thêm các chỉ dẫn chi tiết cho AI để nội dung được cá nhân hóa và hiệu quả hơn (ví dụ: 'giọng văn hài hước, gần gũi', 'nhấn mạnh vào lợi ích tiết kiệm chi phí cho doanh nghiệp nhỏ').",
-        "<strong>Tạo và sử dụng:</strong> Nhấn <strong>'Tạo bài viết'</strong>. AI sẽ tạo ra một bài viết hoàn chỉnh. Bạn có thể sao chép, chỉnh sửa lại một chút cho phù hợp với văn phong của mình và đăng tải."
+        "<strong>Bước 1: Xác định mục tiêu:</strong> Truy cập <strong>Tạo Content &gt; Tạo bài viết</strong>. Bạn muốn viết bài để quảng cáo, chia sẻ kiến thức hay giới thiệu dịch vụ? Hãy chọn đúng 'Dạng bài' và 'Dịch vụ' bạn muốn nói đến.",
+        "<strong>Bước 2: Cung cấp 'linh hồn' cho bài viết:</strong> Trong ô 'Định hướng', hãy cho AI biết bạn muốn bài viết có phong cách như thế nào. Ví dụ: 'viết một cách hài hước', 'nhấn mạnh vào giá cả phải chăng cho doanh nghiệp nhỏ'.",
+        "<strong>Bước 3: Nhận thành quả và tỏa sáng:</strong> Nhấn 'Tạo bài viết'. AI sẽ trả về một bài viết hoàn chỉnh. Việc của bạn chỉ là đọc lại, thêm một chút 'chất' riêng của mình và đăng tải để thu hút khách hàng."
       ]
     },
     {
-      title: "3. Tạo bình luận (AI Comment)",
-      description: "Công cụ giúp bạn tạo ra các bình luận chuyên nghiệp, phù hợp với ngữ cảnh để trả lời khách hàng hoặc tương tác trong các bài viết tiềm năng.",
+      title: "3. Tạo bình luận: Chuyên gia tương tác tức thì",
+      description: "Biến mọi bình luận thành cơ hội. Công cụ này giúp bạn tạo ra những phản hồi thông minh, tự nhiên và đầy tính thuyết phục khi tương tác với các bài viết của khách hàng.",
       steps: [
-        "Truy cập menu <strong>Công cụ AI &gt; Tạo comment</strong>.",
-        "<strong>Dán nội dung bài viết:</strong> Sao chép toàn bộ nội dung bài viết của khách hàng mà bạn muốn bình luận và dán vào ô.",
-        "<strong>Chọn Dịch vụ:</strong> Chọn dịch vụ của Dailong Media phù hợp nhất để giải quyết nhu cầu trong bài viết.",
-        "<strong>Thêm yêu cầu (tùy chọn):</strong> Đưa ra chỉ dẫn thêm cho AI (ví dụ: 'bình luận ngắn gọn và thân thiện', 'thể hiện sự chuyên nghiệp và đồng cảm').",
-        "<strong>Tạo và sử dụng:</strong> Nhấn <strong>'Tạo comment'</strong>. AI sẽ phân tích bài viết và tạo ra một bình luận gợi ý. Bạn có thể sao chép để sử dụng trực tiếp hoặc chỉnh sửa lại."
+        "<strong>Bước 1: Cung cấp bối cảnh:</strong> Vào <strong>Tạo Content &gt; Tạo comment</strong>. Dán nội dung bài viết của khách hàng vào đây để AI hiểu rõ họ đang cần gì.",
+        "<strong>Bước 2: Đưa ra giải pháp:</strong> Chọn dịch vụ phù hợp nhất của Dailong Media có thể giải quyết vấn đề của khách hàng.",
+        "<strong>Bước 3: Tạo bình luận 'chốt đơn':</strong> Nhấn 'Tạo Comment'. AI sẽ tạo ra một bình luận vừa thể hiện sự đồng cảm, vừa khéo léo giới thiệu giải pháp của chúng ta. Bạn chỉ cần sao chép và bắt đầu cuộc trò chuyện."
       ]
     },
     {
-      title: "4. Tư vấn khách hàng (AI Assistant)",
-      description: "Trợ lý AI chuyên nghiệp được huấn luyện để giúp bạn soạn thảo nội dung tư vấn, báo giá, và trả lời các câu hỏi phức tạp của khách hàng.",
+      title: "4. Tư vấn khách hàng: Chuyên gia AI luôn kề vai sát cánh",
+      description: "Bạn không còn đơn độc khi đối mặt với những câu hỏi khó từ khách hàng. Trợ lý AI này được trang bị đầy đủ kiến thức về dịch vụ của Dailong Media để hỗ trợ bạn 24/7.",
       steps: [
-        "Truy cập menu <strong>Công cụ AI &gt; Tư vấn khách hàng</strong>.",
-        "<strong>Tạo phiên tư vấn mới:</strong> Mỗi khách hàng hoặc mỗi cuộc trò chuyện nên được bắt đầu trong một phiên mới để AI có thể theo dõi ngữ cảnh tốt hơn.",
-        "<strong>Chọn Dịch vụ:</strong> Chọn các dịch vụ mà khách hàng đang quan tâm.",
-        "<strong>Bắt đầu trò chuyện với AI:</strong> Đặt câu hỏi hoặc nhập yêu cầu của khách hàng vào khung chat. Ví dụ: 'Khách hàng hỏi về quy trình thiết kế logo gồm mấy bước?', 'Soạn giúp mình một báo giá chi tiết cho dịch vụ quản trị fanpage gói cơ bản trong 3 tháng'.",
-        "<strong>Nhận câu trả lời:</strong> AI sẽ phản hồi như một chuyên viên tư vấn thực thụ. Bạn có thể sao chép câu trả lời này để gửi cho khách hàng, giúp tiết kiệm thời gian và đảm bảo tính chuyên nghiệp."
+        "<strong>Bước 1: Mở một cuộc trò chuyện mới:</strong> Vào <strong>Tư vấn khách hàng</strong>. Mỗi khách hàng là một câu chuyện, hãy tạo một phiên tư vấn riêng để AI có thể tập trung hỗ trợ bạn tốt nhất.",
+        "<strong>Bước 2: 'Hỏi' chuyên gia:</strong> Chỉ cần dán tin nhắn của khách hàng vào khung chat và bấm gửi. AI sẽ tự động phân tích và soạn thảo câu trả lời.",
+        "<strong>Bước 3: Nhận tư vấn chuyên nghiệp:</strong> AI sẽ cung cấp câu trả lời chi tiết, từ quy trình làm việc, báo giá cho đến các lợi ích của dịch vụ. Bạn chỉ cần sao chép, chỉnh sửa nếu cần và gửi cho khách hàng."
       ]
     },
     {
-      title: "5. Theo dõi thu nhập",
-      description: "Theo dõi toàn bộ thu nhập, hoa hồng, và hiệu suất kinh doanh của bạn một cách minh bạch và chi tiết.",
+      title: "5. Theo dõi thu nhập: Bảng điều khiển tài chính của bạn",
+      description: "Mọi nỗ lực của bạn đều được ghi nhận. Tại đây, bạn có thể theo dõi thu nhập của mình một cách minh bạch, rõ ràng và cập nhật theo thời gian thực.",
       steps: [
-        "Truy cập menu <strong>Báo cáo hiệu suất &gt; Thu nhập của tôi</strong>.",
-        "<strong>Chọn tháng báo cáo:</strong> Sử dụng bộ lọc để chọn tháng bạn muốn xem chi tiết.",
-        "<strong>Xem tổng quan:</strong> Bảng điều khiển sẽ hiển thị các thông số quan trọng:",
-        "<ul><li><strong>Lương cứng:</strong> Khoản lương cố định bạn nhận được dựa trên doanh số đạt được trong tháng hoặc tháng trước đó.</li><li><strong>Hoa hồng hợp đồng mới:</strong> Tổng hoa hồng từ các hợp đồng được ký kết trong tháng.</li><li><strong>Hoa hồng hợp đồng cũ:</strong> Tổng hoa hồng từ các khoản thanh toán của những hợp đồng đã ký từ các tháng trước.</li><li><strong>Tổng thu nhập:</strong> Tổng của tất cả các khoản trên.</li></ul>",
-        "<strong>Xem chi tiết hợp đồng:</strong> Kéo xuống dưới để xem danh sách chi tiết từng hợp đồng, giá trị, và các khoản thanh toán liên quan đã được ghi nhận trong tháng."
+        "<strong>Bước 1: Xem tổng quan:</strong> Truy cập menu <strong>Thu nhập</strong>. Bảng điều khiển sẽ cho bạn thấy bức tranh tài chính tổng thể trong tháng bạn chọn.",
+        "<strong>Bước 2: Hiểu rõ các khoản thu nhập:</strong> Bạn sẽ thấy rõ từng khoản: Lương cứng, Hoa hồng từ hợp đồng mới, và cả hoa hồng từ các hợp đồng cũ.",
+        "<strong>Bước 3: Xem chi tiết từng hợp đồng:</strong> Mọi hợp đồng bạn mang về đều được liệt kê chi tiết trong tab 'Hợp đồng', giúp bạn dễ dàng đối soát và nắm bắt hiệu quả công việc của mình."
       ]
     }
   ];
@@ -64,21 +56,21 @@ const HelpPage = () => {
       <div>
         <h1 className="text-3xl font-bold">Hướng dẫn sử dụng hệ thống</h1>
         <p className="text-muted-foreground mt-2">
-          Chào mừng bạn đến với hệ thống Cộng tác viên của Dailong Media. Dưới đây là hướng dẫn chi tiết các tính năng chính giúp bạn làm việc hiệu quả.
+          Chào mừng bạn đến với hệ thống Cộng tác viên của Dailong Media! Đây là không gian làm việc được thiết kế dành riêng cho bạn, tích hợp những công cụ mạnh mẽ để giúp bạn tìm kiếm khách hàng, sáng tạo nội dung và quản lý thu nhập một cách hiệu quả nhất. Hãy cùng khám phá các tính năng chính nhé!
         </p>
       </div>
 
       <div className="grid gap-6">
         {guides.map((guide, index) => (
-          <Card key={index}>
+          <Card key={index} className="border-orange-200">
             <CardHeader>
-              <CardTitle className="text-2xl">{guide.title}</CardTitle>
-              <CardDescription>{guide.description}</CardDescription>
+              <CardTitle className="text-2xl text-gray-800">{guide.title}</CardTitle>
+              <CardDescription className="text-base">{guide.description}</CardDescription>
             </CardHeader>
             <CardContent>
-              <ol className="list-decimal list-inside space-y-3">
+              <ol className="list-decimal list-inside space-y-4">
                 {guide.steps.map((step, stepIndex) => (
-                  <li key={stepIndex} dangerouslySetInnerHTML={{ __html: step }} className="text-gray-700" />
+                  <li key={stepIndex} dangerouslySetInnerHTML={{ __html: step }} className="text-gray-700 leading-relaxed" />
                 ))}
               </ol>
             </CardContent>
@@ -89,4 +81,4 @@ const HelpPage = () => {
   );
 };
 
-export default HelpPage;
+export default Guide;

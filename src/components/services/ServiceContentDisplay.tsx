@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { Briefcase, Info, CircleDollarSign, Pencil, Save } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import MDEditor from '@uiw/react-md-editor';
 
 interface ServiceContentDisplayProps {
   serviceId: string | null;
@@ -129,9 +129,13 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
             </h2>
           </AccordionTrigger>
           <AccordionContent className="px-4 pb-4">
-            <div className="pl-8 border-l-2 border-orange-100">
+            <div className="pl-8 border-l-2 border-orange-100" data-color-mode="light">
               {isEditing ? (
-                <Textarea value={infoContent} onChange={e => setInfoContent(e.target.value)} className="min-h-[200px]" />
+                <MDEditor
+                  value={infoContent}
+                  onChange={(value) => setInfoContent(value || '')}
+                  height={250}
+                />
               ) : (
                 <div className="prose max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{infoContent || "Chưa có nội dung."}</ReactMarkdown></div>
               )}
@@ -146,9 +150,13 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
             </h2>
           </AccordionTrigger>
           <AccordionContent className="px-4 pb-4">
-            <div className="pl-8 border-l-2 border-orange-100">
+            <div className="pl-8 border-l-2 border-orange-100" data-color-mode="light">
               {isEditing ? (
-                <Textarea value={pricingContent} onChange={e => setPricingContent(e.target.value)} className="min-h-[200px]" />
+                <MDEditor
+                  value={pricingContent}
+                  onChange={(value) => setPricingContent(value || '')}
+                  height={250}
+                />
               ) : (
                 <div className="prose max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{pricingContent || "Chưa có nội dung."}</ReactMarkdown></div>
               )}

@@ -40,7 +40,7 @@ const ServiceCategoryList = ({ categories, loading, selectedServiceId, onSelectS
     <div className="p-4 h-full flex flex-col">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">Danh mục</h2>
-        {canEdit && <Button size="sm" onClick={onAddCategory}><Plus className="h-4 w-4 mr-2" />Thêm mục</Button>}
+        {canEdit && <Button size="sm" onClick={onAddCategory} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><Plus className="h-4 w-4 mr-2" />Thêm mục</Button>}
       </div>
       <div className="flex-grow overflow-y-auto">
         <Accordion type="multiple" className="w-full" defaultValue={categories.map(c => c.id)}>

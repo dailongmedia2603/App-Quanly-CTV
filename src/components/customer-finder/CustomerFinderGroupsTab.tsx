@@ -114,7 +114,7 @@ const CustomerFinderGroupsTab = () => {
       </CardHeader>
       <CardContent>
         {loading ? <p>Đang tải...</p> : categories.length === 0 ? <p className="text-center text-gray-500 py-8">Chưa có nhóm group nào.</p> : (
-          <Accordion type="multiple" className="w-full space-y-3" defaultValue={categories.map(c => c.id)}>
+          <Accordion type="multiple" className="w-full space-y-3">
             {categories.map(category => (
               <AccordionItem value={category.id} key={category.id} className="border border-orange-100 rounded-lg bg-white/50">
                 <AccordionTrigger className="p-4 hover:no-underline">

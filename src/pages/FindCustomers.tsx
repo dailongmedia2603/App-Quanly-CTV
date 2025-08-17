@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { FacebookReportDetailsDialog } from "@/components/FacebookReportDetailsDialog";
 import { showError, showSuccess } from '@/utils/toast';
 import { format } from 'date-fns';
-import { ExternalLink, FileText, Users, MessageSquare, Clock, Tags, Link as LinkIcon, Sparkles, Copy, RefreshCw, Loader2 } from 'lucide-react';
+import { ExternalLink, FileText, Users, MessageSquare, Clock, Tags, Link as LinkIcon, Sparkles, Copy, RefreshCw, Loader2, ListChecks } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CustomerFinderGroupsTab from '@/components/customer-finder/CustomerFinderGroupsTab';
 
 interface ReportData {
   id: string;
@@ -136,99 +138,120 @@ const FindCustomers = () => {
 
   return (
     <>
-      <div>
-        <Card className="border-orange-200">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Users className="h-6 w-6 text-brand-orange" />
-              <span>Khách hàng tiềm năng ({reportData.length})</span>
-            </CardTitle>
-            <CardDescription>Danh sách các khách hàng tiềm năng được thu thập. Bấm vào nút để AI tạo comment giới thiệu dịch vụ phù hợp.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead><div className="flex items-center space-x-2"><FileText className="h-4 w-4" /><span>Nội dung bài viết</span></div></TableHead>
-                    <TableHead><div className="flex items-center space-x-2"><MessageSquare className="h-4 w-4" /><span>Comment đề xuất</span></div></TableHead>
-                    <TableHead><div className="flex items-center space-x-2"><Clock className="h-4 w-4" /><span>Thời gian đăng</span></div></TableHead>
-                    <TableHead><div className="flex items-center space-x-2"><Tags className="h-4 w-4" /><span>Dịch vụ phù hợp</span></div></TableHead>
-                    <TableHead className="text-right"><div className="flex items-center justify-end space-x-2"><LinkIcon className="h-4 w-4" /><span>Link</span></div></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loadingReports ? (
-                    <TableRow><TableCell colSpan={5} className="h-24 text-center">Đang tải kết quả...</TableCell></TableRow>
-                  ) : paginatedData.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center">
-                        <div className="flex flex-col items-center justify-center text-gray-500">
-                          <FileText className="h-10 w-10 mb-2" />
-                          Không tìm thấy kết quả nào.
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedData.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="max-w-md truncate cursor-pointer hover:text-brand-orange" onClick={() => handleViewDetails(item)}>
-                          {item.description}
-                        </TableCell>
-                        <TableCell className="max-w-sm">
-                          {generatingCommentIds.has(item.id) ? (
-                            <div className="flex items-center space-x-2 text-gray-500">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              <span>Đang tạo comment...</span>
-                            </div>
-                          ) : item.suggested_comment ? (
-                            <div className="space-y-2">
-                              <p className="whitespace-pre-wrap text-sm">{item.suggested_comment}</p>
-                              <div className="flex items-center space-x-1">
-                                <Button variant="ghost" size="sm" onClick={() => handleCopyComment(item.suggested_comment)}>
-                                  <Copy className="h-3 w-3 mr-1" /> Sao chép
-                                </Button>
-                                <Button variant="ghost" size="sm" onClick={() => handleGenerateComment(item)}>
-                                  <RefreshCw className="h-3 w-3 mr-1" /> Tạo lại
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <Button 
-                              onClick={() => handleGenerateComment(item)}
-                              className="bg-brand-orange text-white hover:bg-brand-orange/90 animate-pulse"
-                            >
-                              <Sparkles className="h-4 w-4 mr-2" />
-                              Tạo comment giới thiệu
-                            </Button>
-                          )}
-                        </TableCell>
-                        <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
-                        <TableCell>
-                          {item.identified_service_name ? (
-                            <Badge variant="default">{item.identified_service_name}</Badge>
-                          ) : <span className="text-gray-400 italic">Chưa xác định</span>}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" asChild className="text-brand-orange hover:bg-brand-orange-light hover:text-brand-orange">
-                            <a href={item.source_url!} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
-                          </Button>
-                        </TableCell>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Tìm khách hàng</h1>
+          <p className="text-gray-500 mt-1">Công cụ AI tự động quét và đề xuất các khách hàng tiềm năng từ mạng xã hội.</p>
+        </div>
+        <Tabs defaultValue="potential-customers" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 max-w-md rounded-lg border border-orange-200 p-0 bg-white">
+            <TabsTrigger value="potential-customers" className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-l-md">
+              <Users className="h-4 w-4" />
+              <span>Khách hàng tiềm năng</span>
+            </TabsTrigger>
+            <TabsTrigger value="groups" className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-r-md">
+              <ListChecks className="h-4 w-4" />
+              <span>Group tìm khách hàng</span>
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="potential-customers" className="pt-6">
+            <Card className="border-orange-200">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Users className="h-6 w-6 text-brand-orange" />
+                  <span>Khách hàng tiềm năng ({reportData.length})</span>
+                </CardTitle>
+                <CardDescription>Danh sách các khách hàng tiềm năng được thu thập. Bấm vào nút để AI tạo comment giới thiệu dịch vụ phù hợp.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead><div className="flex items-center space-x-2"><FileText className="h-4 w-4" /><span>Nội dung bài viết</span></div></TableHead>
+                        <TableHead><div className="flex items-center space-x-2"><MessageSquare className="h-4 w-4" /><span>Comment đề xuất</span></div></TableHead>
+                        <TableHead><div className="flex items-center space-x-2"><Clock className="h-4 w-4" /><span>Thời gian đăng</span></div></TableHead>
+                        <TableHead><div className="flex items-center space-x-2"><Tags className="h-4 w-4" /><span>Dịch vụ phù hợp</span></div></TableHead>
+                        <TableHead className="text-right"><div className="flex items-center justify-end space-x-2"><LinkIcon className="h-4 w-4" /><span>Link</span></div></TableHead>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            {totalPages > 1 && (
-              <div className="flex items-center justify-end space-x-2 py-4">
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}>Trước</Button>
-                <span className="text-sm">Trang {currentPage} / {totalPages}</span>
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>Sau</Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {loadingReports ? (
+                        <TableRow><TableCell colSpan={5} className="h-24 text-center">Đang tải kết quả...</TableCell></TableRow>
+                      ) : paginatedData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="h-24 text-center">
+                            <div className="flex flex-col items-center justify-center text-gray-500">
+                              <FileText className="h-10 w-10 mb-2" />
+                              Không tìm thấy kết quả nào.
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        paginatedData.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="max-w-md truncate cursor-pointer hover:text-brand-orange" onClick={() => handleViewDetails(item)}>
+                              {item.description}
+                            </TableCell>
+                            <TableCell className="max-w-sm">
+                              {generatingCommentIds.has(item.id) ? (
+                                <div className="flex items-center space-x-2 text-gray-500">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  <span>Đang tạo comment...</span>
+                                </div>
+                              ) : item.suggested_comment ? (
+                                <div className="space-y-2">
+                                  <p className="whitespace-pre-wrap text-sm">{item.suggested_comment}</p>
+                                  <div className="flex items-center space-x-1">
+                                    <Button variant="ghost" size="sm" onClick={() => handleCopyComment(item.suggested_comment)}>
+                                      <Copy className="h-3 w-3 mr-1" /> Sao chép
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => handleGenerateComment(item)}>
+                                      <RefreshCw className="h-3 w-3 mr-1" /> Tạo lại
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <Button 
+                                  onClick={() => handleGenerateComment(item)}
+                                  className="bg-brand-orange text-white hover:bg-brand-orange/90 animate-pulse"
+                                >
+                                  <Sparkles className="h-4 w-4 mr-2" />
+                                  Tạo comment giới thiệu
+                                </Button>
+                              )}
+                            </TableCell>
+                            <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
+                            <TableCell>
+                              {item.identified_service_name ? (
+                                <Badge variant="default">{item.identified_service_name}</Badge>
+                              ) : <span className="text-gray-400 italic">Chưa xác định</span>}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" asChild className="text-brand-orange hover:bg-brand-orange-light hover:text-brand-orange">
+                                <a href={item.source_url!} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-end space-x-2 py-4">
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}>Trước</Button>
+                    <span className="text-sm">Trang {currentPage} / {totalPages}</span>
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>Sau</Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="groups" className="pt-6">
+            <CustomerFinderGroupsTab />
+          </TabsContent>
+        </Tabs>
       </div>
       <FacebookReportDetailsDialog
         isOpen={isDetailsModalOpen}

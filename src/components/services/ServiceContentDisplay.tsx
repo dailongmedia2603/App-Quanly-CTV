@@ -8,6 +8,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import MDEditor from '@uiw/react-md-editor';
+import "@uiw/react-md-editor/markdown-editor.css";
+import "@uiw/react-md-editor/react-markdown-preview.css";
 
 interface ServiceContentDisplayProps {
   serviceId: string | null;

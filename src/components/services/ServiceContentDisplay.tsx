@@ -119,7 +119,7 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
               <Button onClick={handleSave} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><Save className="h-4 w-4 mr-2" />Lưu</Button>
             </div>
           ) : (
-            <Button onClick={() => setIsEditing(true)}><Pencil className="h-4 w-4 mr-2" />Sửa nội dung</Button>
+            <Button onClick={() => setIsEditing(true)} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><Pencil className="h-4 w-4 mr-2" />Sửa nội dung</Button>
           )
         )}
       </div>

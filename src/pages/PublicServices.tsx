@@ -108,7 +108,7 @@ const PublicServices = () => {
         <DialogContent>
           <DialogHeader><DialogTitle>Thêm danh mục chính</DialogTitle></DialogHeader>
           <div className="py-4"><Label htmlFor="category-name">Tên danh mục</Label><Input id="category-name" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} /></div>
-          <DialogFooter><Button variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>Hủy</Button><Button onClick={handleAddCategory}>Thêm</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>Hủy</Button><Button onClick={handleAddCategory} className="bg-brand-orange hover:bg-brand-orange/90 text-white">Thêm</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -117,7 +117,7 @@ const PublicServices = () => {
         <DialogContent>
           <DialogHeader><DialogTitle>Thêm dịch vụ con</DialogTitle></DialogHeader>
           <div className="py-4"><Label htmlFor="service-name">Tên dịch vụ</Label><Input id="service-name" value={newServiceName} onChange={e => setNewServiceName(e.target.value)} /></div>
-          <DialogFooter><Button variant="outline" onClick={() => setIsServiceDialogOpen(false)}>Hủy</Button><Button onClick={handleAddService}>Thêm</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setIsServiceDialogOpen(false)}>Hủy</Button><Button onClick={handleAddService} className="bg-brand-orange hover:bg-brand-orange/90 text-white">Thêm</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </>

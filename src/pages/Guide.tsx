@@ -4,13 +4,13 @@ const Guide = () => {
   const guides = [
     {
       title: "1. Tìm kiếm khách hàng: Trợ lý săn tìm cơ hội 24/7",
-      description: "Thay vì tốn hàng giờ lướt Facebook, công cụ này sẽ tự động tìm kiếm và mang những khách hàng tiềm năng nhất đến cho bạn.",
+      description: "Đây là công cụ được Dailong Media phát triển độc quyền nhằm giải phóng bạn khỏi công việc tìm kiếm khách hàng thủ công. Hệ thống sẽ tự động 'lắng nghe' mạng xã hội và mang đến cho bạn một danh sách các khách hàng tiềm năng - những người đã thể hiện sự quan tâm rõ ràng đến các dịch vụ của chúng ta. Nhiệm vụ của bạn giờ đây là tập trung vào điều quan trọng nhất: kết nối và tư vấn.",
       steps: [
-        "<strong>Bước 1: Thiết lập 'radar' của bạn (Tạo chiến dịch):</strong> Hãy coi mỗi chiến dịch như một 'radar' chuyên biệt. Bạn vào menu <strong>Quét & Tìm khách hàng</strong> và tạo một chiến dịch mới.",
-        "<strong>Bước 2: Nhập 'tín hiệu' (Điền thông tin):</strong> Đặt tên cho chiến dịch, chọn các group Facebook bạn muốn quét và nhập các từ khóa liên quan. Đây là những 'tín hiệu' mà radar của bạn sẽ dò tìm (ví dụ: 'cần thiết kế logo', 'tìm đơn vị marketing').",
-        "<strong>Bước 3: Tối ưu hóa (Thiết lập quét & AI):</strong> Bật <strong>'Bộ lọc AI'</strong> giống như việc trang bị cho radar của bạn một bộ não thông minh. AI sẽ tự động phân tích và đánh giá mức độ tiềm năng của mỗi bài viết, giúp bạn tiết kiệm thời gian.",
-        "<strong>Bước 4: Xem 'chiến lợi phẩm' (Xem kết quả):</strong> Vào mục <strong>Tìm khách hàng</strong>, tất cả các 'mục tiêu' tiềm năng sẽ được liệt kê rõ ràng, kèm theo đánh giá từ AI.",
-        "<strong>Bước 5: Tiếp cận thông minh (Hành động):</strong> Không cần phải suy nghĩ nên bắt đầu từ đâu. AI đã gợi ý sẵn một bình luận chuyên nghiệp. Bạn chỉ cần sao chép, chỉnh sửa một chút cho phù hợp và tương tác với khách hàng."
+        "<strong>Nội dung bài viết:</strong> Hiển thị đầy đủ nội dung gốc mà khách hàng đã đăng. Hãy đọc kỹ để nắm bắt chính xác nhu cầu và vấn đề của họ.",
+        "<strong>Comment đề xuất:</strong> AI đã phân tích và soạn sẵn một bình luận chuyên nghiệp để bạn bắt đầu cuộc trò chuyện. <strong>Việc của bạn:</strong> Sao chép, có thể chỉnh sửa một chút cho tự nhiên và phù hợp với văn phong của bạn, sau đó đăng vào bài viết của khách hàng.",
+        "<strong>Thời gian đăng:</strong> Cho bạn biết bài viết được đăng khi nào. Những bài viết mới nhất thường là cơ hội tốt nhất, hãy ưu tiên tương tác trước.",
+        "<strong>Dịch vụ phù hợp:</strong> Hệ thống tự động phân tích và gợi ý dịch vụ phù hợp nhất của Dailong Media với nhu cầu của khách hàng, giúp bạn tư vấn đúng trọng tâm.",
+        "<strong>Link:</strong> Đường dẫn trực tiếp đến bài viết gốc trên Facebook. Nhấn vào đây để đến thẳng bài viết và bắt đầu tương tác."
       ]
     },
     {
@@ -68,11 +68,11 @@ const Guide = () => {
               <CardDescription className="text-base">{guide.description}</CardDescription>
             </CardHeader>
             <CardContent>
-              <ol className="list-decimal list-inside space-y-4">
+              <ul className="list-disc list-inside space-y-4">
                 {guide.steps.map((step, stepIndex) => (
                   <li key={stepIndex} dangerouslySetInnerHTML={{ __html: step }} className="text-gray-700 leading-relaxed" />
                 ))}
-              </ol>
+              </ul>
             </CardContent>
           </Card>
         ))}

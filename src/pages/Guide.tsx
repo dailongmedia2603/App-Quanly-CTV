@@ -1,175 +1,92 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { FileText, Target, SlidersHorizontal, KeyRound, Book, ChevronRight } from "lucide-react";
-import { cn } from '@/lib/utils';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Define the structure for a guide section
-interface GuideSection {
-  id: string;
-  title: string;
-  icon: React.ElementType;
-  content: React.ReactNode;
-}
-
-// Content for each section
-const sections: GuideSection[] = [
-  {
-    id: 'introduction',
-    title: 'Giới thiệu',
-    icon: Book,
-    content: (
-      <div>
-        <h2 className="text-3xl font-bold text-gray-800 mb-4">Chào mừng đến với Listen PRO</h2>
-        <p className="text-lg text-gray-600">
-          Listen PRO là một công cụ mạnh mẽ giúp bạn theo dõi, thu thập và phân tích thông tin từ nhiều nguồn khác nhau trên internet như mạng xã hội và website. Tài liệu này sẽ hướng dẫn bạn từng bước để khai thác tối đa các tính năng của ứng dụng.
-        </p>
-      </div>
-    ),
-  },
-  {
-    id: 'api-keys',
-    title: 'Cấu hình API Keys',
-    icon: KeyRound,
-    content: (
-      <div className="prose max-w-none">
-        <p>
-          Đây là bước đầu tiên và quan trọng nhất để ứng dụng có thể hoạt động. Bạn cần cung cấp các API key cho các dịch vụ bên thứ ba mà Listen PRO sử dụng để thu thập và phân tích dữ liệu.
-        </p>
-        <ul>
-          <li><strong>API AI (Gemini):</strong> Dùng để phân tích và đánh giá nội dung bằng trí tuệ nhân tạo. Bạn có thể lấy key từ <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer">Google AI Studio</a>.</li>
-          <li><strong>API Facebook:</strong> Dùng để lấy dữ liệu từ các group Facebook. Bạn cần sử dụng URL và Token từ dịch vụ proxy được cung cấp cho bạn.</li>
-          <li><strong>API Firecrawl:</strong> Dùng để thu thập dữ liệu từ các website. Bạn có thể đăng ký và lấy key từ <a href="https://firecrawl.dev" target="_blank" rel="noopener noreferrer">Firecrawl.dev</a>.</li>
-        </ul>
-        <p>
-          Sau khi nhập key vào các trường tương ứng trong mục "API Keys", hãy bấm nút <strong>Test Connection</strong> để đảm bảo thông tin chính xác trước khi bấm <strong>Save</strong>.
-        </p>
-      </div>
-    ),
-  },
-  {
-    id: 'data-sources',
-    title: 'Thiết lập Nguồn',
-    icon: SlidersHorizontal,
-    content: (
-      <div className="prose max-w-none">
-        <p>
-          Tại mục "Thiết lập nguồn", bạn có thể quản lý danh sách các nguồn mà bạn muốn theo dõi. Nguồn được chia thành hai loại chính:
-        </p>
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="item-1">
-            <AccordionTrigger>Nguồn Website</AccordionTrigger>
-            <AccordionContent>
-              Thêm các URL của website bạn muốn quét. Mỗi website có thể được cấu hình với một "Endpoint" khác nhau (/scrape, /crawl, /map) tùy thuộc vào cấu trúc của trang web đó và loại dữ liệu bạn muốn thu thập.
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="item-2">
-            <AccordionTrigger>Nguồn Group Facebook</AccordionTrigger>
-            <AccordionContent>
-              Thêm các Group ID và Tên Group mà bạn muốn theo dõi. Dữ liệu từ các group này sẽ được thu thập để phân tích.
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-        <p className="mt-4">
-          Bạn có thể thêm từng nguồn một cách thủ công hoặc sử dụng tính năng <strong>Import</strong> để thêm hàng loạt từ file Excel, giúp tiết kiệm thời gian khi có nhiều nguồn cần quản lý.
-        </p>
-      </div>
-    ),
-  },
-  {
-    id: 'campaigns',
-    title: 'Quản lý Chiến dịch',
-    icon: Target,
-    content: (
-      <div className="prose max-w-none">
-        <p>
-          Chiến dịch là trung tâm của Listen PRO. Mỗi chiến dịch sẽ liên kết các nguồn dữ liệu và các thiết lập quét để thu thập thông tin theo mục tiêu của bạn.
-        </p>
-        <ul>
-          <li><strong>Tên chiến dịch:</strong> Đặt một cái tên dễ nhớ để phân biệt.</li>
-          <li><strong>Loại chiến dịch:</strong> Chọn Facebook, Website, hoặc Tổng hợp (kết hợp cả hai).</li>
-          <li><strong>Nguồn:</strong> Chọn các nguồn (group, website) đã được thiết lập trước đó để đưa vào chiến dịch.</li>
-          <li><strong>Tần suất quét:</strong> Cài đặt thời gian giữa các lần quét (phút, giờ, ngày).</li>
-          <li><strong>Lọc bằng AI (chỉ cho Facebook):</strong> Bật tính năng này và cung cấp "Yêu cầu AI" (prompt) để AI tự động phân tích và đánh giá nội dung bài viết theo các tiêu chí của bạn.</li>
-        </ul>
-        <p>
-          Sau khi tạo, bạn có thể "Tạm dừng", "Tiếp tục", "Sửa", "Xóa" hoặc thực hiện <strong>Quét ngay</strong> cho mỗi chiến dịch.
-        </p>
-      </div>
-    ),
-  },
-  {
-    id: 'reports',
-    title: 'Xem Báo cáo',
-    icon: FileText,
-    content: (
-      <div className="prose max-w-none">
-        <p>
-          Mục "Báo cáo" hiển thị tất cả dữ liệu đã được thu thập từ các chiến dịch của bạn.
-        </p>
-        <ul>
-          <li>Chọn một chiến dịch từ danh sách bên trái để xem chi tiết kết quả quét.</li>
-          <li>Dữ liệu được hiển thị trong một bảng, bạn có thể xem chi tiết từng mục, xóa các mục không cần thiết hoặc xuất toàn bộ báo cáo ra file Excel.</li>
-          <li>Sử dụng nút <strong>Logs</strong> để xem lịch sử chi tiết các lần quét của chiến dịch, bao gồm cả các lỗi (nếu có), giúp bạn theo dõi và gỡ lỗi khi cần.</li>
-        </ul>
-      </div>
-    ),
-  },
-];
-
-const Guide = () => {
-  const [activeSection, setActiveSection] = useState<string>(sections[0].id);
-
-  const currentSection = sections.find(s => s.id === activeSection);
+const HelpPage = () => {
+  const guides = [
+    {
+      title: "1. Tìm kiếm khách hàng",
+      description: "Công cụ tự động quét các hội nhóm Facebook để tìm kiếm khách hàng tiềm năng dựa trên các từ khóa và chiến dịch bạn thiết lập.",
+      steps: [
+        "<strong>Tạo chiến dịch:</strong> Truy cập menu <strong>Tìm khách hàng &gt; Danh sách chiến dịch</strong> và nhấn <strong>'Tạo chiến dịch mới'</strong>.",
+        "<strong>Điền thông tin:</strong> Đặt tên, chọn nguồn (các group Facebook đã có), và nhập các <strong>từ khóa</strong> liên quan đến dịch vụ (ví dụ: 'cần thiết kế logo', 'tìm đơn vị marketing', 'báo giá website').",
+        "<strong>Thiết lập quét:</strong> Chọn tần suất quét và thời gian bắt đầu/kết thúc. Nên bật <strong>'Bộ lọc AI'</strong> để hệ thống phân tích và đánh giá bài viết một cách thông minh, giúp bạn tập trung vào những khách hàng tiềm năng nhất.",
+        "<strong>Xem kết quả:</strong> Vào mục <strong>Tìm khách hàng &gt; Báo cáo Facebook</strong>. Tại đây, hệ thống sẽ liệt kê tất cả bài viết phù hợp được tìm thấy.",
+        "<strong>Hành động:</strong> Bạn có thể xem nội dung bài viết, đánh giá của AI về mức độ tiềm năng, và sử dụng <strong>'Bình luận gợi ý'</strong> do AI tạo ra để tương tác nhanh chóng và chuyên nghiệp."
+      ]
+    },
+    {
+      title: "2. Tạo bài viết (AI Content)",
+      description: "Sử dụng trí tuệ nhân tạo (AI) để nhanh chóng soạn thảo các bài viết quảng cáo, chia sẻ kiến thức chuyên nghiệp để đăng lên trang cá nhân hoặc các hội nhóm.",
+      steps: [
+        "Truy cập menu <strong>Công cụ AI &gt; Tạo bài viết</strong>.",
+        "<strong>Chọn Dịch vụ:</strong> Lựa chọn dịch vụ bạn muốn quảng bá (ví dụ: Thiết kế Website, Quản trị Fanpage).",
+        "<strong>Chọn Loại bài viết:</strong> Xác định mục tiêu của bài viết (ví dụ: Bài viết quảng cáo, Bài viết chia sẻ kiến thức, Bài viết giới thiệu).",
+        "<strong>Thêm yêu cầu:</strong> Cung cấp thêm các chỉ dẫn chi tiết cho AI để nội dung được cá nhân hóa và hiệu quả hơn (ví dụ: 'giọng văn hài hước, gần gũi', 'nhấn mạnh vào lợi ích tiết kiệm chi phí cho doanh nghiệp nhỏ').",
+        "<strong>Tạo và sử dụng:</strong> Nhấn <strong>'Tạo bài viết'</strong>. AI sẽ tạo ra một bài viết hoàn chỉnh. Bạn có thể sao chép, chỉnh sửa lại một chút cho phù hợp với văn phong của mình và đăng tải."
+      ]
+    },
+    {
+      title: "3. Tạo bình luận (AI Comment)",
+      description: "Công cụ giúp bạn tạo ra các bình luận chuyên nghiệp, phù hợp với ngữ cảnh để trả lời khách hàng hoặc tương tác trong các bài viết tiềm năng.",
+      steps: [
+        "Truy cập menu <strong>Công cụ AI &gt; Tạo comment</strong>.",
+        "<strong>Dán nội dung bài viết:</strong> Sao chép toàn bộ nội dung bài viết của khách hàng mà bạn muốn bình luận và dán vào ô.",
+        "<strong>Chọn Dịch vụ:</strong> Chọn dịch vụ của Dailong Media phù hợp nhất để giải quyết nhu cầu trong bài viết.",
+        "<strong>Thêm yêu cầu (tùy chọn):</strong> Đưa ra chỉ dẫn thêm cho AI (ví dụ: 'bình luận ngắn gọn và thân thiện', 'thể hiện sự chuyên nghiệp và đồng cảm').",
+        "<strong>Tạo và sử dụng:</strong> Nhấn <strong>'Tạo comment'</strong>. AI sẽ phân tích bài viết và tạo ra một bình luận gợi ý. Bạn có thể sao chép để sử dụng trực tiếp hoặc chỉnh sửa lại."
+      ]
+    },
+    {
+      title: "4. Tư vấn khách hàng (AI Assistant)",
+      description: "Trợ lý AI chuyên nghiệp được huấn luyện để giúp bạn soạn thảo nội dung tư vấn, báo giá, và trả lời các câu hỏi phức tạp của khách hàng.",
+      steps: [
+        "Truy cập menu <strong>Công cụ AI &gt; Tư vấn khách hàng</strong>.",
+        "<strong>Tạo phiên tư vấn mới:</strong> Mỗi khách hàng hoặc mỗi cuộc trò chuyện nên được bắt đầu trong một phiên mới để AI có thể theo dõi ngữ cảnh tốt hơn.",
+        "<strong>Chọn Dịch vụ:</strong> Chọn các dịch vụ mà khách hàng đang quan tâm.",
+        "<strong>Bắt đầu trò chuyện với AI:</strong> Đặt câu hỏi hoặc nhập yêu cầu của khách hàng vào khung chat. Ví dụ: 'Khách hàng hỏi về quy trình thiết kế logo gồm mấy bước?', 'Soạn giúp mình một báo giá chi tiết cho dịch vụ quản trị fanpage gói cơ bản trong 3 tháng'.",
+        "<strong>Nhận câu trả lời:</strong> AI sẽ phản hồi như một chuyên viên tư vấn thực thụ. Bạn có thể sao chép câu trả lời này để gửi cho khách hàng, giúp tiết kiệm thời gian và đảm bảo tính chuyên nghiệp."
+      ]
+    },
+    {
+      title: "5. Theo dõi thu nhập",
+      description: "Theo dõi toàn bộ thu nhập, hoa hồng, và hiệu suất kinh doanh của bạn một cách minh bạch và chi tiết.",
+      steps: [
+        "Truy cập menu <strong>Báo cáo hiệu suất &gt; Thu nhập của tôi</strong>.",
+        "<strong>Chọn tháng báo cáo:</strong> Sử dụng bộ lọc để chọn tháng bạn muốn xem chi tiết.",
+        "<strong>Xem tổng quan:</strong> Bảng điều khiển sẽ hiển thị các thông số quan trọng:",
+        "<ul><li><strong>Lương cứng:</strong> Khoản lương cố định bạn nhận được dựa trên doanh số đạt được trong tháng hoặc tháng trước đó.</li><li><strong>Hoa hồng hợp đồng mới:</strong> Tổng hoa hồng từ các hợp đồng được ký kết trong tháng.</li><li><strong>Hoa hồng hợp đồng cũ:</strong> Tổng hoa hồng từ các khoản thanh toán của những hợp đồng đã ký từ các tháng trước.</li><li><strong>Tổng thu nhập:</strong> Tổng của tất cả các khoản trên.</li></ul>",
+        "<strong>Xem chi tiết hợp đồng:</strong> Kéo xuống dưới để xem danh sách chi tiết từng hợp đồng, giá trị, và các khoản thanh toán liên quan đã được ghi nhận trong tháng."
+      ]
+    }
+  ];
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">Hướng dẫn sử dụng</h1>
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* Left Navigation */}
-        <nav className="md:w-1/4 lg:w-1/5">
-          <div className="space-y-2">
-            {sections.map(section => (
-              <button
-                key={section.id}
-                onClick={() => setActiveSection(section.id)}
-                className={cn(
-                  "w-full flex items-center justify-between text-left p-3 rounded-lg transition-colors",
-                  activeSection === section.id
-                    ? "bg-brand-orange-light text-brand-orange font-semibold"
-                    : "text-gray-600 hover:bg-gray-100"
-                )}
-              >
-                <div className="flex items-center space-x-3">
-                  <section.icon className="h-5 w-5 flex-shrink-0" />
-                  <span>{section.title}</span>
-                </div>
-                <ChevronRight className={cn(
-                  "h-4 w-4 transition-transform",
-                  activeSection === section.id ? "transform translate-x-1" : ""
-                )} />
-              </button>
-            ))}
-          </div>
-        </nav>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold">Hướng dẫn sử dụng hệ thống</h1>
+        <p className="text-muted-foreground mt-2">
+          Chào mừng bạn đến với hệ thống Cộng tác viên của Dailong Media. Dưới đây là hướng dẫn chi tiết các tính năng chính giúp bạn làm việc hiệu quả.
+        </p>
+      </div>
 
-        {/* Right Content */}
-        <main className="flex-1 md:w-3/4 lg:w-4/5">
-          <Card className="border-orange-200 h-full">
+      <div className="grid gap-6">
+        {guides.map((guide, index) => (
+          <Card key={index}>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-3 text-2xl">
-                {currentSection && <currentSection.icon className="h-7 w-7 text-brand-orange" />}
-                <span>{currentSection?.title}</span>
-              </CardTitle>
+              <CardTitle className="text-2xl">{guide.title}</CardTitle>
+              <CardDescription>{guide.description}</CardDescription>
             </CardHeader>
             <CardContent>
-              {currentSection?.content}
+              <ol className="list-decimal list-inside space-y-3">
+                {guide.steps.map((step, stepIndex) => (
+                  <li key={stepIndex} dangerouslySetInnerHTML={{ __html: step }} className="text-gray-700" />
+                ))}
+              </ol>
             </CardContent>
           </Card>
-        </main>
+        ))}
       </div>
     </div>
   );
 };
 
-export default Guide;
+export default HelpPage;

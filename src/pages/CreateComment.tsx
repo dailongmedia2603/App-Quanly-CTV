@@ -80,9 +80,12 @@ const getCommentSnippet = (content: string): string => {
   if (!content) return 'Comment không có nội dung';
   const cleanedContent = cleanAiResponseForDisplay(content);
   const firstLine = cleanedContent.split('\n')[0].trim();
-  if (firstLine.length > 100) {
-    return firstLine.substring(0, 100) + '...';
+  
+  const words = firstLine.split(/\s+/);
+  if (words.length > 8) {
+    return words.slice(0, 8).join(' ') + '...';
   }
+
   return firstLine || 'Comment không có nội dung';
 };
 
@@ -147,10 +150,12 @@ const CommentHistoryView = ({ onBack }: { onBack: () => void }) => {
               {logs.map(log => (
                 <AccordionItem value={log.id} key={log.id} className="bg-white border border-orange-200 rounded-lg shadow-sm">
                   <AccordionTrigger className="p-4 hover:no-underline hover:bg-orange-50/50 rounded-t-lg data-[state=open]:border-b data-[state=open]:border-orange-200">
-                    <span className="font-medium text-left text-gray-800 truncate flex-1 min-w-0">{getCommentSnippet(log.generated_content)}</span>
-                    <span className="text-sm text-gray-500 font-normal flex-shrink-0 pl-4">
-                      {format(new Date(log.created_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}
-                    </span>
+                    <div className="flex justify-between items-center w-full min-w-0 gap-4">
+                      <span className="font-medium text-left text-gray-800 truncate flex-1 min-w-0">{getCommentSnippet(log.generated_content)}</span>
+                      <span className="text-sm text-gray-500 font-normal flex-shrink-0 pl-4">
+                        {format(new Date(log.created_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}
+                      </span>
+                    </div>
                   </AccordionTrigger>
                   <AccordionContent className="p-4 bg-white rounded-b-lg">
                     <div className="prose max-w-none relative bg-orange-50/30 p-4 rounded-md border border-orange-100">

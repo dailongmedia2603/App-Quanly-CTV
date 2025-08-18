@@ -179,7 +179,7 @@ const CustomerFinderGroupsTab = () => {
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <CardTitle className="text-2xl">Danh sách Group Facebook</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl">Danh sách Group Facebook</CardTitle>
             {!isMobile && (
               <CardDescription>Các group chất lượng được phân loại theo từng nhóm để tìm kiếm khách hàng.</CardDescription>
             )}
@@ -192,7 +192,7 @@ const CustomerFinderGroupsTab = () => {
       </CardHeader>
       <CardContent>
         {loading ? <p>Đang tải...</p> : categories.length === 0 ? <p className="text-center text-gray-500 py-8">Chưa có nhóm group nào.</p> : (
-          <Accordion type="multiple" className="w-full space-y-3">
+          <Accordion type="multiple" className="w-full space-y-3" defaultValue={categories.map(c => c.id)}>
             {categories.map(category => (
               <AccordionItem value={category.id} key={category.id} className="border border-orange-100 rounded-lg bg-white/50">
                 <AccordionTrigger className="p-4 hover:no-underline">
@@ -205,19 +205,24 @@ const CustomerFinderGroupsTab = () => {
                     {isSuperAdmin && <div className="flex items-center space-x-1"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setEditingCategory(category); setCategoryName(category.name); setIsCategoryDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={(e) => { e.stopPropagation(); setItemToDelete({ type: 'category', data: category }); setIsDeleteAlertOpen(true); }}><Trash2 className="h-4 w-4" /></Button></div>}
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="px-4 pb-4">
-                  <div className="pl-8 border-l-2 border-orange-100">
+                <AccordionContent className="px-2 sm:px-4 pb-4">
+                  <div className="pl-2 sm:pl-4 border-l-2 border-orange-100">
                     <Table>
                       <TableHeader><TableRow>
-                        <TableHead className="w-[80px]"><div className="flex items-center space-x-2"><Hash className="h-4 w-4" /><span>STT</span></div></TableHead>
-                        <TableHead><div className="flex items-center space-x-2"><Users className="h-4 w-4" /><span>Tên group</span></div></TableHead>
-                        <TableHead className="text-center"><div className="flex items-center justify-center space-x-2"><LinkIcon className="h-4 w-4" /><span>Link</span></div></TableHead>
-                        {isSuperAdmin && <TableHead className="text-right"><div className="flex items-center justify-end space-x-2"><Settings2 className="h-4 w-4" /><span>Hành động</span></div></TableHead>}
+                        <TableHead className="w-[40px] px-1 text-center">#</TableHead>
+                        <TableHead>Tên group</TableHead>
+                        <TableHead className="w-[50px] px-1 text-center">Link</TableHead>
+                        {isSuperAdmin && <TableHead className="w-[80px] px-1 text-right">Sửa/Xóa</TableHead>}
                       </TableRow></TableHeader>
                       <TableBody>
-                        {category.customer_finder_groups.length === 0 ? <TableRow><TableCell colSpan={4} className="text-center h-16">Chưa có group nào trong nhóm này.</TableCell></TableRow> : (
+                        {category.customer_finder_groups.length === 0 ? <TableRow><TableCell colSpan={isSuperAdmin ? 4 : 3} className="text-center h-16">Chưa có group nào trong nhóm này.</TableCell></TableRow> : (
                           category.customer_finder_groups.map((group, index) => (
-                            <TableRow key={group.id}><TableCell>{index + 1}</TableCell><TableCell className="font-medium">{group.name}</TableCell><TableCell className="text-center"><Button variant="ghost" size="icon" asChild><a href={group.link} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4 text-brand-orange" /></a></Button></TableCell>{isSuperAdmin && <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => { setEditingGroup(group); setGroupName(group.name); setGroupLink(group.link); setParentCategoryId(group.category_id); setIsGroupDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="text-red-500" onClick={() => { setItemToDelete({ type: 'group', data: group }); setIsDeleteAlertOpen(true); }}><Trash2 className="h-4 w-4" /></Button></TableCell>}</TableRow>
+                            <TableRow key={group.id}>
+                              <TableCell className="px-1 text-center">{index + 1}</TableCell>
+                              <TableCell className="font-medium">{group.name}</TableCell>
+                              <TableCell className="px-1 text-center"><Button variant="ghost" size="icon" asChild className="h-8 w-8"><a href={group.link} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4 text-brand-orange" /></a></Button></TableCell>
+                              {isSuperAdmin && <TableCell className="px-1 text-right"><div className="flex justify-end items-center"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingGroup(group); setGroupName(group.name); setGroupLink(group.link); setParentCategoryId(group.category_id); setIsGroupDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => { setItemToDelete({ type: 'group', data: group }); setIsDeleteAlertOpen(true); }}><Trash2 className="h-4 w-4" /></Button></div></TableCell>}
+                            </TableRow>
                           ))
                         )}
                       </TableBody>

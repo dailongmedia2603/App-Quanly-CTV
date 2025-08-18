@@ -2,9 +2,16 @@ import React from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useSidebar } from '@/hooks/use-sidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
+import MobileLayout from '@/components/mobile/MobileLayout';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { isCollapsed, toggleSidebar } = useSidebar();
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return <MobileLayout>{children}</MobileLayout>;
+  }
 
   return (
     <div className="flex h-screen bg-white text-gray-800">

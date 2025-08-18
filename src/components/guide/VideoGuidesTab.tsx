@@ -111,7 +111,10 @@ const VideoGuidesTab = () => {
               <AccordionItem value={guide.id} key={guide.id} className="border border-orange-200 rounded-lg bg-white shadow-sm">
                 <AccordionTrigger className="p-4 hover:no-underline hover:bg-orange-50/50 rounded-t-lg data-[state=open]:border-b data-[state=open]:border-orange-200">
                   <div className="flex justify-between items-center w-full">
-                    <span className="font-semibold text-left text-gray-800">{guide.title}</span>
+                    <div className="flex items-center space-x-3">
+                      <Video className="h-5 w-5 text-brand-orange" />
+                      <span className="font-semibold text-left text-gray-800">{guide.title}</span>
+                    </div>
                     {isSuperAdmin && (
                       <div className="flex items-center space-x-1 flex-shrink-0 ml-4">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleEditClick(guide); }}><Pencil className="h-4 w-4" /></Button>
@@ -124,7 +127,7 @@ const VideoGuidesTab = () => {
                   <div className="space-y-4">
                     {guide.description && <div className="prose max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{guide.description}</ReactMarkdown></div>}
                     {embedUrl ? (
-                      <div className="aspect-w-16 aspect-h-9">
+                      <div className="aspect-video">
                         <iframe src={embedUrl} title={guide.title} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full rounded-lg"></iframe>
                       </div>
                     ) : <p className="text-red-500">Link YouTube không hợp lệ.</p>}

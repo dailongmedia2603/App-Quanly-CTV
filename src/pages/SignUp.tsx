@@ -45,7 +45,7 @@ const SignUp = () => {
     <div className="min-h-screen bg-dotted-pattern flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-md mx-auto bg-white p-8 rounded-2xl shadow-lg">
         <div className="text-center mb-8">
-          <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-24 mx-auto" />
+          <img src="/logodailong-ngang.png" alt="Dailong Media Agency Logo" className="w-auto h-20 mx-auto" />
           <h1 className="text-2xl font-bold text-gray-900 mt-4">Đăng ký tài khoản</h1>
         </div>
 

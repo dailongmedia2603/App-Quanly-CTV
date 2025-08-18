@@ -5,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
-import { Plus, ExternalLink, Pencil, Trash2, Folder, FolderPlus, Hash, Users, Link as LinkIcon, Settings2 } from 'lucide-react';
+import { Plus, ExternalLink, Pencil, Trash2, Folder, FolderPlus, Hash, Users, Link as LinkIcon, Settings2, Upload, FileText } from 'lucide-react';
+import * as XLSX from "xlsx";
 
 interface Group {
   id: string;
@@ -40,6 +41,8 @@ const CustomerFinderGroupsTab = () => {
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ type: 'category' | 'group', data: Category | Group } | null>(null);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
 
   // Form states
   const [categoryName, setCategoryName] = useState('');
@@ -103,6 +106,72 @@ const CustomerFinderGroupsTab = () => {
     setIsSubmitting(false);
   };
 
+  const handleDownloadTemplate = () => {
+    const sampleData = [{ category_name: 'Marketing Online', group_name: 'Cộng đồng Digital Marketing', group_link: 'https://www.facebook.com/groups/...' }];
+    const worksheet = XLSX.utils.json_to_sheet(sampleData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+    XLSX.writeFile(workbook, "mau_import_group_tim_khach_hang.xlsx");
+  };
+
+  const handleImport = async () => {
+    if (!importFile) return showError("Vui lòng chọn một file để import.");
+    setIsSubmitting(true);
+    const toastId = showLoading("Đang xử lý file...");
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet) as { category_name: string; group_name: string; group_link: string }[];
+
+        if (json.length === 0) throw new Error("File không có dữ liệu.");
+
+        const categoryNamesFromFile = [...new Set(json.map(row => row.category_name).filter(Boolean))];
+        if (categoryNamesFromFile.length === 0) throw new Error("File phải có cột 'category_name'.");
+
+        const { data: existingCategories, error: fetchError } = await supabase.from('customer_finder_group_categories').select('id, name').in('name', categoryNamesFromFile);
+        if (fetchError) throw fetchError;
+
+        const existingCategoryMap = new Map(existingCategories.map(c => [c.name, c.id]));
+        const newCategoryNames = categoryNamesFromFile.filter(name => !existingCategoryMap.has(name));
+        if (newCategoryNames.length > 0) {
+          const { data: insertedCategories, error: insertCatError } = await supabase.from('customer_finder_group_categories').insert(newCategoryNames.map(name => ({ name }))).select('id, name');
+          if (insertCatError) throw insertCatError;
+          insertedCategories.forEach(c => existingCategoryMap.set(c.name, c.id));
+        }
+
+        const groupsToInsert = json.map(row => {
+          if (!row.group_name || !row.group_link || !row.category_name) return null;
+          const categoryId = existingCategoryMap.get(row.category_name);
+          if (!categoryId) return null;
+          return { name: String(row.group_name), link: String(row.group_link), category_id: categoryId };
+        }).filter(Boolean);
+
+        if (groupsToInsert.length === 0) throw new Error("Không có group hợp lệ nào để import. Vui lòng kiểm tra file của bạn có các cột 'category_name', 'group_name', 'group_link'.");
+
+        dismissToast(toastId);
+        const insertToastId = showLoading(`Đang import ${groupsToInsert.length} group...`);
+        const { error: insertGroupsError } = await supabase.from('customer_finder_groups').insert(groupsToInsert as any);
+        dismissToast(insertToastId);
+        if (insertGroupsError) throw insertGroupsError;
+
+        showSuccess(`Import thành công ${groupsToInsert.length} group!`);
+        setIsImportDialogOpen(false);
+        setImportFile(null);
+        fetchData();
+      } catch (error: any) {
+        dismissToast(toastId);
+        showError(`Lỗi xử lý file: ${error.message}`);
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+    reader.readAsArrayBuffer(importFile);
+  };
+
   return (
     <Card className="border-orange-200">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -110,7 +179,10 @@ const CustomerFinderGroupsTab = () => {
           <CardTitle>Danh sách Group Facebook</CardTitle>
           <CardDescription>Các group chất lượng được phân loại theo từng nhóm để tìm kiếm khách hàng.</CardDescription>
         </div>
-        {isSuperAdmin && <Button onClick={() => { setEditingCategory(null); setCategoryName(''); setIsCategoryDialogOpen(true); }} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><FolderPlus className="mr-2 h-4 w-4" />Thêm Nhóm Group</Button>}
+        <div className="flex items-center space-x-2">
+          {isSuperAdmin && <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}><Upload className="mr-2 h-4 w-4" />Import</Button>}
+          {isSuperAdmin && <Button onClick={() => { setEditingCategory(null); setCategoryName(''); setIsCategoryDialogOpen(true); }} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><FolderPlus className="mr-2 h-4 w-4" />Thêm Nhóm Group</Button>}
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? <p>Đang tải...</p> : categories.length === 0 ? <p className="text-center text-gray-500 py-8">Chưa có nhóm group nào.</p> : (
@@ -155,6 +227,30 @@ const CustomerFinderGroupsTab = () => {
       <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}><DialogContent><DialogHeader><DialogTitle>{editingCategory ? 'Sửa Nhóm Group' : 'Thêm Nhóm Group mới'}</DialogTitle></DialogHeader><div className="py-4"><Label htmlFor="cat-name">Tên nhóm</Label><Input id="cat-name" value={categoryName} onChange={e => setCategoryName(e.target.value)} /></div><DialogFooter><Button variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>Hủy</Button><Button onClick={handleSaveCategory} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? 'Đang lưu...' : 'Lưu'}</Button></DialogFooter></DialogContent></Dialog>
       <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}><DialogContent><DialogHeader><DialogTitle>{editingGroup ? 'Sửa Group' : 'Thêm Group mới'}</DialogTitle></DialogHeader><div className="grid gap-4 py-4"><div className="space-y-2"><Label htmlFor="group-name">Tên group</Label><Input id="group-name" value={groupName} onChange={e => setGroupName(e.target.value)} /></div><div className="space-y-2"><Label htmlFor="group-link">Link group</Label><Input id="group-link" value={groupLink} onChange={e => setGroupLink(e.target.value)} /></div></div><DialogFooter><Button variant="outline" onClick={() => setIsGroupDialogOpen(false)}>Hủy</Button><Button onClick={handleSaveGroup} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? 'Đang lưu...' : 'Lưu'}</Button></DialogFooter></DialogContent></Dialog>
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Xác nhận xóa</AlertDialogTitle><AlertDialogDescription>Bạn có chắc muốn xóa "{itemToDelete?.data.name}" không? Hành động này không thể hoàn tác.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Hủy</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} disabled={isSubmitting} className="bg-red-600 hover:bg-red-700">{isSubmitting ? 'Đang xóa...' : 'Xóa'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import Group từ file Excel</DialogTitle>
+            <DialogDescription>File phải có 3 cột: 'category_name', 'group_name', và 'group_link'. Nếu 'category_name' chưa tồn tại, nó sẽ được tự động tạo.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="import-file">Chọn file Excel</Label>
+              <Input id="import-file" type="file" accept=".xlsx, .xls" onChange={(e) => setImportFile(e.target.files ? e.target.files[0] : null)} />
+            </div>
+            <Button variant="link" onClick={handleDownloadTemplate} className="p-0 h-auto text-brand-orange">
+              <FileText className="h-4 w-4 mr-2" />
+              Tải file mẫu
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>Hủy</Button>
+            <Button onClick={handleImport} disabled={isSubmitting || !importFile} className="bg-brand-orange hover:bg-brand-orange/90 text-white">
+              {isSubmitting ? "Đang import..." : "Import"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

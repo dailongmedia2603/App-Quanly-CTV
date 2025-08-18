@@ -9,9 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ArrowLeft } from 'lucide-react';
 
 const PublicServices = () => {
   const { roles } = useAuth();
+  const isMobile = useIsMobile();
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
@@ -74,6 +77,64 @@ const PublicServices = () => {
     }
   };
 
+  if (isMobile) {
+    return (
+      <>
+        <div className="h-[calc(100vh-5rem)]">
+          {!selectedServiceId ? (
+            <div className="h-full rounded-lg border border-orange-200 bg-white">
+              <ServiceCategoryList
+                categories={categories}
+                loading={loading}
+                selectedServiceId={selectedServiceId}
+                onSelectService={setSelectedServiceId}
+                onAddCategory={() => setIsCategoryDialogOpen(true)}
+                onAddService={(categoryId) => {
+                  setParentCategoryId(categoryId);
+                  setIsServiceDialogOpen(true);
+                }}
+                canEdit={isSuperAdmin}
+              />
+            </div>
+          ) : (
+            <div className="h-full rounded-lg border border-orange-200 bg-white relative">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="absolute top-4 left-4 z-10 bg-white/80 backdrop-blur-sm" 
+                onClick={() => setSelectedServiceId(null)}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Danh sách
+              </Button>
+              <div className="pt-16 h-full">
+                <ServiceContentDisplay 
+                  serviceId={selectedServiceId} 
+                  canEdit={isSuperAdmin}
+                  onDataChange={fetchData}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+        <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Thêm danh mục chính</DialogTitle></DialogHeader>
+            <div className="py-4"><Label htmlFor="category-name">Tên danh mục</Label><Input id="category-name" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} /></div>
+            <DialogFooter><Button variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>Hủy</Button><Button onClick={handleAddCategory} className="bg-brand-orange hover:bg-brand-orange/90 text-white">Thêm</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Thêm dịch vụ con</DialogTitle></DialogHeader>
+            <div className="py-4"><Label htmlFor="service-name">Tên dịch vụ</Label><Input id="service-name" value={newServiceName} onChange={e => setNewServiceName(e.target.value)} /></div>
+            <DialogFooter><Button variant="outline" onClick={() => setIsServiceDialogOpen(false)}>Hủy</Button><Button onClick={handleAddService} className="bg-brand-orange hover:bg-brand-orange/90 text-white">Thêm</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
   return (
     <>
       <div className="h-[calc(100vh-8rem)]">
@@ -102,8 +163,6 @@ const PublicServices = () => {
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
-
-      {/* Add Category Dialog */}
       <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Thêm danh mục chính</DialogTitle></DialogHeader>
@@ -111,8 +170,6 @@ const PublicServices = () => {
           <DialogFooter><Button variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>Hủy</Button><Button onClick={handleAddCategory} className="bg-brand-orange hover:bg-brand-orange/90 text-white">Thêm</Button></DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Add Service Dialog */}
       <Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Thêm dịch vụ con</DialogTitle></DialogHeader>

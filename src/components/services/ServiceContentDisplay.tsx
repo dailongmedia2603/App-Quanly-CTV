@@ -10,6 +10,7 @@ import remarkGfm from 'remark-gfm';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ImageLightbox } from './ImageLightbox';
 
 interface ServiceContentDisplayProps {
   serviceId: string | null;
@@ -33,6 +34,8 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
   const [pricingContent, setPricingContent] = useState('');
   const [pricingImageUrls, setPricingImageUrls] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     if (!serviceId) {
@@ -82,7 +85,7 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
     } else {
       showSuccess("Lưu thành công!");
       setIsEditing(false);
-      onDataChange(); // Notify parent to refetch data
+      onDataChange();
     }
   };
 
@@ -118,6 +121,11 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
     setPricingImageUrls(prev => prev.filter((_, index) => index !== indexToDelete));
   };
 
+  const openLightbox = (index: number) => {
+    setSelectedImageIndex(index);
+    setIsLightboxOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="p-8 space-y-6">
@@ -142,100 +150,115 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
   }
 
   return (
-    <div className="p-8 h-full overflow-y-auto">
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">{details.name}</h1>
-          <p className="text-gray-500">Thông tin chi tiết và báo giá</p>
+    <>
+      <div className="p-8 h-full overflow-y-auto">
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">{details.name}</h1>
+            <p className="text-gray-500">Thông tin chi tiết và báo giá</p>
+          </div>
+          {canEdit && (
+            isEditing ? (
+              <div className="flex space-x-2">
+                <Button variant="outline" onClick={() => setIsEditing(false)}>Hủy</Button>
+                <Button onClick={handleSave} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><Save className="h-4 w-4 mr-2" />Lưu</Button>
+              </div>
+            ) : (
+              <Button onClick={() => setIsEditing(true)} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><Pencil className="h-4 w-4 mr-2" />Sửa nội dung</Button>
+            )
+          )}
         </div>
-        {canEdit && (
-          isEditing ? (
-            <div className="flex space-x-2">
-              <Button variant="outline" onClick={() => setIsEditing(false)}>Hủy</Button>
-              <Button onClick={handleSave} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><Save className="h-4 w-4 mr-2" />Lưu</Button>
-            </div>
-          ) : (
-            <Button onClick={() => setIsEditing(true)} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><Pencil className="h-4 w-4 mr-2" />Sửa nội dung</Button>
-          )
-        )}
-      </div>
-      <Accordion type="multiple" className="w-full space-y-4" defaultValue={['info', 'pricing']}>
-        <AccordionItem value="info" className="border border-orange-100 rounded-lg bg-white/50">
-          <AccordionTrigger className="p-4 hover:no-underline">
-            <h2 className="text-xl font-semibold flex items-center space-x-3">
-              <Info className="h-5 w-5 text-brand-orange" />
-              <span>Thông tin dịch vụ</span>
-            </h2>
-          </AccordionTrigger>
-          <AccordionContent className="px-4 pb-4">
-            <div className="pl-8 border-l-2 border-orange-100">
-              {isEditing ? (
-                <Textarea value={infoContent} onChange={e => setInfoContent(e.target.value)} className="min-h-[200px]" />
-              ) : (
-                <div className="prose max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{infoContent || "Chưa có nội dung."}</ReactMarkdown></div>
-              )}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="pricing" className="border border-orange-100 rounded-lg bg-white/50">
-          <AccordionTrigger className="p-4 hover:no-underline">
-            <h2 className="text-xl font-semibold flex items-center space-x-3">
-              <CircleDollarSign className="h-5 w-5 text-brand-orange" />
-              <span>Báo giá</span>
-            </h2>
-          </AccordionTrigger>
-          <AccordionContent className="px-4 pb-4">
-            <div className="pl-8 border-l-2 border-orange-100 space-y-4">
-              {isEditing ? (
-                <div className="space-y-4">
-                  <Textarea value={pricingContent} onChange={e => setPricingContent(e.target.value)} className="min-h-[150px]" placeholder="Nhập nội dung báo giá..." />
+        <Accordion type="multiple" className="w-full space-y-4" defaultValue={['info', 'pricing']}>
+          <AccordionItem value="info" className="border border-orange-100 rounded-lg bg-white/50">
+            <AccordionTrigger className="p-4 hover:no-underline">
+              <h2 className="text-xl font-semibold flex items-center space-x-3">
+                <Info className="h-5 w-5 text-brand-orange" />
+                <span>Thông tin dịch vụ</span>
+              </h2>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4">
+              <div className="pl-8 border-l-2 border-orange-100">
+                {isEditing ? (
+                  <Textarea value={infoContent} onChange={e => setInfoContent(e.target.value)} className="min-h-[200px]" />
+                ) : (
+                  <div className="prose max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{infoContent || "Chưa có nội dung."}</ReactMarkdown></div>
+                )}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="pricing" className="border border-orange-100 rounded-lg bg-white/50">
+            <AccordionTrigger className="p-4 hover:no-underline">
+              <h2 className="text-xl font-semibold flex items-center space-x-3">
+                <CircleDollarSign className="h-5 w-5 text-brand-orange" />
+                <span>Báo giá</span>
+              </h2>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4">
+              <div className="pl-8 border-l-2 border-orange-100 space-y-4">
+                {isEditing ? (
+                  <div className="space-y-4">
+                    <Textarea value={pricingContent} onChange={e => setPricingContent(e.target.value)} className="min-h-[150px]" placeholder="Nhập nội dung báo giá..." />
+                    <div>
+                      <Label>Ảnh báo giá</Label>
+                      <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {pricingImageUrls.map((url, index) => (
+                          <div key={index} className="relative group">
+                            <img src={url} alt={`Báo giá ${index + 1}`} className="w-full h-auto object-cover rounded-md border" />
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleImageDelete(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4">
+                        <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploading} />
+                        {isUploading && <p className="text-sm text-gray-500 mt-1">Đang tải lên...</p>}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
                   <div>
-                    <Label>Ảnh báo giá</Label>
-                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                      {pricingImageUrls.map((url, index) => (
-                        <div key={index} className="relative group">
-                          <img src={url} alt={`Báo giá ${index + 1}`} className="w-full h-auto object-cover rounded-md border" />
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => handleImageDelete(index)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
+                    <div className="prose max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {pricingContent || ""}
+                      </ReactMarkdown>
                     </div>
-                    <div className="mt-4">
-                      <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploading} />
-                      {isUploading && <p className="text-sm text-gray-500 mt-1">Đang tải lên...</p>}
-                    </div>
+                    {pricingImageUrls && pricingImageUrls.length > 0 && (
+                      <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {pricingImageUrls.map((url, index) => (
+                          <img 
+                            key={index} 
+                            src={url} 
+                            alt={`Báo giá ${index + 1}`} 
+                            className="w-full h-auto object-cover rounded-md border cursor-pointer transition-transform hover:scale-105"
+                            onClick={() => openLightbox(index)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {!pricingContent && (!pricingImageUrls || pricingImageUrls.length === 0) && (
+                      <p className="text-gray-500 italic">Chưa có nội dung báo giá.</p>
+                    )}
                   </div>
-                </div>
-              ) : (
-                <div>
-                  <div className="prose max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {pricingContent || ""}
-                    </ReactMarkdown>
-                  </div>
-                  {pricingImageUrls && pricingImageUrls.length > 0 && (
-                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                      {pricingImageUrls.map((url, index) => (
-                        <img key={index} src={url} alt={`Báo giá ${index + 1}`} className="w-full h-auto object-cover rounded-md border" />
-                      ))}
-                    </div>
-                  )}
-                  {!pricingContent && (!pricingImageUrls || pricingImageUrls.length === 0) && (
-                    <p className="text-gray-500 italic">Chưa có nội dung báo giá.</p>
-                  )}
-                </div>
-              )}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-    </div>
+                )}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
+      <ImageLightbox
+        isOpen={isLightboxOpen}
+        onOpenChange={setIsLightboxOpen}
+        images={pricingImageUrls || []}
+        selectedIndex={selectedImageIndex}
+        onSelectedIndexChange={setSelectedImageIndex}
+      />
+    </>
   );
 };
 

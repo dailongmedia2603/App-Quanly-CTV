@@ -126,7 +126,7 @@ const CommentHistoryView = ({ onBack }: { onBack: () => void }) => {
       <div className="flex justify-between items-center mb-6">
         <div className="space-y-1">
             <h1 className="text-3xl font-bold">Comment đã tạo</h1>
-            <p className="text-gray-500 mt-1">Xem lại các comment bạn đã tạo trước đây.</p>
+            <p className="text-gray-500 mt-1 hidden lg:block">Xem lại các comment bạn đã tạo trước đây.</p>
         </div>
         <Button onClick={onBack} variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -255,7 +255,7 @@ const CreateComment = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Tạo Comment</h1>
-          <p className="text-gray-500 mt-1">Sử dụng AI để tạo các bình luận quảng bá dịch vụ một cách tự nhiên.</p>
+          <p className="text-gray-500 mt-1 hidden lg:block">Sử dụng AI để tạo các bình luận quảng bá dịch vụ một cách tự nhiên.</p>
         </div>
         <Button onClick={() => setView('history')} className="bg-brand-orange hover:bg-brand-orange/90 text-white">
             <History className="mr-2 h-4 w-4" />
@@ -263,7 +263,7 @@ const CreateComment = () => {
         </Button>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        <Card className="lg:col-span-1 border-orange-200 sticky top-8">
+        <Card className="lg:col-span-1 border-orange-200">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Wand2 className="h-6 w-6 text-brand-orange" />
@@ -314,7 +314,7 @@ const CreateComment = () => {
                 <Sparkles className="h-6 w-6 text-brand-orange" />
                 <span>Comment được tạo ra</span>
               </CardTitle>
-              <CardDescription>Đây là bình luận do AI tạo ra.</CardDescription>
+              <CardDescription className="hidden lg:block">Đây là bình luận do AI tạo ra.</CardDescription>
             </div>
             {generatedComment && !isGenerating && (
               <div className="flex items-center space-x-2">

@@ -137,7 +137,7 @@ const PostHistoryView = ({ onBack }: { onBack: () => void }) => {
       <div className="flex justify-between items-center mb-6">
         <div className="space-y-1">
             <h1 className="text-3xl font-bold">Bài viết đã tạo</h1>
-            <p className="text-gray-500 mt-1">Xem lại các bài viết bạn đã tạo trước đây.</p>
+            <p className="text-gray-500 mt-1 hidden lg:block">Xem lại các bài viết bạn đã tạo trước đây.</p>
         </div>
         <Button onClick={onBack} variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -301,7 +301,7 @@ const CreatePost = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Tạo bài viết</h1>
-          <p className="text-gray-500 mt-1">Sử dụng AI để tạo ra các bài viết hấp dẫn.</p>
+          <p className="text-gray-500 mt-1 hidden lg:block">Sử dụng AI để tạo ra các bài viết hấp dẫn.</p>
         </div>
         <Button onClick={() => setView('history')} className="bg-brand-orange hover:bg-brand-orange/90 text-white">
             <History className="mr-2 h-4 w-4" />
@@ -310,7 +310,7 @@ const CreatePost = () => {
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Left Column: Configuration */}
-        <Card className="lg:col-span-1 border-orange-200 sticky top-8">
+        <Card className="lg:col-span-1 border-orange-200">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Wand2 className="h-6 w-6 text-brand-orange" />
@@ -376,7 +376,7 @@ const CreatePost = () => {
                 <Sparkles className="h-6 w-6 text-brand-orange" />
                 <span>Nội dung tạo ra</span>
               </CardTitle>
-              <CardDescription>Đây là bài viết do AI tạo ra dựa trên cấu hình của bạn.</CardDescription>
+              <CardDescription className="hidden lg:block">Đây là bài viết do AI tạo ra dựa trên cấu hình của bạn.</CardDescription>
             </div>
             {generatedPost && !isGenerating && (
               <div className="flex items-center space-x-2">

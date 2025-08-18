@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ const stripMarkdown = (markdown: string): string => {
 };
 
 const FindCustomers = () => {
+  const { user } = useAuth();
   const [reportData, setReportData] = useState<ReportData[]>([]);
   const [loadingReports, setLoadingReports] = useState(true);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -54,6 +56,11 @@ const FindCustomers = () => {
 
   useEffect(() => {
     const fetchReportData = async () => {
+      if (!user) {
+        setReportData([]);
+        setLoadingReports(false);
+        return;
+      }
       setLoadingReports(true);
       const { data: reports, error: reportsError } = await supabase.functions.invoke(
         'get-facebook-posts-for-customer-finder'
@@ -71,6 +78,7 @@ const FindCustomers = () => {
         const { data: comments, error: commentsError } = await supabase
           .from('user_suggested_comments')
           .select('report_id, comment_text')
+          .eq('user_id', user.id)
           .in('report_id', reportIds);
 
         if (commentsError) {
@@ -91,7 +99,7 @@ const FindCustomers = () => {
     };
 
     fetchReportData();
-  }, []);
+  }, [user]);
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;

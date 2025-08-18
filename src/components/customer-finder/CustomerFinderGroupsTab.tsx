@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { Plus, ExternalLink, Pencil, Trash2, Folder, FolderPlus, Hash, Users, Link as LinkIcon, Settings2, Upload, FileText } from 'lucide-react';
 import * as XLSX from "xlsx";
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Group {
   id: string;
@@ -29,6 +30,7 @@ interface Category {
 
 const CustomerFinderGroupsTab = () => {
   const { roles } = useAuth();
+  const isMobile = useIsMobile();
   const isSuperAdmin = roles.includes('Super Admin');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -174,14 +176,18 @@ const CustomerFinderGroupsTab = () => {
 
   return (
     <Card className="border-orange-200">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Danh sách Group Facebook</CardTitle>
-          <CardDescription>Các group chất lượng được phân loại theo từng nhóm để tìm kiếm khách hàng.</CardDescription>
-        </div>
-        <div className="flex items-center space-x-2">
-          {isSuperAdmin && <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}><Upload className="mr-2 h-4 w-4" />Import</Button>}
-          {isSuperAdmin && <Button onClick={() => { setEditingCategory(null); setCategoryName(''); setIsCategoryDialogOpen(true); }} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><FolderPlus className="mr-2 h-4 w-4" />Thêm Nhóm Group</Button>}
+      <CardHeader>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <CardTitle className="text-2xl">Danh sách Group Facebook</CardTitle>
+            {!isMobile && (
+              <CardDescription>Các group chất lượng được phân loại theo từng nhóm để tìm kiếm khách hàng.</CardDescription>
+            )}
+          </div>
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+            {isSuperAdmin && <Button variant="outline" onClick={() => setIsImportDialogOpen(true)} className="w-full sm:w-auto"><Upload className="mr-2 h-4 w-4" />Import</Button>}
+            {isSuperAdmin && <Button onClick={() => { setEditingCategory(null); setCategoryName(''); setIsCategoryDialogOpen(true); }} className="bg-brand-orange hover:bg-brand-orange/90 text-white w-full sm:w-auto"><FolderPlus className="mr-2 h-4 w-4" />Thêm Nhóm Group</Button>}
+          </div>
         </div>
       </CardHeader>
       <CardContent>

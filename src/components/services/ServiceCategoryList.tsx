@@ -34,6 +34,7 @@ interface ServiceCategoryListProps {
 const ServiceCategoryList = ({ categories, loading, selectedServiceId, onSelectService, onAddCategory, onAddService, canEdit, onReorder }: ServiceCategoryListProps) => {
   const [localCategories, setLocalCategories] = useState<ServiceCategory[]>([]);
   const [editingService, setEditingService] = useState<{ id: string; name: string } | null>(null);
+  const [editingCategory, setEditingCategory] = useState<{ id: string; name: string } | null>(null);
   const [draggedItem, setDraggedItem] = useState<{ service: ServiceDetail, categoryId: string } | null>(null);
 
   useEffect(() => {
@@ -44,17 +45,17 @@ const ServiceCategoryList = ({ categories, loading, selectedServiceId, onSelectS
     setLocalCategories(sortedCategories);
   }, [categories]);
 
-  const handleEditClick = (e: React.MouseEvent, service: ServiceDetail) => {
+  const handleEditServiceClick = (e: React.MouseEvent, service: ServiceDetail) => {
     e.stopPropagation();
     setEditingService({ id: service.id, name: service.name });
   };
 
-  const handleCancelEdit = (e: React.MouseEvent) => {
+  const handleCancelEditService = (e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingService(null);
   };
 
-  const handleSaveEdit = async (e: React.MouseEvent) => {
+  const handleSaveService = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!editingService) return;
     const { error } = await supabase.from('service_details').update({ name: editingService.name }).eq('id', editingService.id);
@@ -62,9 +63,32 @@ const ServiceCategoryList = ({ categories, loading, selectedServiceId, onSelectS
       showError("Cập nhật thất bại.");
     } else {
       showSuccess("Đã cập nhật tên dịch vụ.");
-      onReorder(); // Refetch all data
+      onReorder();
     }
     setEditingService(null);
+  };
+
+  const handleEditCategoryClick = (e: React.MouseEvent, category: ServiceCategory) => {
+    e.stopPropagation();
+    setEditingCategory({ id: category.id, name: category.name });
+  };
+
+  const handleCancelEditCategory = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingCategory(null);
+  };
+
+  const handleSaveCategory = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!editingCategory) return;
+    const { error } = await supabase.from('service_categories').update({ name: editingCategory.name }).eq('id', editingCategory.id);
+    if (error) {
+      showError("Cập nhật thất bại.");
+    } else {
+      showSuccess("Đã cập nhật tên danh mục.");
+      onReorder();
+    }
+    setEditingCategory(null);
   };
 
   const handleDragStart = (e: React.DragEvent, service: ServiceDetail, categoryId: string) => {
@@ -132,11 +156,33 @@ const ServiceCategoryList = ({ categories, loading, selectedServiceId, onSelectS
         <Accordion type="multiple" className="w-full" defaultValue={categories.map(c => c.id)}>
           {localCategories.map(category => (
             <AccordionItem value={category.id} key={category.id} className="border-b-0">
-              <AccordionTrigger className="py-2 hover:no-underline rounded-md hover:bg-gray-100 px-2">
-                <div className="flex items-center space-x-2">
-                  <Folder className="h-5 w-5 text-brand-orange" />
-                  <span className="font-semibold text-gray-700">{category.name}</span>
-                </div>
+              <AccordionTrigger className="py-2 hover:no-underline rounded-md hover:bg-gray-100 px-2 group">
+                {editingCategory?.id === category.id ? (
+                  <div className="flex items-center space-x-2 w-full">
+                    <Folder className="h-5 w-5 text-brand-orange flex-shrink-0" />
+                    <Input
+                      value={editingCategory.name}
+                      onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                      className="h-8 text-sm font-semibold"
+                      onClick={(e) => e.stopPropagation()}
+                      autoFocus
+                    />
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={handleSaveCategory}><Check className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={handleCancelEditCategory}><X className="h-4 w-4" /></Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center space-x-2">
+                      <Folder className="h-5 w-5 text-brand-orange" />
+                      <span className="font-semibold text-gray-700">{category.name}</span>
+                    </div>
+                    {canEdit && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={(e) => handleEditCategoryClick(e, category)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
               </AccordionTrigger>
               <AccordionContent className="pl-4 pt-1 pb-2">
                 <div className="border-l-2 border-orange-100 pl-4 space-y-1">
@@ -165,15 +211,15 @@ const ServiceCategoryList = ({ categories, loading, selectedServiceId, onSelectS
                             className="h-7 text-sm"
                             onClick={e => e.stopPropagation()}
                           />
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600" onClick={handleSaveEdit}><Check className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={handleCancelEdit}><X className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600" onClick={handleSaveService}><Check className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={handleCancelEditService}><X className="h-4 w-4" /></Button>
                         </div>
                       ) : (
                         <>
                           <FileText className="h-4 w-4 flex-shrink-0" />
                           <span className="flex-grow">{service.name}</span>
                           {canEdit && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={(e) => handleEditClick(e, service)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={(e) => handleEditServiceClick(e, service)}>
                               <Pencil className="h-4 w-4" />
                             </Button>
                           )}

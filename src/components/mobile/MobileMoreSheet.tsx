@@ -49,7 +49,7 @@ const MobileMoreSheet = ({ isOpen, onOpenChange }: MobileMoreSheetProps) => {
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[280px] p-0">
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 flex justify-center">
           <img src="/logodailong-ngang.png" alt="Dailong Media Logo" className="h-14 object-contain" />
         </div>
         <nav className="p-4 space-y-2">

@@ -40,10 +40,10 @@ serve(async (req) => {
       .select('user_id, role_id');
     if (userRolesError) throw userRolesError;
 
-    // 4. Get all profiles
+    // 4. Get all profiles with all details
     const { data: profiles, error: profilesError } = await supabaseAdmin
       .from('profiles')
-      .select('id, first_name, last_name, phone');
+      .select('*'); // Fetch all columns from profiles
     if (profilesError) throw profilesError;
     const profilesMap = new Map(profiles.map((p: any) => [p.id, p]));
 
@@ -65,6 +65,10 @@ serve(async (req) => {
         first_name: userProfile?.first_name || null,
         last_name: userProfile?.last_name || null,
         phone: userProfile?.phone || null,
+        bank_name: userProfile?.bank_name || null,
+        bank_account_number: userProfile?.bank_account_number || null,
+        bank_account_name: userProfile?.bank_account_name || null,
+        momo: userProfile?.momo || null,
       };
     });
 

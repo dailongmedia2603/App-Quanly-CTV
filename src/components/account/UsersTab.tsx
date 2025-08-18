@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Users, UserCheck, UserX, Search, Plus, MoreHorizontal, Trash2, Ban, CheckCircle, ShieldCheck } from "lucide-react";
 import { Checkbox } from "../ui/checkbox";
+import { UserDetailsDialog } from "./UserDetailsDialog";
 
 interface Role {
   id: string;
@@ -30,6 +31,10 @@ interface AdminUser extends User {
   first_name?: string | null;
   last_name?: string | null;
   phone?: string | null;
+  bank_name?: string | null;
+  bank_account_number?: string | null;
+  bank_account_name?: string | null;
+  momo?: string | null;
 }
 
 interface UsersTabProps {
@@ -48,6 +53,7 @@ const UsersTab = ({ users, allRoles, loading, isSuperAdmin, onUsersAndRolesUpdat
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRolesDialogOpen, setIsRolesDialogOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   // Form states
   const [newUserEmail, setNewUserEmail] = useState("");
@@ -57,6 +63,7 @@ const UsersTab = ({ users, allRoles, loading, isSuperAdmin, onUsersAndRolesUpdat
   const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null);
   const [userToEditRoles, setUserToEditRoles] = useState<AdminUser | null>(null);
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
 
   const handleAddUser = async () => {
     if (!newUserEmail || !newUserPassword) return showError("Vui lòng nhập email và mật khẩu.");
@@ -137,6 +144,11 @@ const UsersTab = ({ users, allRoles, loading, isSuperAdmin, onUsersAndRolesUpdat
     setIsSubmitting(false);
   };
 
+  const handleViewDetails = (user: AdminUser) => {
+    setSelectedUser(user);
+    setIsDetailsOpen(true);
+  };
+
   const getInitials = (email: string) => (email ? email.charAt(0).toUpperCase() : "P");
   const filteredUsers = useMemo(() => users.filter((user) => user.email?.toLowerCase().includes(searchTerm.toLowerCase())), [users, searchTerm]);
   const stats = useMemo(() => {
@@ -182,7 +194,14 @@ const UsersTab = ({ users, allRoles, loading, isSuperAdmin, onUsersAndRolesUpdat
                 const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
                 return (
                   <TableRow key={user.id}>
-                    <TableCell><div className="flex items-center space-x-3"><Avatar><AvatarImage src={user.user_metadata.avatar_url} /><AvatarFallback className="bg-brand-orange-light text-brand-orange">{getInitials(user.email || "")}</AvatarFallback></Avatar><span className="font-medium">{user.email}</span></div></TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-3">
+                        <Avatar><AvatarImage src={user.user_metadata.avatar_url} /><AvatarFallback className="bg-brand-orange-light text-brand-orange">{getInitials(user.email || "")}</AvatarFallback></Avatar>
+                        <Button variant="link" className="p-0 h-auto font-medium" onClick={() => handleViewDetails(user)}>
+                          {user.email}
+                        </Button>
+                      </div>
+                    </TableCell>
                     <TableCell>{fullName || <span className="text-gray-400 text-xs">Chưa có</span>}</TableCell>
                     <TableCell>{user.phone || <span className="text-gray-400 text-xs">Chưa có</span>}</TableCell>
                     <TableCell><div className="flex flex-wrap gap-1">{user.roles.length > 0 ? user.roles.map(role => <Badge key={role} variant="secondary">{role}</Badge>) : <span className="text-gray-400 text-xs">Chưa có</span>}</div></TableCell>
@@ -231,6 +250,8 @@ const UsersTab = ({ users, allRoles, loading, isSuperAdmin, onUsersAndRolesUpdat
           <DialogFooter><Button variant="outline" onClick={() => setIsRolesDialogOpen(false)}>Hủy</Button><Button onClick={handleUpdateUserRoles} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? "Đang lưu..." : "Lưu"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <UserDetailsDialog user={selectedUser} isOpen={isDetailsOpen} onOpenChange={setIsDetailsOpen} />
     </div>
   );
 };

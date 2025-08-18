@@ -32,8 +32,9 @@ const PublicServices = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('service_categories')
-      .select('*, service_details(id, name)')
-      .order('created_at', { ascending: true });
+      .select('*, service_details(*)')
+      .order('created_at', { ascending: true })
+      .order('position', { foreignTable: 'service_details', ascending: true });
 
     if (error) {
       showError("Không thể tải danh mục dịch vụ.");
@@ -94,6 +95,7 @@ const PublicServices = () => {
                   setIsServiceDialogOpen(true);
                 }}
                 canEdit={isSuperAdmin}
+                onReorder={fetchData}
               />
             </div>
           ) : (
@@ -151,6 +153,7 @@ const PublicServices = () => {
                 setIsServiceDialogOpen(true);
               }}
               canEdit={isSuperAdmin}
+              onReorder={fetchData}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />

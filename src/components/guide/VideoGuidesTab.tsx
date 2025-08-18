@@ -22,7 +22,7 @@ interface VideoGuide {
   thumbnail_url: string | null;
 }
 
-const getYoutubeEmbedUrl = (url: string): string | null => {
+const getYoutubeEmbedUrl = (url: string, autoplay = false): string | null => {
   if (!url) return null;
   let videoId = null;
   try {
@@ -36,7 +36,11 @@ const getYoutubeEmbedUrl = (url: string): string | null => {
     return null;
   }
   if (videoId) {
-    return `https://www.youtube.com/embed/${videoId}`;
+    let embedUrl = `https://www.youtube.com/embed/${videoId}`;
+    if (autoplay) {
+      embedUrl += '?autoplay=1';
+    }
+    return embedUrl;
   }
   return null;
 };
@@ -117,7 +121,7 @@ const VideoGuidesTab = () => {
   };
 
   const handlePlayVideo = (url: string) => {
-    const embedUrl = getYoutubeEmbedUrl(url);
+    const embedUrl = getYoutubeEmbedUrl(url, true); // Set autoplay to true
     if (embedUrl) {
       setCurrentVideoUrl(embedUrl);
       setIsPlayerOpen(true);

@@ -82,8 +82,8 @@ const getCommentSnippet = (content: string): string => {
   const firstLine = cleanedContent.split('\n')[0].trim();
   
   const words = firstLine.split(/\s+/);
-  if (words.length > 8) {
-    return words.slice(0, 8).join(' ') + '...';
+  if (words.length > 5) {
+    return words.slice(0, 5).join(' ') + '...';
   }
 
   return firstLine || 'Comment không có nội dung';

@@ -97,8 +97,8 @@ const getPostTitle = (content: string): string => {
   const cleanTitle = firstLine.replace(/^(#+\s*|\*\*\s*|\s*\*)/, '').replace(/\s*\*\*$/, '').trim();
   
   const words = cleanTitle.split(/\s+/);
-  if (words.length > 8) {
-    return words.slice(0, 8).join(' ') + '...';
+  if (words.length > 5) {
+    return words.slice(0, 5).join(' ') + '...';
   }
 
   return cleanTitle || 'Bài viết không có tiêu đề';

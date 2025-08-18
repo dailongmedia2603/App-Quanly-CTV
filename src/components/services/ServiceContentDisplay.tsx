@@ -22,7 +22,7 @@ interface ServiceDetails {
   name: string;
   service_info_content: string | null;
   pricing_content: string | null;
-  pricing_image_url: string | null;
+  pricing_image_urls: string[] | null;
 }
 
 const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceContentDisplayProps) => {
@@ -31,7 +31,7 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
   const [isEditing, setIsEditing] = useState(false);
   const [infoContent, setInfoContent] = useState('');
   const [pricingContent, setPricingContent] = useState('');
-  const [pricingImageUrl, setPricingImageUrl] = useState<string | null>(null);
+  const [pricingImageUrls, setPricingImageUrls] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
         setDetails(data);
         setInfoContent(data.service_info_content || '');
         setPricingContent(data.pricing_content || '');
-        setPricingImageUrl(data.pricing_image_url || null);
+        setPricingImageUrls(data.pricing_image_urls || []);
       }
       setLoading(false);
     };
@@ -72,7 +72,7 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
       .update({
         service_info_content: infoContent,
         pricing_content: pricingContent,
-        pricing_image_url: pricingImageUrl
+        pricing_image_urls: pricingImageUrls
       })
       .eq('id', details.id);
     
@@ -109,9 +109,13 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
       .from('service_pricing_images')
       .getPublicUrl(filePath);
     
-    setPricingImageUrl(publicUrl);
+    setPricingImageUrls(prev => [...prev, publicUrl]);
     showSuccess("Tải ảnh lên thành công!");
     setIsUploading(false);
+  };
+
+  const handleImageDelete = (indexToDelete: number) => {
+    setPricingImageUrls(prev => prev.filter((_, index) => index !== indexToDelete));
   };
 
   if (loading) {
@@ -155,7 +159,7 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
           )
         )}
       </div>
-      <Accordion type="multiple" className="w-full space-y-4">
+      <Accordion type="multiple" className="w-full space-y-4" defaultValue={['info', 'pricing']}>
         <AccordionItem value="info" className="border border-orange-100 rounded-lg bg-white/50">
           <AccordionTrigger className="p-4 hover:no-underline">
             <h2 className="text-xl font-semibold flex items-center space-x-3">
@@ -181,40 +185,50 @@ const ServiceContentDisplay = ({ serviceId, canEdit, onDataChange }: ServiceCont
             </h2>
           </AccordionTrigger>
           <AccordionContent className="px-4 pb-4">
-            <div className="pl-8 border-l-2 border-orange-100">
+            <div className="pl-8 border-l-2 border-orange-100 space-y-4">
               {isEditing ? (
                 <div className="space-y-4">
                   <Textarea value={pricingContent} onChange={e => setPricingContent(e.target.value)} className="min-h-[150px]" placeholder="Nhập nội dung báo giá..." />
                   <div>
                     <Label>Ảnh báo giá</Label>
-                    {pricingImageUrl ? (
-                      <div className="relative mt-2 w-fit">
-                        <img src={pricingImageUrl} alt="Báo giá" className="max-w-sm rounded-md border" />
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                          onClick={() => setPricingImageUrl(null)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="mt-2">
-                        <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploading} />
-                        {isUploading && <p className="text-sm text-gray-500 mt-1">Đang tải lên...</p>}
-                      </div>
-                    )}
+                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {pricingImageUrls.map((url, index) => (
+                        <div key={index} className="relative group">
+                          <img src={url} alt={`Báo giá ${index + 1}`} className="w-full h-auto object-cover rounded-md border" />
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleImageDelete(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4">
+                      <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploading} />
+                      {isUploading && <p className="text-sm text-gray-500 mt-1">Đang tải lên...</p>}
+                    </div>
                   </div>
                 </div>
               ) : (
                 <div>
-                  {pricingImageUrl && <img src={pricingImageUrl} alt="Báo giá" className="max-w-full rounded-md border mb-4" />}
                   <div className="prose max-w-none">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {pricingContent || (!pricingImageUrl ? "Chưa có nội dung." : "")}
+                      {pricingContent || ""}
                     </ReactMarkdown>
                   </div>
+                  {pricingImageUrls && pricingImageUrls.length > 0 && (
+                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {pricingImageUrls.map((url, index) => (
+                        <img key={index} src={url} alt={`Báo giá ${index + 1}`} className="w-full h-auto object-cover rounded-md border" />
+                      ))}
+                    </div>
+                  )}
+                  {!pricingContent && (!pricingImageUrls || pricingImageUrls.length === 0) && (
+                    <p className="text-gray-500 italic">Chưa có nội dung báo giá.</p>
+                  )}
                 </div>
               )}
             </div>

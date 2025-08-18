@@ -39,12 +39,15 @@ const UpdatePassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 lg:p-8">
-      <div className="w-full max-w-md mx-auto bg-white p-8 sm:p-12 rounded-2xl shadow-2xl">
-        <h1 className="text-3xl font-bold text-gray-900">Đặt lại mật khẩu</h1>
-        <p className="mt-2 text-gray-500">Nhập mật khẩu mới của bạn.</p>
+    <div className="min-h-screen bg-dotted-pattern flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-md mx-auto bg-white p-8 rounded-2xl shadow-lg">
+        <div className="text-center mb-8">
+          <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-24 mx-auto" />
+          <h1 className="text-2xl font-bold text-gray-900 mt-4">Đặt lại mật khẩu</h1>
+          <p className="mt-2 text-gray-500">Nhập mật khẩu mới của bạn.</p>
+        </div>
 
-        <form onSubmit={handleUpdatePassword} className="mt-8 space-y-6">
+        <form onSubmit={handleUpdatePassword} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="password">Mật khẩu mới*</Label>
             <div className="relative">
@@ -76,6 +79,9 @@ const UpdatePassword = () => {
           </div>
         </form>
       </div>
+      <p className="mt-8 text-center text-xs text-gray-400">
+        © 2024 DAILONG MEDIA. All Rights Reserved.
+      </p>
     </div>
   );
 };

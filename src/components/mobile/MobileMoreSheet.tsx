@@ -1,5 +1,5 @@
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import {
@@ -12,7 +12,8 @@ import {
   Briefcase,
   ClipboardList,
   FileSpreadsheet,
-  Cog
+  Cog,
+  LogOut,
 } from "lucide-react";
 
 interface MobileMoreSheetProps {
@@ -40,19 +41,26 @@ const MoreNavLink = ({ to, icon: Icon, children, onLinkClick }: { to: string; ic
 };
 
 const MobileMoreSheet = ({ isOpen, onOpenChange }: MobileMoreSheetProps) => {
-  const { hasPermission } = useAuth();
+  const { hasPermission, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const handleLinkClick = () => {
     onOpenChange(false);
   };
 
+  const handleSignOut = async () => {
+    onOpenChange(false);
+    await signOut();
+    navigate('/login');
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[280px] p-0">
+      <SheetContent side="right" className="w-[280px] p-0 flex flex-col">
         <div className="p-4 border-b border-gray-200 flex justify-center">
           <img src="/logodailong-ngang.png" alt="Dailong Media Logo" className="h-14 object-contain" />
         </div>
-        <nav className="p-4 space-y-2">
+        <nav className="p-4 space-y-2 flex-grow overflow-y-auto">
           {hasPermission('performance_reports') && <MoreNavLink to="/performance-report" icon={FilePieChart} onLinkClick={handleLinkClick}>Báo cáo hiệu suất</MoreNavLink>}
           {hasPermission('documents') && <MoreNavLink to="/documents" icon={FolderKanban} onLinkClick={handleLinkClick}>Tài liệu</MoreNavLink>}
           {hasPermission('public_services') && <MoreNavLink to="/services" icon={Briefcase} onLinkClick={handleLinkClick}>Dịch vụ</MoreNavLink>}
@@ -75,6 +83,15 @@ const MobileMoreSheet = ({ isOpen, onOpenChange }: MobileMoreSheetProps) => {
             </div>
           )}
         </nav>
+        <div className="p-4 border-t border-gray-200">
+          <button
+            onClick={handleSignOut}
+            className="flex items-center space-x-4 rounded-lg px-4 py-3 text-md font-medium text-red-500 hover:bg-red-50 w-full"
+          >
+            <LogOut className="h-6 w-6 flex-shrink-0" />
+            <span>Đăng xuất</span>
+          </button>
+        </div>
       </SheetContent>
     </Sheet>
   );

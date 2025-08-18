@@ -14,10 +14,10 @@ export default defineConfig(() => ({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'logologin.png'],
+      includeAssets: ['favicon.ico', 'logoapp.png'],
       manifest: {
-        name: 'Hệ thống CTV Dailong Media',
-        short_name: 'Dailong CTV',
+        name: 'CTV Dailong',
+        short_name: 'CTV Dailong',
         description: 'Hệ thống quản lý cộng tác viên sale của Dailong Media',
         theme_color: '#F97316',
         background_color: '#ffffff',
@@ -26,17 +26,17 @@ export default defineConfig(() => ({
         start_url: '/',
         icons: [
           {
-            src: 'logologin.png',
+            src: 'logoapp.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'logologin.png',
+            src: 'logoapp.png',
             sizes: '512x512',
             type: 'image/png'
           },
           {
-            src: 'logologin.png',
+            src: 'logoapp.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'

@@ -10,6 +10,8 @@ import { format } from 'date-fns';
 import { ExternalLink, FileText, Users, MessageSquare, Clock, Tags, Link as LinkIcon, Sparkles, Copy, RefreshCw, Loader2, ListChecks } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CustomerFinderGroupsTab from '@/components/customer-finder/CustomerFinderGroupsTab';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Label } from '@/components/ui/label';
 
 interface ReportData {
   id: string;
@@ -48,6 +50,7 @@ const FindCustomers = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
   const [generatingCommentIds, setGeneratingCommentIds] = useState<Set<string>>(new Set());
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchReportData = async () => {
@@ -136,6 +139,41 @@ const FindCustomers = () => {
     }
   };
 
+  const renderCommentSection = (item: ReportData) => {
+    if (generatingCommentIds.has(item.id)) {
+      return (
+        <div className="flex items-center space-x-2 text-gray-500">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Đang tạo comment...</span>
+        </div>
+      );
+    }
+    if (item.suggested_comment) {
+      return (
+        <div className="space-y-2">
+          <p className="whitespace-pre-wrap text-sm bg-gray-50 p-3 rounded-md border">{item.suggested_comment}</p>
+          <div className="flex items-center space-x-1">
+            <Button variant="ghost" size="sm" onClick={() => handleCopyComment(item.suggested_comment)}>
+              <Copy className="h-3 w-3 mr-1" /> Sao chép
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => handleGenerateComment(item)}>
+              <RefreshCw className="h-3 w-3 mr-1" /> Tạo lại
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <Button 
+        onClick={() => handleGenerateComment(item)}
+        className="bg-brand-orange text-white hover:bg-brand-orange/90 animate-pulse w-full sm:w-auto"
+      >
+        <Sparkles className="h-4 w-4 mr-2" />
+        Tạo comment giới thiệu
+      </Button>
+    );
+  };
+
   return (
     <>
       <div className="space-y-6">
@@ -164,80 +202,101 @@ const FindCustomers = () => {
                 <CardDescription>Danh sách các khách hàng tiềm năng được thu thập. Bấm vào nút để AI tạo comment giới thiệu dịch vụ phù hợp.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="border rounded-lg">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead><div className="flex items-center space-x-2"><FileText className="h-4 w-4" /><span>Nội dung bài viết</span></div></TableHead>
-                        <TableHead><div className="flex items-center space-x-2"><MessageSquare className="h-4 w-4" /><span>Comment đề xuất</span></div></TableHead>
-                        <TableHead><div className="flex items-center space-x-2"><Clock className="h-4 w-4" /><span>Thời gian đăng</span></div></TableHead>
-                        <TableHead><div className="flex items-center space-x-2"><Tags className="h-4 w-4" /><span>Dịch vụ phù hợp</span></div></TableHead>
-                        <TableHead className="text-right"><div className="flex items-center justify-end space-x-2"><LinkIcon className="h-4 w-4" /><span>Link</span></div></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {loadingReports ? (
-                        <TableRow><TableCell colSpan={5} className="h-24 text-center">Đang tải kết quả...</TableCell></TableRow>
-                      ) : paginatedData.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={5} className="h-24 text-center">
-                            <div className="flex flex-col items-center justify-center text-gray-500">
-                              <FileText className="h-10 w-10 mb-2" />
-                              Không tìm thấy kết quả nào.
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        paginatedData.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="max-w-md truncate cursor-pointer hover:text-brand-orange" onClick={() => handleViewDetails(item)}>
+                {isMobile ? (
+                  <div className="space-y-4">
+                    {loadingReports ? (
+                      <p className="text-center text-gray-500 py-8">Đang tải...</p>
+                    ) : paginatedData.length === 0 ? (
+                      <div className="text-center text-gray-500 py-10">
+                        <FileText className="mx-auto h-12 w-12 text-gray-400" />
+                        <p className="mt-4 font-medium">Không tìm thấy kết quả nào.</p>
+                      </div>
+                    ) : (
+                      paginatedData.map((item) => (
+                        <Card key={item.id} className="overflow-hidden border-orange-100">
+                          <CardContent className="p-4 space-y-4">
+                            <p className="text-sm font-medium leading-relaxed cursor-pointer hover:text-brand-orange" onClick={() => handleViewDetails(item)}>
                               {item.description}
-                            </TableCell>
-                            <TableCell className="max-w-sm">
-                              {generatingCommentIds.has(item.id) ? (
-                                <div className="flex items-center space-x-2 text-gray-500">
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                  <span>Đang tạo comment...</span>
-                                </div>
-                              ) : item.suggested_comment ? (
-                                <div className="space-y-2">
-                                  <p className="whitespace-pre-wrap text-sm">{item.suggested_comment}</p>
-                                  <div className="flex items-center space-x-1">
-                                    <Button variant="ghost" size="sm" onClick={() => handleCopyComment(item.suggested_comment)}>
-                                      <Copy className="h-3 w-3 mr-1" /> Sao chép
-                                    </Button>
-                                    <Button variant="ghost" size="sm" onClick={() => handleGenerateComment(item)}>
-                                      <RefreshCw className="h-3 w-3 mr-1" /> Tạo lại
-                                    </Button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <Button 
-                                  onClick={() => handleGenerateComment(item)}
-                                  className="bg-brand-orange text-white hover:bg-brand-orange/90 animate-pulse"
-                                >
-                                  <Sparkles className="h-4 w-4 mr-2" />
-                                  Tạo comment giới thiệu
-                                </Button>
-                              )}
-                            </TableCell>
-                            <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
-                            <TableCell>
-                              {item.identified_service_name ? (
-                                <Badge variant="default">{item.identified_service_name}</Badge>
-                              ) : <span className="text-gray-400 italic">Chưa xác định</span>}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" asChild className="text-brand-orange hover:bg-brand-orange-light hover:text-brand-orange">
-                                <a href={item.source_url!} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
+                            </p>
+                            <div className="flex items-center justify-between text-xs text-gray-500 border-t border-orange-100 pt-3">
+                              <div className="flex items-center space-x-1">
+                                <Clock size={14} />
+                                <span>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yy HH:mm') : 'N/A'}</span>
+                              </div>
+                              <Button variant="link" asChild className="p-0 h-auto text-brand-orange">
+                                <a href={item.source_url!} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="h-3 w-3 mr-1" /> Xem gốc
+                                </a>
                               </Button>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold text-gray-600">Dịch vụ phù hợp</Label>
+                              <div>
+                                {item.identified_service_name ? (
+                                  <Badge variant="default">{item.identified_service_name}</Badge>
+                                ) : <span className="text-xs text-gray-400 italic">Chưa xác định</span>}
+                              </div>
+                            </div>
+                            <div className="space-y-2 pt-2">
+                              <Label className="text-xs font-semibold text-gray-600">Comment đề xuất</Label>
+                              {renderCommentSection(item)}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
+                  </div>
+                ) : (
+                  <div className="border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead><div className="flex items-center space-x-2"><FileText className="h-4 w-4" /><span>Nội dung bài viết</span></div></TableHead>
+                          <TableHead><div className="flex items-center space-x-2"><MessageSquare className="h-4 w-4" /><span>Comment đề xuất</span></div></TableHead>
+                          <TableHead><div className="flex items-center space-x-2"><Clock className="h-4 w-4" /><span>Thời gian đăng</span></div></TableHead>
+                          <TableHead><div className="flex items-center space-x-2"><Tags className="h-4 w-4" /><span>Dịch vụ phù hợp</span></div></TableHead>
+                          <TableHead className="text-right"><div className="flex items-center justify-end space-x-2"><LinkIcon className="h-4 w-4" /><span>Link</span></div></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {loadingReports ? (
+                          <TableRow><TableCell colSpan={5} className="h-24 text-center">Đang tải kết quả...</TableCell></TableRow>
+                        ) : paginatedData.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="h-24 text-center">
+                              <div className="flex flex-col items-center justify-center text-gray-500">
+                                <FileText className="h-10 w-10 mb-2" />
+                                Không tìm thấy kết quả nào.
+                              </div>
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                        ) : (
+                          paginatedData.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell className="max-w-md truncate cursor-pointer hover:text-brand-orange" onClick={() => handleViewDetails(item)}>
+                                {item.description}
+                              </TableCell>
+                              <TableCell className="max-w-sm">
+                                {renderCommentSection(item)}
+                              </TableCell>
+                              <TableCell>{item.posted_at ? format(new Date(item.posted_at), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
+                              <TableCell>
+                                {item.identified_service_name ? (
+                                  <Badge variant="default">{item.identified_service_name}</Badge>
+                                ) : <span className="text-gray-400 italic">Chưa xác định</span>}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" asChild className="text-brand-orange hover:bg-brand-orange-light hover:text-brand-orange">
+                                  <a href={item.source_url!} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /></a>
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-end space-x-2 py-4">
                     <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}>Trước</Button>

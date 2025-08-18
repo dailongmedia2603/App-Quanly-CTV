@@ -8,11 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import ReportWidget from '@/components/ReportWidget';
-import { Wallet, Landmark, Percent, FileText, Handshake, ChevronLeft, ChevronRight, Plus, Search, MoreHorizontal, Pencil, Trash2, Loader, CheckCircle, CalendarPlus, Link as LinkIcon, Users as UsersIcon, History, Clock } from 'lucide-react';
+import { Wallet, Landmark, Percent, FileText, Handshake, ChevronLeft, ChevronRight, Plus, Search, MoreHorizontal, Pencil, Trash2, Loader, CheckCircle, CalendarPlus, Link as LinkIcon, Users as UsersIcon, History, Clock, Calendar as CalendarIcon } from 'lucide-react';
 import { startOfMonth, endOfMonth, format, subMonths, addMonths } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -25,6 +25,7 @@ import { PaymentDetailsDialog } from '@/components/PaymentDetailsDialog';
 import { OldContractsDialog } from '@/components/OldContractsDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ContractCard from '@/components/income/ContractCard';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 // Define the contract type
 interface Contract {
@@ -107,7 +108,8 @@ const Income = () => {
   const [allContracts, setAllContracts] = useState<Contract[]>([]);
   const [allUsers, setAllUsers] = useState<Collaborator[]>([]);
   const [loadingAll, setLoadingAll] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date()); // For income tab
+  const [contractFilterDate, setContractFilterDate] = useState<Date | null>(null); // For contracts tab
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCollaboratorId, setSelectedCollaboratorId] = useState('all');
   const [incomeStats, setIncomeStats] = useState<IncomeStats | null>(null);
@@ -232,8 +234,17 @@ const Income = () => {
   }, [collaboratorFilteredContracts]);
 
   const filteredContracts = useMemo(() => {
-    return collaboratorFilteredContracts.filter(c => c.project_name.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [collaboratorFilteredContracts, searchTerm]);
+    return collaboratorFilteredContracts.filter(c => {
+      const searchMatch = c.project_name.toLowerCase().includes(searchTerm.toLowerCase());
+      if (!contractFilterDate) {
+        return searchMatch;
+      }
+      const contractStartDate = new Date(c.start_date);
+      const dateMatch = contractStartDate.getFullYear() === contractFilterDate.getFullYear() &&
+                      contractStartDate.getMonth() === contractFilterDate.getMonth();
+      return searchMatch && dateMatch;
+    });
+  }, [collaboratorFilteredContracts, searchTerm, contractFilterDate]);
 
   const handleMonthChange = (direction: 'prev' | 'next') => {
     setSelectedDate(currentDate => direction === 'prev' ? subMonths(currentDate, 1) : addMonths(currentDate, 1));
@@ -343,12 +354,14 @@ const Income = () => {
         <Tabs defaultValue="income">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <TabsList className="flex w-full max-w-md rounded-lg border border-orange-200 p-0 bg-white"><TabsTrigger value="income" className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-l-md"><Wallet className="h-4 w-4" /><span>Thu nhập</span></TabsTrigger><TabsTrigger value="contracts" className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-r-md"><Handshake className="h-4 w-4" /><span>Hợp đồng</span></TabsTrigger></TabsList>
-            <div className="flex items-center space-x-4 w-full sm:w-auto">
-              {isSuperAdmin && !isMobile && (<div className="w-[220px]"><SingleSelectCombobox options={[{ value: 'all', label: 'Tất cả cộng tác viên', searchValue: 'tất cả cộng tác viên' }, ...collaboratorOptions]} selected={selectedCollaboratorId} onChange={(value) => setSelectedCollaboratorId(value || 'all')} placeholder="Lọc theo cộng tác viên" searchPlaceholder="Tìm cộng tác viên..." emptyPlaceholder="Không tìm thấy." /></div>)}
-              <div className="flex items-center space-x-2 flex-1 justify-end"><Button variant="outline" size="icon" onClick={() => handleMonthChange('prev')}><ChevronLeft className="h-4 w-4" /></Button><span className="text-lg font-semibold w-32 text-center capitalize">{format(selectedDate, 'MMMM yyyy', { locale: vi })}</span><Button variant="outline" size="icon" onClick={() => handleMonthChange('next')}><ChevronRight className="h-4 w-4" /></Button></div>
-            </div>
+            {isSuperAdmin && !isMobile && (<div className="w-[220px]"><SingleSelectCombobox options={[{ value: 'all', label: 'Tất cả cộng tác viên', searchValue: 'tất cả cộng tác viên' }, ...collaboratorOptions]} selected={selectedCollaboratorId} onChange={(value) => setSelectedCollaboratorId(value || 'all')} placeholder="Lọc theo cộng tác viên" searchPlaceholder="Tìm cộng tác viên..." emptyPlaceholder="Không tìm thấy." /></div>)}
           </div>
           <TabsContent value="income" className="space-y-4 pt-4">
+            <div className="flex items-center justify-end space-x-2">
+                <Button variant="outline" size="icon" onClick={() => handleMonthChange('prev')}><ChevronLeft className="h-4 w-4" /></Button>
+                <span className="text-lg font-semibold w-32 text-center capitalize">{format(selectedDate, 'MMMM yyyy', { locale: vi })}</span>
+                <Button variant="outline" size="icon" onClick={() => handleMonthChange('next')}><ChevronRight className="h-4 w-4" /></Button>
+            </div>
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <ReportWidget icon={<Wallet className="h-5 w-5" />} title="Tổng thu nhập" value={formatCurrency(incomeStats?.total_income || 0)} />
               <ReportWidget icon={<Landmark className="h-5 w-5" />} title="Lương cứng" value={formatCurrency(incomeStats?.fixed_salary || 0)} />
@@ -377,7 +390,26 @@ const Income = () => {
                 <ReportWidget icon={<CheckCircle className="h-5 w-5" />} title="Hoàn thành" value={allContractsStats.completed.toString()} />
                 <ReportWidget icon={<CalendarPlus className="h-5 w-5" />} title="HĐ trong tháng" value={allContractsStats.thisMonth.toString()} />
             </div>
-            <Card><CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"><div><CardTitle>Quản lý Hợp đồng</CardTitle><CardDescription>Thêm mới, chỉnh sửa và theo dõi tất cả hợp đồng của bạn.</CardDescription></div><div className="flex items-center space-x-2 w-full sm:w-auto"><div className="relative flex-1 sm:flex-initial sm:w-full sm:max-w-sm"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /><Input placeholder="Tìm theo tên dự án..." className="pl-10" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>{canCreate && <Button onClick={handleAddNewClick} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><Plus className="mr-2 h-4 w-4" />Tạo hợp đồng</Button>}</div></CardHeader><CardContent>
+            <Card><CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"><div><CardTitle>Quản lý Hợp đồng</CardTitle><CardDescription>Thêm mới, chỉnh sửa và theo dõi tất cả hợp đồng của bạn.</CardDescription></div>
+              <div className="flex items-center space-x-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:flex-initial sm:w-full sm:max-w-sm"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /><Input placeholder="Tìm theo tên dự án..." className="pl-10" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full sm:w-auto">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {contractFilterDate ? format(contractFilterDate, 'MM/yyyy') : 'Tất cả hợp đồng'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <DatePicker date={contractFilterDate || undefined} setDate={(date) => setContractFilterDate(date || null)} />
+                    <div className="p-2 border-t border-border">
+                      <Button variant="ghost" className="w-full justify-start" onClick={() => setContractFilterDate(null)}>Xóa bộ lọc</Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                {canCreate && <Button onClick={handleAddNewClick} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><Plus className="mr-2 h-4 w-4" />Tạo hợp đồng</Button>}
+              </div>
+            </CardHeader><CardContent>
               {isMobile ? (
                 <div className="space-y-4">
                   {loadingAll ? <p>Đang tải...</p> : filteredContracts.length === 0 ? <p className="text-center text-gray-500 py-8">Không có hợp đồng nào.</p> : (

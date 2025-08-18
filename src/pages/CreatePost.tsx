@@ -159,7 +159,7 @@ const PostHistoryView = ({ onBack }: { onBack: () => void }) => {
                 <AccordionItem value={log.id} key={log.id} className="bg-white border border-orange-200 rounded-lg shadow-sm">
                   <AccordionTrigger className="p-4 hover:no-underline hover:bg-orange-50/50 rounded-t-lg data-[state=open]:border-b data-[state=open]:border-orange-200">
                     <div className="flex justify-between items-center w-full min-w-0 gap-4">
-                      <span className="font-semibold text-left text-gray-800 truncate flex-1">{getPostTitle(log.generated_content)}</span>
+                      <span className="font-semibold text-left text-gray-800 truncate flex-1 min-w-0">{getPostTitle(log.generated_content)}</span>
                       <span className="text-sm text-gray-500 font-normal flex-shrink-0">
                         {format(new Date(log.created_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}
                       </span>

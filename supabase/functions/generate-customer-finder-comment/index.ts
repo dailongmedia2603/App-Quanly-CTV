@@ -103,12 +103,23 @@ serve(async (req) => {
     
     const matchedService = services.find(s => s.id === identifiedServiceId);
 
-    // Step 5: Save the result
-    const { error: updateError } = await supabaseAdmin
+    // Step 5: Save the result to the new user-specific table
+    const { error: upsertError } = await supabaseAdmin
+      .from('user_suggested_comments')
+      .upsert({
+        user_id: user.id,
+        report_id: reportId,
+        comment_text: cleanedGeneratedComment,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id, report_id' });
+
+    if (upsertError) throw new Error(`Lưu comment thất bại: ${upsertError.message}`);
+
+    // Also update the globally identified service on the main report
+    await supabaseAdmin
         .from('Bao_cao_Facebook')
-        .update({ suggested_comment: cleanedGeneratedComment, identified_service_id: identifiedServiceId })
+        .update({ identified_service_id: identifiedServiceId })
         .eq('id', reportId);
-    if (updateError) throw new Error(`Lưu comment thất bại: ${updateError.message}`);
 
     // Step 6: Log and return
     await supabaseAdmin.from('ai_generation_logs').insert({ user_id: user.id, template_type: 'customer_finder_comment', final_prompt: finalPrompt, generated_content: rawResponse, is_hidden_in_admin_history: false });

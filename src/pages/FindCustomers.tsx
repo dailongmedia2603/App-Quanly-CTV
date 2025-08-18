@@ -55,16 +55,38 @@ const FindCustomers = () => {
   useEffect(() => {
     const fetchReportData = async () => {
       setLoadingReports(true);
-      const { data, error } = await supabase.functions.invoke(
+      const { data: reports, error: reportsError } = await supabase.functions.invoke(
         'get-facebook-posts-for-customer-finder'
       );
 
-      if (error) {
-        showError(`Không thể tải dữ liệu: ${error.message}`);
+      if (reportsError) {
+        showError(`Không thể tải dữ liệu: ${reportsError.message}`);
         setReportData([]);
-      } else {
-        setReportData(data as ReportData[]);
+        setLoadingReports(false);
+        return;
       }
+
+      if (reports && reports.length > 0) {
+        const reportIds = reports.map((r: ReportData) => r.id);
+        const { data: comments, error: commentsError } = await supabase
+          .from('user_suggested_comments')
+          .select('report_id, comment_text')
+          .in('report_id', reportIds);
+
+        if (commentsError) {
+          showError("Không thể tải các comment đã tạo.");
+        }
+
+        const commentsMap = new Map(comments?.map(c => [c.report_id, c.comment_text]));
+        const mergedData = reports.map((report: ReportData) => ({
+          ...report,
+          suggested_comment: commentsMap.get(report.id) || null,
+        }));
+        setReportData(mergedData);
+      } else {
+        setReportData([]);
+      }
+
       setLoadingReports(false);
     };
 

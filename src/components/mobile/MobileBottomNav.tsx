@@ -42,7 +42,7 @@ const MobileBottomNav = () => {
   return (
     <>
       <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-200 shadow-lg flex items-center justify-around z-50">
-        {hasPermission('find_customers') && <NavItem to="/find-customers" icon={Search} label="Tìm KH" />}
+        {hasPermission('find_customers') && <NavItem to="/find-customers" icon={Search} label="Khách hàng" />}
         {hasPermission('customer_consulting') && <NavItem to="/create-content/customer-consulting" icon={UserCheck} label="Tư vấn" />}
         
         <Link to="/income" className="flex-1 flex justify-center">
@@ -50,8 +50,7 @@ const MobileBottomNav = () => {
             "h-16 w-16 rounded-full text-white flex flex-col items-center justify-center -mt-6 border-4 border-white shadow-md",
             isIncomeActive ? "bg-brand-orange" : "bg-gray-400"
           )}>
-            <Wallet className="h-6 w-6" />
-            <span className="text-xs font-semibold mt-0.5">Thu nhập</span>
+            <Wallet className="h-8 w-8" />
           </div>
         </Link>
 

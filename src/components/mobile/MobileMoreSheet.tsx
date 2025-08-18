@@ -48,7 +48,7 @@ const MobileMoreSheet = ({ isOpen, onOpenChange }: MobileMoreSheetProps) => {
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-[280px]">
+      <SheetContent side="right" className="w-[280px]">
         <SheetHeader>
           <SheetTitle className="text-2xl">Menu Khác</SheetTitle>
         </SheetHeader>

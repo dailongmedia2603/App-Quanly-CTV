@@ -26,6 +26,7 @@ import { OldContractsDialog } from '@/components/OldContractsDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ContractCard from '@/components/income/ContractCard';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { MonthPicker } from '@/components/ui/MonthPicker';
 
 // Define the contract type
 interface Contract {
@@ -391,23 +392,28 @@ const Income = () => {
                 <ReportWidget icon={<CalendarPlus className="h-5 w-5" />} title="HĐ trong tháng" value={allContractsStats.thisMonth.toString()} />
             </div>
             <Card><CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"><div><CardTitle>Quản lý Hợp đồng</CardTitle><CardDescription>Thêm mới, chỉnh sửa và theo dõi tất cả hợp đồng của bạn.</CardDescription></div>
-              <div className="flex items-center space-x-2 w-full sm:w-auto">
-                <div className="relative flex-1 sm:flex-initial sm:w-full sm:max-w-sm"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /><Input placeholder="Tìm theo tên dự án..." className="pl-10" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full sm:w-auto">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {contractFilterDate ? format(contractFilterDate, 'MM/yyyy') : 'Tất cả hợp đồng'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <DatePicker date={contractFilterDate || undefined} setDate={(date) => setContractFilterDate(date || null)} />
-                    <div className="p-2 border-t border-border">
-                      <Button variant="ghost" className="w-full justify-start" onClick={() => setContractFilterDate(null)}>Xóa bộ lọc</Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-                {canCreate && <Button onClick={handleAddNewClick} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><Plus className="mr-2 h-4 w-4" />Tạo hợp đồng</Button>}
+              <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                <div className="relative w-full sm:flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input placeholder="Tìm theo tên dự án..." className="pl-10 w-full" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-center sm:w-auto">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {contractFilterDate ? format(contractFilterDate, 'MM/yyyy', { locale: vi }) : 'Tất cả hợp đồng'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <MonthPicker date={contractFilterDate} setDate={setContractFilterDate} />
+                      <div className="p-2 border-t border-border">
+                        <Button variant="ghost" className="w-full justify-start" onClick={() => setContractFilterDate(null)}>Xóa bộ lọc</Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  {canCreate && <Button onClick={handleAddNewClick} className="bg-brand-orange hover:bg-brand-orange/90 text-white w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" />Tạo hợp đồng</Button>}
+                </div>
               </div>
             </CardHeader><CardContent>
               {isMobile ? (

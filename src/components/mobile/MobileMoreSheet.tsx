@@ -1,4 +1,4 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -48,11 +48,11 @@ const MobileMoreSheet = ({ isOpen, onOpenChange }: MobileMoreSheetProps) => {
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[280px]">
-        <SheetHeader>
-          <SheetTitle className="text-2xl">Menu Khác</SheetTitle>
-        </SheetHeader>
-        <nav className="mt-8 space-y-2">
+      <SheetContent side="right" className="w-[280px] p-0">
+        <div className="p-4 border-b border-gray-200">
+          <img src="/logodailong-ngang.png" alt="Dailong Media Logo" className="h-14 object-contain" />
+        </div>
+        <nav className="p-4 space-y-2">
           {hasPermission('performance_reports') && <MoreNavLink to="/performance-report" icon={FilePieChart} onLinkClick={handleLinkClick}>Báo cáo hiệu suất</MoreNavLink>}
           {hasPermission('documents') && <MoreNavLink to="/documents" icon={FolderKanban} onLinkClick={handleLinkClick}>Tài liệu</MoreNavLink>}
           {hasPermission('public_services') && <MoreNavLink to="/services" icon={Briefcase} onLinkClick={handleLinkClick}>Dịch vụ</MoreNavLink>}

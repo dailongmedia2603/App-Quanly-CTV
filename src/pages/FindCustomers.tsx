@@ -54,51 +54,88 @@ const FindCustomers = () => {
   const [generatingCommentIds, setGeneratingCommentIds] = useState<Set<string>>(new Set());
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    const fetchReportData = async () => {
-      if (!user) {
-        setReportData([]);
-        setLoadingReports(false);
-        return;
-      }
-      setLoadingReports(true);
-      const { data: reports, error: reportsError } = await supabase.functions.invoke(
-        'get-facebook-posts-for-customer-finder'
-      );
-
-      if (reportsError) {
-        showError(`Không thể tải dữ liệu: ${reportsError.message}`);
-        setReportData([]);
-        setLoadingReports(false);
-        return;
-      }
-
-      if (reports && reports.length > 0) {
-        const reportIds = reports.map((r: ReportData) => r.id);
-        const { data: comments, error: commentsError } = await supabase
-          .from('user_suggested_comments')
-          .select('report_id, comment_text')
-          .eq('user_id', user.id)
-          .in('report_id', reportIds);
-
-        if (commentsError) {
-          showError("Không thể tải các comment đã tạo.");
-        }
-
-        const commentsMap = new Map(comments?.map(c => [c.report_id, c.comment_text]));
-        const mergedData = reports.map((report: ReportData) => ({
-          ...report,
-          suggested_comment: commentsMap.get(report.id) || null,
-        }));
-        setReportData(mergedData);
-      } else {
-        setReportData([]);
-      }
-
+  const fetchReportData = async () => {
+    if (!user) {
+      setReportData([]);
       setLoadingReports(false);
-    };
+      return;
+    }
+    setLoadingReports(true);
+    const { data: reports, error: reportsError } = await supabase.functions.invoke(
+      'get-facebook-posts-for-customer-finder'
+    );
 
+    if (reportsError) {
+      showError(`Không thể tải dữ liệu: ${reportsError.message}`);
+      setReportData([]);
+      setLoadingReports(false);
+      return;
+    }
+
+    if (reports && reports.length > 0) {
+      const reportIds = reports.map((r: ReportData) => r.id);
+      const { data: comments, error: commentsError } = await supabase
+        .from('user_suggested_comments')
+        .select('report_id, comment_text')
+        .eq('user_id', user.id)
+        .in('report_id', reportIds);
+
+      if (commentsError) {
+        showError("Không thể tải các comment đã tạo.");
+      }
+
+      const commentsMap = new Map(comments?.map(c => [c.report_id, c.comment_text]));
+      const mergedData = reports.map((report: ReportData) => ({
+        ...report,
+        suggested_comment: commentsMap.get(report.id) || null,
+      }));
+      setReportData(mergedData);
+    } else {
+      setReportData([]);
+    }
+
+    setLoadingReports(false);
+  };
+
+  useEffect(() => {
     fetchReportData();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase.channel('user-suggested-comments-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_suggested_comments',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        const updatedRecord = payload.new as { report_id: string; comment_text: string };
+        const deletedRecord = payload.old as { report_id: string };
+
+        setReportData(prevData =>
+          prevData.map(report => {
+            if (payload.eventType === 'INSERT' && report.id === updatedRecord.report_id) {
+              setGeneratingCommentIds(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(report.id);
+                return newSet;
+              });
+              return { ...report, suggested_comment: updatedRecord.comment_text };
+            }
+            if (payload.eventType === 'DELETE' && report.id === deletedRecord.report_id) {
+              return { ...report, suggested_comment: null };
+            }
+            return report;
+          })
+        );
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const paginatedData = useMemo(() => {
@@ -130,8 +167,9 @@ const FindCustomers = () => {
       return;
     }
     setGeneratingCommentIds(prev => new Set(prev).add(item.id));
+    
     try {
-      const { data, error } = await supabase.functions.invoke('generate-customer-finder-comment', {
+      const { error } = await supabase.functions.invoke('trigger-generate-comment', {
         body: {
           reportId: item.id,
           postContent: item.description,
@@ -141,26 +179,9 @@ const FindCustomers = () => {
       if (error) {
         throw new Error(error.message);
       }
-
-      const { comment, service } = data;
-
-      setReportData(prevData =>
-        prevData.map(report =>
-          report.id === item.id
-            ? { 
-                ...report, 
-                suggested_comment: comment,
-                identified_service_id: service.id,
-                identified_service_name: service.name,
-              }
-            : report
-        )
-      );
-      showSuccess("Đã tạo comment thành công!");
-
+      // No need to show success here, the realtime listener will update the UI
     } catch (error: any) {
-      showError(`Lỗi tạo comment: ${error.message}`);
-    } finally {
+      showError(`Lỗi khi gửi yêu cầu: ${error.message}`);
       setGeneratingCommentIds(prev => {
         const newSet = new Set(prev);
         newSet.delete(item.id);

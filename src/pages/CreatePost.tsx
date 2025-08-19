@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -166,7 +167,7 @@ const PostHistoryView = ({ onBack }: { onBack: () => void }) => {
                   <AccordionTrigger className="p-4 hover:no-underline hover:bg-orange-50/50 rounded-t-lg data-[state=open]:border-b data-[state=open]:border-orange-200">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center w-full min-w-0 gap-1 sm:gap-4 text-left">
                       <span className="font-semibold text-gray-800 truncate w-full">{getPostTitle(log.generated_content)}</span>
-                      <span className="text-xs text-gray-500 font-normal sm:flex-shrink-0 sm:pl-4">
+                      <span className="text-sm text-gray-500 font-normal sm:flex-shrink-0 sm:pl-4">
                         {format(new Date(log.created_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}
                       </span>
                     </div>
@@ -197,79 +198,76 @@ const PostHistoryView = ({ onBack }: { onBack: () => void }) => {
 };
 
 const CreatePost = () => {
+  const { user } = useAuth();
   const [view, setView] = useState<'create' | 'history'>('create');
-  // Form state
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [selectedServiceId, setSelectedServiceId] = useState('');
-  
   const [postTypes, setPostTypes] = useState<PostType[]>([]);
   const [loadingPostTypes, setLoadingPostTypes] = useState(true);
   const [selectedPostTypeId, setSelectedPostTypeId] = useState('');
-
   const [industry, setIndustry] = useState('');
   const [direction, setDirection] = useState('');
-
-  // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPost, setGeneratedPost] = useState('');
-
-  // Regeneration state
   const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
   const [regenerateDirection, setRegenerateDirection] = useState('');
+  const [lastRequestTime, setLastRequestTime] = useState<number>(0);
 
   useEffect(() => {
-    const fetchServices = async () => {
+    const fetchInitialData = async () => {
       setLoadingServices(true);
-      const { data, error } = await supabase
-        .from('document_services')
-        .select('id, name, description')
-        .order('name', { ascending: true });
-      
-      if (error) {
-        showError("Không thể tải danh sách dịch vụ.");
-      } else {
-        setServices(data as Service[]);
-      }
-      setLoadingServices(false);
-    };
-
-    const fetchPostTypes = async () => {
       setLoadingPostTypes(true);
-      const { data, error } = await supabase
-        .from('document_post_types')
-        .select('id, name, description, word_count')
-        .order('name', { ascending: true });
-      
-      if (error) {
-        showError("Không thể tải danh sách dạng bài.");
-      } else {
-        setPostTypes(data as PostType[]);
-      }
+      const [servicesRes, postTypesRes] = await Promise.all([
+        supabase.from('document_services').select('id, name, description').order('name', { ascending: true }),
+        supabase.from('document_post_types').select('id, name, description, word_count').order('name', { ascending: true })
+      ]);
+      if (servicesRes.error) showError("Không thể tải danh sách dịch vụ.");
+      else setServices(servicesRes.data as Service[]);
+      setLoadingServices(false);
+      if (postTypesRes.error) showError("Không thể tải danh sách dạng bài.");
+      else setPostTypes(postTypesRes.data as PostType[]);
       setLoadingPostTypes(false);
     };
-
-    fetchServices();
-    fetchPostTypes();
+    fetchInitialData();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase.channel('post-generation')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'ai_generation_logs',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        const newLog = payload.new as { template_type: string; generated_content: string; created_at: string };
+        if (newLog.template_type === 'post' && new Date(newLog.created_at).getTime() > lastRequestTime) {
+          setGeneratedPost(newLog.generated_content);
+          setIsGenerating(false);
+          showSuccess("Tạo bài viết thành công!");
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, lastRequestTime]);
 
   const handleGeneratePost = async (isRegeneration = false) => {
     const selectedPostType = postTypes.find(pt => pt.id === selectedPostTypeId);
-
     if (!selectedServiceId || !selectedPostType || !industry) {
       showError("Vui lòng điền đầy đủ các trường Dịch vụ, Dạng bài và Ngành.");
       return;
     }
     setIsGenerating(true);
+    setGeneratedPost('');
     if (isRegeneration) setIsRegenerateDialogOpen(false);
-    const toastId = showLoading(isRegeneration ? "Đang tạo lại bài viết..." : "AI đang sáng tạo, vui lòng chờ...");
+    
+    setLastRequestTime(Date.now());
 
-    const postTypeForPrompt = `${selectedPostType.name}${selectedPostType.description ? ` (Mô tả: ${selectedPostType.description})` : ''}`;
-
-    const { data, error } = await supabase.functions.invoke('generate-post', {
+    const { error } = await supabase.functions.invoke('trigger-generate-post', {
       body: {
         serviceId: selectedServiceId,
-        postType: postTypeForPrompt,
+        postType: `${selectedPostType.name}${selectedPostType.description ? ` (Mô tả: ${selectedPostType.description})` : ''}`,
         wordCount: selectedPostType.word_count,
         industry,
         direction,
@@ -277,15 +275,12 @@ const CreatePost = () => {
       }
     });
 
-    dismissToast(toastId);
     if (error) {
-      showError(`Tạo bài viết thất bại: ${error.message}`);
+      showError(`Gửi yêu cầu thất bại: ${error.message}`);
+      setIsGenerating(false);
     } else {
-      showSuccess("Tạo bài viết thành công!");
-      setGeneratedPost(data.post);
-      setRegenerateDirection('');
+      showSuccess("Đã gửi yêu cầu, AI đang xử lý...");
     }
-    setIsGenerating(false);
   };
 
   const handleCopy = () => {
@@ -315,7 +310,6 @@ const CreatePost = () => {
         </Button>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Left Column: Configuration */}
         <Card className="lg:col-span-1 border-orange-200">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -327,36 +321,14 @@ const CreatePost = () => {
           <CardContent className="space-y-4">
             <FormInput icon={Briefcase} label="Dịch vụ">
               <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn dịch vụ" />
-                </SelectTrigger>
-                <SelectContent>
-                  {loadingServices ? (
-                    <SelectItem value="loading" disabled>Đang tải...</SelectItem>
-                  ) : (
-                    services.map(service => (
-                      <SelectItem key={service.id} value={service.id}>
-                        {service.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
+                <SelectTrigger><SelectValue placeholder="Chọn dịch vụ" /></SelectTrigger>
+                <SelectContent>{loadingServices ? <SelectItem value="loading" disabled>Đang tải...</SelectItem> : services.map(service => <SelectItem key={service.id} value={service.id}>{service.name}</SelectItem>)}</SelectContent>
               </Select>
             </FormInput>
             <FormInput icon={FileText} label="Dạng bài">
               <Select value={selectedPostTypeId} onValueChange={setSelectedPostTypeId}>
                 <SelectTrigger><SelectValue placeholder="Chọn dạng bài" /></SelectTrigger>
-                <SelectContent>
-                  {loadingPostTypes ? (
-                    <SelectItem value="loading" disabled>Đang tải...</SelectItem>
-                  ) : (
-                    postTypes.map(postType => (
-                      <SelectItem key={postType.id} value={postType.id}>
-                        {postType.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
+                <SelectContent>{loadingPostTypes ? <SelectItem value="loading" disabled>Đang tải...</SelectItem> : postTypes.map(postType => <SelectItem key={postType.id} value={postType.id}>{postType.name}</SelectItem>)}</SelectContent>
               </Select>
             </FormInput>
             <FormInput icon={Factory} label="Ngành muốn đánh">
@@ -373,8 +345,6 @@ const CreatePost = () => {
             </Button>
           </CardFooter>
         </Card>
-
-        {/* Right Column: Content */}
         <Card className="lg:col-span-2 border-orange-200 min-h-[500px]">
           <CardHeader className="flex flex-row items-center justify-between">
             <div className="space-y-1">
@@ -394,9 +364,7 @@ const CreatePost = () => {
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Tạo lại bài viết</DialogTitle>
-                    </DialogHeader>
+                    <DialogHeader><DialogTitle>Tạo lại bài viết</DialogTitle></DialogHeader>
                     <div className="py-4">
                       <Label htmlFor="regenerate-direction">Định hướng mới (nếu có)</Label>
                       <Textarea id="regenerate-direction" placeholder="VD: Viết ngắn gọn hơn, thêm yếu tố hài hước..." value={regenerateDirection} onChange={e => setRegenerateDirection(e.target.value)} className="mt-2" />

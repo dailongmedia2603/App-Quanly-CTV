@@ -28,7 +28,7 @@ serve(async (req) => {
     );
 
     // Invoke the processing function without awaiting its result
-    supabaseAdmin.functions.invoke('process-generate-comment', {
+    supabaseAdmin.functions.invoke('process-generate-post', {
       body,
       headers: {
         'Authorization': authHeader
@@ -36,13 +36,13 @@ serve(async (req) => {
     });
 
     // Immediately return a 202 Accepted response
-    return new Response(JSON.stringify({ success: true, message: "Yêu cầu tạo comment đã được tiếp nhận." }), {
+    return new Response(JSON.stringify({ success: true, message: "Yêu cầu tạo bài viết đã được tiếp nhận." }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 202,
     });
 
   } catch (error) {
-    console.error('Lỗi tại hàm trigger-generate-comment:', error);
+    console.error('Lỗi tại hàm trigger-generate-post:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,

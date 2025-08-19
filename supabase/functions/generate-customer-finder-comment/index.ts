@@ -103,17 +103,21 @@ serve(async (req) => {
     
     const matchedService = services.find(s => s.id === identifiedServiceId);
 
-    // Step 5: Save the result to the new user-specific table
-    const { error: upsertError } = await supabaseAdmin
+    // Step 5: Delete any existing comment for this user/report, then insert the new one.
+    await supabaseAdmin
       .from('user_suggested_comments')
-      .upsert({
+      .delete()
+      .match({ user_id: user.id, report_id: reportId });
+
+    const { error: insertError } = await supabaseAdmin
+      .from('user_suggested_comments')
+      .insert({
         user_id: user.id,
         report_id: reportId,
         comment_text: cleanedGeneratedComment,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id, report_id' });
+      });
 
-    if (upsertError) throw new Error(`Lưu comment thất bại: ${upsertError.message}`);
+    if (insertError) throw new Error(`Lưu comment thất bại: ${insertError.message}`);
 
     // Also update the globally identified service on the main report
     await supabaseAdmin

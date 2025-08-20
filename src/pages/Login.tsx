@@ -11,7 +11,7 @@ import { showError } from '@/utils/toast';
 
 const AuthBranding = () => (
   <div className="hidden lg:flex flex-col items-center justify-center bg-blue-600 text-white p-12 rounded-2xl">
-    <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-20 mx-auto" />
+    <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-40 mx-auto" />
     <div className="mt-4 bg-white/20 backdrop-blur-sm py-2 px-6 rounded-lg">
       <h1 className="text-xl font-bold">HỆ THỐNG QUẢN LÝ CỘNG TÁC VIÊN</h1>
     </div>

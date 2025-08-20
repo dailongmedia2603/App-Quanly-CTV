@@ -11,7 +11,9 @@ import { showError, showSuccess } from '@/utils/toast';
 const AuthBranding = () => (
   <div className="hidden lg:flex flex-col items-center justify-center bg-blue-600 text-white p-12 rounded-2xl">
     <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-20 mx-auto" />
-    <h1 className="text-2xl font-bold mt-4">HỆ THỐNG QUẢN LÝ CỘNG TÁC VIÊN</h1>
+    <div className="mt-4 bg-white/20 backdrop-blur-sm py-2 px-6 rounded-lg">
+      <h1 className="text-xl font-bold">HỆ THỐNG QUẢN LÝ CỘNG TÁC VIÊN</h1>
+    </div>
   </div>
 );
 
@@ -47,7 +49,7 @@ const UpdatePassword = () => {
 
   return (
     <div className="min-h-screen bg-dotted-pattern flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-lg grid lg:grid-cols-2">
+      <div className="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-lg grid lg:grid-cols-2">
         <div className="lg:hidden text-center p-8 border-b border-gray-200">
           <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-16 mx-auto" />
         </div>

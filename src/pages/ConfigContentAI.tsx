@@ -1,7 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PromptTemplateEditor from "@/components/settings/PromptTemplateEditor";
 import PromptHistory from "@/components/settings/PromptHistory";
-import { PenSquare, MessageSquare, UserCheck, Users } from "lucide-react";
+import AiErrorLogTab from "@/components/settings/AiErrorLogTab";
+import { PenSquare, MessageSquare, UserCheck, Users, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -39,7 +40,7 @@ const ConfigContentAI = () => {
         </p>
       </div>
       <Tabs defaultValue="post" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-3xl rounded-lg border border-orange-200 p-0 bg-white overflow-hidden">
+        <TabsList className="grid w-full grid-cols-5 max-w-4xl rounded-lg border border-orange-200 p-0 bg-white overflow-hidden">
           <TabsTrigger value="post" className="flex-1 flex items-center justify-center space-x-2 py-2.5 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold">
             <PenSquare className="h-5 w-5" />
             <span>Prompt Post</span>
@@ -55,6 +56,10 @@ const ConfigContentAI = () => {
           <TabsTrigger value="consulting" className="flex-1 flex items-center justify-center space-x-2 py-2.5 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold">
             <UserCheck className="h-5 w-5" />
             <span>Prompt Tư vấn</span>
+          </TabsTrigger>
+          <TabsTrigger value="error_logs" className="flex-1 flex items-center justify-center space-x-2 py-2.5 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold">
+            <AlertTriangle className="h-5 w-5" />
+            <span>Thông báo lỗi</span>
           </TabsTrigger>
         </TabsList>
         <TabsContent value="post" className="pt-6 space-y-6">
@@ -88,6 +93,9 @@ const ConfigContentAI = () => {
             description="Cấu hình mẫu prompt mặc định cho chức năng 'Tư vấn khách hàng'. AI sẽ sử dụng mẫu này để trả lời các câu hỏi của khách hàng."
           />
           <PromptHistory templateType="consulting" />
+        </TabsContent>
+        <TabsContent value="error_logs" className="pt-6 space-y-6">
+          <AiErrorLogTab />
         </TabsContent>
       </Tabs>
     </div>

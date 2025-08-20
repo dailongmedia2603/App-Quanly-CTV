@@ -52,16 +52,29 @@ const cleanAiResponse = (rawText: string): string => {
   return text;
 };
 
+const logErrorToDb = async (supabaseAdmin: any, userId: string, functionName: string, error: Error, context: any) => {
+  try {
+    await supabaseAdmin.from('ai_error_logs').insert({
+      user_id: userId,
+      error_message: error.message,
+      function_name: functionName,
+      context: context,
+    });
+  } catch (dbError) {
+    console.error("Failed to log error to DB:", dbError);
+  }
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
+  let userId: string | null = null;
+  const functionName = 'generate-post';
+  let requestBody: any = {};
+
   try {
-    const { serviceId, postType, industry, direction, originalPost, regenerateDirection, wordCount } = await req.json();
-
-    if (!serviceId) throw new Error("Service ID is required.");
-
     const authHeader = req.headers.get('Authorization')!
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -71,6 +84,12 @@ serve(async (req) => {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Không tìm thấy người dùng.");
+    userId = user.id;
+
+    requestBody = await req.json();
+    const { serviceId, postType, industry, direction, originalPost, regenerateDirection, wordCount } = requestBody;
+
+    if (!serviceId) throw new Error("Service ID is required.");
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -207,9 +226,14 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error(`Error in ${functionName}:`, error);
+    if (userId) {
+      const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+      await logErrorToDb(supabaseAdmin, userId, functionName, error, requestBody);
+    }
+    return new Response(JSON.stringify({ error: "Đang bị quá tải.... Hãy bấm tạo lại nhé" }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
-    })
+    });
   }
 })

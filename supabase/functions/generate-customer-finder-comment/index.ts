@@ -25,19 +25,38 @@ const cleanAiResponse = (rawText: string): string => {
   return text;
 };
 
+const logErrorToDb = async (supabaseAdmin: any, userId: string, functionName: string, error: Error, context: any) => {
+  try {
+    await supabaseAdmin.from('ai_error_logs').insert({
+      user_id: userId,
+      error_message: error.message,
+      function_name: functionName,
+      context: context,
+    });
+  } catch (dbError) {
+    console.error("Failed to log error to DB:", dbError);
+  }
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
-  try {
-    const { reportId, postContent } = await req.json();
-    if (!reportId || !postContent) throw new Error("Yêu cầu ID báo cáo và nội dung bài đăng.");
+  let userId: string | null = null;
+  const functionName = 'generate-customer-finder-comment';
+  let requestBody: any = {};
 
+  try {
     const authHeader = req.headers.get('Authorization')!
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '', { global: { headers: { Authorization: authHeader } } });
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Không tìm thấy người dùng.");
+    userId = user.id;
+
+    requestBody = await req.json();
+    const { reportId, postContent } = requestBody;
+    if (!reportId || !postContent) throw new Error("Yêu cầu ID báo cáo và nội dung bài đăng.");
 
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
@@ -131,7 +150,11 @@ serve(async (req) => {
     return new Response(JSON.stringify({ comment: cleanedGeneratedComment, service: matchedService }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
 
   } catch (error) {
-    console.error('Lỗi Edge function:', error);
-    return new Response(JSON.stringify({ error: error.message }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 });
+    console.error(`Error in ${functionName}:`, error);
+    if (userId) {
+      const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+      await logErrorToDb(supabaseAdmin, userId, functionName, error, requestBody);
+    }
+    return new Response(JSON.stringify({ error: "Đang bị quá tải.... Hãy bấm tạo lại nhé" }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 });
   }
 })

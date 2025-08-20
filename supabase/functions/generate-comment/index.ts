@@ -27,10 +27,6 @@ const cleanAiResponse = (rawText: string): string => {
     for (let i = 0; i < lines.length; i++) {
       const trimmedLine = lines[i].trim();
       if (trimmedLine === '') continue;
-      if (trimmedLine.startsWith('#') || trimmedLine.startsWith('*')) {
-        firstContentLineIndex = i;
-        break;
-      }
       const isPreamble = /^(chắc chắn rồi|dưới đây là|here is|tuyệt vời|tất nhiên|here's a draft|here's the comment)/i.test(trimmedLine);
       if (!isPreamble) {
         firstContentLineIndex = i;
@@ -48,17 +44,29 @@ const cleanAiResponse = (rawText: string): string => {
   return text;
 };
 
+const logErrorToDb = async (supabaseAdmin: any, userId: string, functionName: string, error: Error, context: any) => {
+  try {
+    await supabaseAdmin.from('ai_error_logs').insert({
+      user_id: userId,
+      error_message: error.message,
+      function_name: functionName,
+      context: context,
+    });
+  } catch (dbError) {
+    console.error("Failed to log error to DB:", dbError);
+  }
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
+  let userId: string | null = null;
+  const functionName = 'generate-comment';
+  let requestBody: any = {};
+
   try {
-    const { serviceId, originalPostContent, originalComment, regenerateDirection } = await req.json();
-
-    if (!serviceId) throw new Error("Service ID is required.");
-    if (!originalPostContent) throw new Error("Original post content is required.");
-
     const authHeader = req.headers.get('Authorization')!
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -68,6 +76,13 @@ serve(async (req) => {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Không tìm thấy người dùng.");
+    userId = user.id;
+
+    requestBody = await req.json();
+    const { serviceId, originalPostContent, originalComment, regenerateDirection } = requestBody;
+
+    if (!serviceId) throw new Error("Service ID is required.");
+    if (!originalPostContent) throw new Error("Original post content is required.");
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -185,9 +200,14 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error(`Error in ${functionName}:`, error);
+    if (userId) {
+      const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+      await logErrorToDb(supabaseAdmin, userId, functionName, error, requestBody);
+    }
+    return new Response(JSON.stringify({ error: "Đang bị quá tải.... Hãy bấm tạo lại nhé" }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
-    })
+    });
   }
 })

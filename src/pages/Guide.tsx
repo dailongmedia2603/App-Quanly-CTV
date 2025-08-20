@@ -103,9 +103,9 @@ const Guide = () => {
               <li>
                 <strong>Đội ngũ công ty sẽ luôn đồng hành và hỗ trợ bạn</strong> bất kì khi nào bạn gặp khó khăn hoặc cần trợ giúp để tư vấn khách hàng.
                 <ul className="list-['→'] pl-5 mt-2 space-y-1 text-sm">
-                  <li>Nếu khách hàng cần làm báo giá: Hãy liên hệ cho Admin để được hỗ trợ tạo báo giá.</li>
-                  <li>Khách hàng hỏi nhưng bạn không biết trả lời, công cụ tư vấn khách hàng cũng không trả lời được: Hãy liên hệ cho Admin để được hỗ trợ cách tư vấn.</li>
-                  <li>Khi bạn chốt được hợp đồng: Hãy liên hệ cho admin để admin giúp bạn làm hợp đồng.</li>
+                  <li>Nếu khách hàng cần làm báo giá: <strong className="text-brand-orange">Hãy liên hệ cho Admin</strong> để được hỗ trợ tạo báo giá.</li>
+                  <li>Khách hàng hỏi nhưng bạn không biết trả lời, công cụ tư vấn khách hàng cũng không trả lời được: <strong className="text-brand-orange">Hãy liên hệ cho Admin</strong> để được hỗ trợ cách tư vấn.</li>
+                  <li>Khi bạn chốt được hợp đồng: <strong className="text-brand-orange">Hãy liên hệ cho admin</strong> để admin giúp bạn làm hợp đồng.</li>
                 </ul>
               </li>
             </ul>

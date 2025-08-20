@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bell, LogOut, BookOpen, User, Settings } from "lucide-react";
+import { Bell, LogOut, User, Settings } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,10 +27,6 @@ const Header = () => {
         {/* Placeholder for breadcrumbs or title if needed later */}
       </div>
       <div className="flex items-center space-x-4">
-        <Button variant="outline" className="space-x-2" onClick={() => navigate('/guide')}>
-          <BookOpen className="h-5 w-5" />
-          <span>Hướng dẫn</span>
-        </Button>
         <Button variant="outline" size="icon">
           <Bell className="h-5 w-5" />
         </Button>

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Home, SlidersHorizontal, FilePieChart, CircleDollarSign, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog, FolderKanban, UserCheck, FileSpreadsheet, FileBarChart, Briefcase } from "lucide-react";
+import { Home, SlidersHorizontal, FilePieChart, CircleDollarSign, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog, FolderKanban, UserCheck, FileSpreadsheet, FileBarChart, Briefcase, BookOpen } from "lucide-react";
 import * as Icons from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -110,6 +110,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
         </div>
         <div className="flex-1 overflow-y-auto p-4">
           <nav className="space-y-1">
+            <NavLink to="/guide" icon={BookOpen} isCollapsed={isCollapsed}>Hướng dẫn</NavLink>
             {hasPermission('find_customers') && <NavLink to="/find-customers" icon={Search} isCollapsed={isCollapsed}>Tìm khách hàng</NavLink>}
             
             {(hasPermission('create_post') || hasPermission('create_comment')) && (

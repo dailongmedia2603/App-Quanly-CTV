@@ -236,7 +236,7 @@ const CreateComment = () => {
       setGeneratedComment(data.comment);
       showSuccess("Tạo comment thành công!");
     } catch (error: any) {
-      showError(`Tạo comment thất bại: ${error.message}`);
+      showError("Đang bị quá tải.... Hãy bấm tạo lại nhé");
     } finally {
       dismissToast(toastId);
       setIsGenerating(false);

@@ -153,7 +153,7 @@ const FindCustomers = () => {
       showSuccess("Tạo comment thành công!");
 
     } catch (error: any) {
-      showError(`Lỗi khi tạo comment: ${error.message}`);
+      showError("Đang bị quá tải.... Hãy bấm tạo lại nhé");
     } finally {
       setGeneratingCommentIds(prev => {
         const newSet = new Set(prev);

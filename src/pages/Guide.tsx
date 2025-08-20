@@ -10,7 +10,7 @@ const Guide = () => {
         <h1 className="text-2xl lg:text-3xl font-bold">Hướng dẫn "Bắt đầu công việc"</h1>
       </div>
 
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
         <div className="flex items-start space-x-3">
           <Lightbulb className="h-6 w-6 text-blue-500 flex-shrink-0 mt-1" />
           <div>
@@ -22,21 +22,22 @@ const Guide = () => {
             </ul>
           </div>
         </div>
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="video-guides" className="border border-orange-200 rounded-lg bg-white shadow-sm">
+            <AccordionTrigger className="p-4 hover:no-underline data-[state=open]:border-b data-[state=open]:border-orange-100">
+              <div className="flex items-center space-x-3">
+                <Video className="h-6 w-6 text-brand-orange" />
+                <h2 className="text-xl font-bold text-gray-800">Video hướng dẫn</h2>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="p-4">
+              <VideoGuidesTab />
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
       
       <Accordion type="multiple" className="w-full space-y-4">
-        <AccordionItem value="video-guides" className="border border-orange-200 rounded-lg bg-white shadow-sm">
-          <AccordionTrigger className="p-4 hover:no-underline data-[state=open]:border-b data-[state=open]:border-orange-100">
-            <div className="flex items-center space-x-3">
-              <Video className="h-6 w-6 text-brand-orange" />
-              <h2 className="text-2xl font-bold text-gray-800">Video hướng dẫn</h2>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="p-4">
-            <VideoGuidesTab />
-          </AccordionContent>
-        </AccordionItem>
-
         <AccordionItem value="customer-finding-guides" className="border border-orange-200 rounded-lg bg-white shadow-sm">
           <AccordionTrigger className="p-4 hover:no-underline data-[state=open]:border-b data-[state=open]:border-orange-100">
             <div className="flex items-center space-x-3">

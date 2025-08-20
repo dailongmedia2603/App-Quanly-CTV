@@ -89,6 +89,29 @@ const Guide = () => {
           </AccordionItem>
         </Accordion>
       </div>
+
+      {/* BƯỚC 4 */}
+      <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg space-y-4">
+        <div className="flex items-start space-x-3">
+          <Lightbulb className="h-6 w-6 text-purple-500 flex-shrink-0 mt-1" />
+          <div>
+            <h3 className="font-bold text-lg text-gray-800">BƯỚC 4:</h3>
+            <ul className="list-disc pl-5 mt-1 space-y-2 text-gray-700">
+              <li>
+                Khi bạn thực hiện hết 3 bước trên chắc chắn là bạn đã có thể bắt đầu tìm khách hàng và chắc chắn sẽ có những khách hàng đầu tiên rồi.
+              </li>
+              <li>
+                <strong>Đội ngũ công ty sẽ luôn đồng hành và hỗ trợ bạn</strong> bất kì khi nào bạn gặp khó khăn hoặc cần trợ giúp để tư vấn khách hàng.
+                <ul className="list-['->'] pl-5 mt-2 space-y-1 text-sm">
+                  <li>{'Nếu khách hàng cần làm báo giá -> Hãy liên hệ cho Admin để được hỗ trợ tạo báo giá'}</li>
+                  <li>{'Khách hàng hỏi nhưng bạn không biết trả lời, công cụ tư vấn khách hàng cũng không trả lời được -> Hãy liên hệ cho Admin để được hỗ trợ cách tư vấn.'}</li>
+                  <li>{'Khi bạn chốt được hợp đồng -> Hãy liên hệ cho admin để admin giúp bạn làm hợp đồng'}</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

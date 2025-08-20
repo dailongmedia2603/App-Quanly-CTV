@@ -9,6 +9,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff } from 'lucide-react';
 import { showError } from '@/utils/toast';
 
+const AuthBranding = () => (
+  <div className="hidden lg:flex flex-col items-center justify-center bg-blue-600 text-white p-12 rounded-2xl">
+    <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-20 mx-auto" />
+    <h1 className="text-2xl font-bold mt-4">HỆ THỐNG QUẢN LÝ CỘNG TÁC VIÊN</h1>
+  </div>
+);
+
 const Login = () => {
   const { session } = useAuth();
   const navigate = useNavigate();
@@ -49,93 +56,46 @@ const Login = () => {
     if (error) {
       showError('Email hoặc mật khẩu không chính xác.');
     }
-    // Navigation will be handled by the AuthContext's onAuthStateChange listener
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-dotted-pattern flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-md mx-auto bg-white p-8 rounded-2xl shadow-lg">
-        <div className="text-center mb-8">
-          <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-20 mx-auto" />
-          <h1 className="text-2xl font-bold text-gray-900 mt-4">Hệ thống Quản lý CTV</h1>
+    <div className="min-h-screen bg-dotted-pattern flex items-center justify-center p-4">
+      <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-lg grid lg:grid-cols-2">
+        {/* Mobile Header */}
+        <div className="lg:hidden text-center p-8 border-b border-gray-200">
+          <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-16 mx-auto" />
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="email" className="font-semibold">Email*</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
+        <div className="p-8 lg:p-12">
+          <h2 className="text-3xl font-bold text-gray-900">Đăng nhập</h2>
+          <p className="mt-2 text-gray-500">Nhập Email và mật khẩu để đăng nhập</p>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Mật khẩu*</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                required
-                placeholder="Tối thiểu 8 ký tự"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-12 pr-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
-              >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
+          <form onSubmit={handleLogin} className="mt-8 space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email*</Label>
+              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Checkbox
-                id="remember-me"
-                className="border-gray-400"
-                checked={rememberMe}
-                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-              />
-              <Label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                Ghi nhớ trạng thái đăng nhập
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="password">Mật khẩu*</Label>
+              <div className="relative">
+                <Input id="password" type={showPassword ? 'text' : 'password'} required placeholder="Tối thiểu 8 ký tự" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
             </div>
-            <div className="text-sm">
-              <Link to="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
-                Quên mật khẩu?
-              </Link>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center"><Checkbox id="remember-me" checked={rememberMe} onCheckedChange={(c) => setRememberMe(c as boolean)} /><Label htmlFor="remember-me" className="ml-2">Ghi nhớ trạng thái đăng nhập</Label></div>
+              <Link to="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-500">Quên mật khẩu?</Link>
             </div>
-          </div>
-
-          <div>
-            <Button type="submit" className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-base font-semibold rounded-lg" disabled={loading}>
-              {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-            </Button>
-          </div>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Chưa có tài khoản?{' '}
-          <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500">
-            Đăng ký tài khoản
-          </Link>
-        </p>
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>{loading ? 'Đang đăng nhập...' : 'Đăng nhập'}</Button>
+          </form>
+          <p className="mt-6 text-center text-sm text-gray-500">Chưa có tài khoản? <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500">Đăng ký tài khoản</Link></p>
+          <p className="mt-8 text-center text-xs text-gray-400">© 2024 DAILONG MEDIA. All Rights Reserved.</p>
+        </div>
+        <AuthBranding />
       </div>
-      <p className="mt-8 text-center text-xs text-gray-400">
-        © 2024 DAILONG MEDIA. All Rights Reserved.
-      </p>
     </div>
   );
 };

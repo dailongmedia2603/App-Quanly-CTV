@@ -8,6 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Eye, EyeOff } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 
+const AuthBranding = () => (
+  <div className="hidden lg:flex flex-col items-center justify-center bg-blue-600 text-white p-12 rounded-2xl">
+    <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-20 mx-auto" />
+    <h1 className="text-2xl font-bold mt-4">HỆ THỐNG QUẢN LÝ CỘNG TÁC VIÊN</h1>
+  </div>
+);
+
 const SignUp = () => {
   const { session } = useAuth();
   const navigate = useNavigate();
@@ -42,69 +49,35 @@ const SignUp = () => {
   };
 
   return (
-    <div className="min-h-screen bg-dotted-pattern flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-md mx-auto bg-white p-8 rounded-2xl shadow-lg">
-        <div className="text-center mb-8">
-          <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-20 mx-auto" />
-          <h1 className="text-2xl font-bold text-gray-900 mt-4">Đăng ký tài khoản</h1>
+    <div className="min-h-screen bg-dotted-pattern flex items-center justify-center p-4">
+      <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-lg grid lg:grid-cols-2">
+        <div className="lg:hidden text-center p-8 border-b border-gray-200">
+          <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-16 mx-auto" />
         </div>
-
-        <form onSubmit={handleSignUp} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="email" className="font-semibold">Email*</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Mật khẩu*</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="new-password"
-                required
-                placeholder="Tối thiểu 8 ký tự"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-12 pr-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
-              >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
+        <div className="p-8 lg:p-12">
+          <h2 className="text-3xl font-bold text-gray-900">Đăng ký tài khoản</h2>
+          <p className="mt-2 text-gray-500">Tạo tài khoản mới để bắt đầu.</p>
+          <form onSubmit={handleSignUp} className="mt-8 space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email*</Label>
+              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
-          </div>
-
-          <div>
-            <Button type="submit" className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-base font-semibold rounded-lg" disabled={loading}>
-              {loading ? 'Đang đăng ký...' : 'Đăng ký'}
-            </Button>
-          </div>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Đã có tài khoản?{' '}
-          <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
-            Đăng nhập
-          </Link>
-        </p>
+            <div className="space-y-2">
+              <Label htmlFor="password">Mật khẩu*</Label>
+              <div className="relative">
+                <Input id="password" type={showPassword ? 'text' : 'password'} required placeholder="Tối thiểu 8 ký tự" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>{loading ? 'Đang đăng ký...' : 'Đăng ký'}</Button>
+          </form>
+          <p className="mt-6 text-center text-sm text-gray-500">Đã có tài khoản? <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">Đăng nhập</Link></p>
+          <p className="mt-8 text-center text-xs text-gray-400">© 2024 DAILONG MEDIA. All Rights Reserved.</p>
+        </div>
+        <AuthBranding />
       </div>
-      <p className="mt-8 text-center text-xs text-gray-400">
-        © 2024 DAILONG MEDIA. All Rights Reserved.
-      </p>
     </div>
   );
 };

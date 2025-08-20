@@ -8,6 +8,9 @@ const Guide = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl lg:text-3xl font-bold">Hướng dẫn "Bắt đầu công việc"</h1>
+        <p className="text-gray-500 mt-1">
+          Hướng dẫn dành cho cộng tác viên mới bắt đầu công việc đang chưa biết phải bắt đầu từ đâu. Bạn chỉ cần làm theo các bước bên dưới để bắt đầu công việc nhé.
+        </p>
       </div>
 
       {/* BƯỚC 1 */}

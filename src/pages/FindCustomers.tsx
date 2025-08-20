@@ -101,43 +101,6 @@ const FindCustomers = () => {
     fetchReportData();
   }, [user]);
 
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase.channel('user-suggested-comments-changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'user_suggested_comments',
-        filter: `user_id=eq.${user.id}`
-      }, (payload) => {
-        const updatedRecord = payload.new as { report_id: string; comment_text: string };
-        const deletedRecord = payload.old as { report_id: string };
-
-        setReportData(prevData =>
-          prevData.map(report => {
-            if (payload.eventType === 'INSERT' && report.id === updatedRecord.report_id) {
-              setGeneratingCommentIds(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(report.id);
-                return newSet;
-              });
-              return { ...report, suggested_comment: updatedRecord.comment_text };
-            }
-            if (payload.eventType === 'DELETE' && report.id === deletedRecord.report_id) {
-              return { ...report, suggested_comment: null };
-            }
-            return report;
-          })
-        );
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return reportData.slice(startIndex, startIndex + itemsPerPage);
@@ -169,7 +132,7 @@ const FindCustomers = () => {
     setGeneratingCommentIds(prev => new Set(prev).add(item.id));
     
     try {
-      const { error } = await supabase.functions.invoke('trigger-generate-comment', {
+      const { data, error } = await supabase.functions.invoke('generate-customer-finder-comment', {
         body: {
           reportId: item.id,
           postContent: item.description,
@@ -179,9 +142,19 @@ const FindCustomers = () => {
       if (error) {
         throw new Error(error.message);
       }
-      // No need to show success here, the realtime listener will update the UI
+      
+      setReportData(prevData =>
+        prevData.map(report =>
+          report.id === item.id
+            ? { ...report, suggested_comment: data.comment, identified_service_name: data.service.name }
+            : report
+        )
+      );
+      showSuccess("Tạo comment thành công!");
+
     } catch (error: any) {
-      showError(`Lỗi khi gửi yêu cầu: ${error.message}`);
+      showError(`Lỗi khi tạo comment: ${error.message}`);
+    } finally {
       setGeneratingCommentIds(prev => {
         const newSet = new Set(prev);
         newSet.delete(item.id);

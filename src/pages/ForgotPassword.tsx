@@ -28,7 +28,7 @@ const ForgotPassword = () => {
     <div className="min-h-screen bg-dotted-pattern flex flex-col justify-center items-center p-4">
       <div className="w-full max-w-md mx-auto bg-white p-8 rounded-2xl shadow-lg">
         <div className="text-center mb-8">
-          <img src="/logodailong-ngang.png" alt="Dailong Media Agency Logo" className="w-auto h-20 mx-auto" />
+          <img src="/logologin.png" alt="Dailong Media Agency Logo" className="w-auto h-20 mx-auto" />
           <h1 className="text-2xl font-bold text-gray-900 mt-4">Quên mật khẩu</h1>
           <p className="mt-2 text-gray-500">Nhập email để nhận hướng dẫn.</p>
         </div>

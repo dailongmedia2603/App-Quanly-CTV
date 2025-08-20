@@ -110,7 +110,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
         </div>
         <div className="flex-1 overflow-y-auto p-4">
           <nav className="space-y-1">
-            <NavLink to="/guide" icon={BookOpen} isCollapsed={isCollapsed}>Hướng dẫn</NavLink>
+            <NavLink to="/guide" icon={BookOpen} isCollapsed={isCollapsed}>Bắt đầu công việc</NavLink>
             {hasPermission('find_customers') && <NavLink to="/find-customers" icon={Search} isCollapsed={isCollapsed}>Tìm khách hàng</NavLink>}
             
             {(hasPermission('create_post') || hasPermission('create_comment')) && (

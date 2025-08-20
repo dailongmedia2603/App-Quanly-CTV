@@ -6,10 +6,7 @@ const Guide = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl lg:text-3xl font-bold">Hướng dẫn sử dụng hệ thống</h1>
-        <p className="text-muted-foreground mt-2 hidden md:block">
-          Chào mừng bạn đến với hệ thống Cộng tác viên của Dailong Media! Đây là không gian làm việc được thiết kế dành riêng cho bạn, tích hợp những công cụ mạnh mẽ để giúp bạn tìm kiếm khách hàng, sáng tạo nội dung và quản lý thu nhập một cách hiệu quả nhất. Hãy cùng khám phá các tính năng chính nhé!
-        </p>
+        <h1 className="text-2xl lg:text-3xl font-bold">Hướng dẫn "Bắt đầu công việc"</h1>
       </div>
       
       <Accordion type="single" collapsible className="w-full">

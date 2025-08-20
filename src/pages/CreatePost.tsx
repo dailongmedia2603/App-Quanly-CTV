@@ -198,7 +198,6 @@ const PostHistoryView = ({ onBack }: { onBack: () => void }) => {
 };
 
 const CreatePost = () => {
-  const { user } = useAuth();
   const [view, setView] = useState<'create' | 'history'>('create');
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
@@ -212,7 +211,6 @@ const CreatePost = () => {
   const [generatedPost, setGeneratedPost] = useState('');
   const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
   const [regenerateDirection, setRegenerateDirection] = useState('');
-  const [lastRequestTime, setLastRequestTime] = useState<number>(0);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -232,26 +230,6 @@ const CreatePost = () => {
     fetchInitialData();
   }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase.channel('post-generation')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'ai_generation_logs',
-        filter: `user_id=eq.${user.id}`
-      }, (payload) => {
-        const newLog = payload.new as { template_type: string; generated_content: string; created_at: string };
-        if (newLog.template_type === 'post' && new Date(newLog.created_at).getTime() > lastRequestTime) {
-          setGeneratedPost(newLog.generated_content);
-          setIsGenerating(false);
-          showSuccess("Tạo bài viết thành công!");
-        }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [user, lastRequestTime]);
-
   const handleGeneratePost = async (isRegeneration = false) => {
     const selectedPostType = postTypes.find(pt => pt.id === selectedPostTypeId);
     if (!selectedServiceId || !selectedPostType || !industry) {
@@ -261,25 +239,29 @@ const CreatePost = () => {
     setIsGenerating(true);
     setGeneratedPost('');
     if (isRegeneration) setIsRegenerateDialogOpen(false);
-    
-    setLastRequestTime(Date.now());
+    const toastId = showLoading("AI đang sáng tạo, vui lòng chờ...");
 
-    const { error } = await supabase.functions.invoke('trigger-generate-post', {
-      body: {
-        serviceId: selectedServiceId,
-        postType: `${selectedPostType.name}${selectedPostType.description ? ` (Mô tả: ${selectedPostType.description})` : ''}`,
-        wordCount: selectedPostType.word_count,
-        industry,
-        direction,
-        ...(isRegeneration && { originalPost: generatedPost, regenerateDirection })
-      }
-    });
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-post', {
+        body: {
+          serviceId: selectedServiceId,
+          postType: `${selectedPostType.name}${selectedPostType.description ? ` (Mô tả: ${selectedPostType.description})` : ''}`,
+          wordCount: selectedPostType.word_count,
+          industry,
+          direction,
+          ...(isRegeneration && { originalPost: generatedPost, regenerateDirection })
+        }
+      });
 
-    if (error) {
-      showError(`Gửi yêu cầu thất bại: ${error.message}`);
+      if (error) throw error;
+
+      setGeneratedPost(data.post);
+      showSuccess("Tạo bài viết thành công!");
+    } catch (error: any) {
+      showError(`Tạo bài viết thất bại: ${error.message}`);
+    } finally {
+      dismissToast(toastId);
       setIsGenerating(false);
-    } else {
-      showSuccess("Đã gửi yêu cầu, AI đang xử lý...");
     }
   };
 

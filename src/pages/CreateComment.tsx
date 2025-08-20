@@ -184,7 +184,6 @@ const CommentHistoryView = ({ onBack }: { onBack: () => void }) => {
 };
 
 const CreateComment = () => {
-  const { user } = useAuth();
   const [view, setView] = useState<'create' | 'history'>('create');
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
@@ -194,7 +193,6 @@ const CreateComment = () => {
   const [generatedComment, setGeneratedComment] = useState('');
   const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
   const [regenerateDirection, setRegenerateDirection] = useState('');
-  const [lastRequestTime, setLastRequestTime] = useState<number>(0);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -214,26 +212,6 @@ const CreateComment = () => {
     fetchServices();
   }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase.channel('comment-generation')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'ai_generation_logs',
-        filter: `user_id=eq.${user.id}`
-      }, (payload) => {
-        const newLog = payload.new as { template_type: string; generated_content: string; created_at: string };
-        if (newLog.template_type === 'comment' && new Date(newLog.created_at).getTime() > lastRequestTime) {
-          setGeneratedComment(newLog.generated_content);
-          setIsGenerating(false);
-          showSuccess("Tạo comment thành công!");
-        }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [user, lastRequestTime]);
-
   const handleGenerateComment = async (isRegeneration = false) => {
     if (!selectedServiceId || !originalPostContent.trim()) {
       showError("Vui lòng chọn dịch vụ và nhập nội dung bài viết gốc.");
@@ -242,22 +220,26 @@ const CreateComment = () => {
     setIsGenerating(true);
     setGeneratedComment('');
     if (isRegeneration) setIsRegenerateDialogOpen(false);
-    
-    setLastRequestTime(Date.now());
+    const toastId = showLoading("AI đang nghĩ comment hay...");
 
-    const { error } = await supabase.functions.invoke('trigger-generate-comment', {
-      body: {
-        serviceId: selectedServiceId,
-        originalPostContent: originalPostContent,
-        ...(isRegeneration && { originalComment: generatedComment, regenerateDirection })
-      }
-    });
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-comment', {
+        body: {
+          serviceId: selectedServiceId,
+          originalPostContent: originalPostContent,
+          ...(isRegeneration && { originalComment: generatedComment, regenerateDirection })
+        }
+      });
 
-    if (error) {
-      showError(`Gửi yêu cầu thất bại: ${error.message}`);
+      if (error) throw error;
+
+      setGeneratedComment(data.comment);
+      showSuccess("Tạo comment thành công!");
+    } catch (error: any) {
+      showError(`Tạo comment thất bại: ${error.message}`);
+    } finally {
+      dismissToast(toastId);
       setIsGenerating(false);
-    } else {
-      showSuccess("Đã gửi yêu cầu, AI đang xử lý...");
     }
   };
 

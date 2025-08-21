@@ -210,18 +210,28 @@ serve(async (req) => {
     let newPostsData = allPostsData;
     if (allPostsData.length > 0) {
         const postIdsFromApi = allPostsData.map(p => p.id);
-        
-        const { data: existingPosts, error: existingPostsError } = await supabaseAdmin
-            .from(reportTable)
-            .select('source_post_id')
-            .eq('campaign_id', campaign.id)
-            .in('source_post_id', postIdsFromApi);
+        const existingPostIds = new Set<string>();
+        const CHUNK_SIZE = 200;
 
-        if (existingPostsError) {
-            throw new Error(`Lỗi khi kiểm tra bài viết đã tồn tại: ${existingPostsError.message}`);
+        for (let i = 0; i < postIdsFromApi.length; i += CHUNK_SIZE) {
+            const chunk = postIdsFromApi.slice(i, i + CHUNK_SIZE);
+            const { data: existingPostsChunk, error: chunkError } = await supabaseAdmin
+                .from(reportTable)
+                .select('source_post_id')
+                .eq('campaign_id', campaign.id)
+                .in('source_post_id', chunk);
+
+            if (chunkError) {
+                throw new Error(`Lỗi khi kiểm tra bài viết đã tồn tại: ${chunkError.message}`);
+            }
+
+            if (existingPostsChunk) {
+                for (const post of existingPostsChunk) {
+                    existingPostIds.add(post.source_post_id);
+                }
+            }
         }
-
-        const existingPostIds = new Set(existingPosts.map(p => p.source_post_id));
+        
         newPostsData = allPostsData.filter(p => !existingPostIds.has(p.id));
     }
 

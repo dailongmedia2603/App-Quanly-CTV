@@ -119,7 +119,7 @@ export function MultiSelectCombobox({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label}
+                  value={option.value}
                   onSelect={() => handleSelect(option.value)}
                   className="cursor-pointer"
                 >

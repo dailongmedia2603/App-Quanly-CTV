@@ -14,8 +14,7 @@ interface AiErrorLog {
   error_message: string;
   function_name: string;
   user_id: string;
-  profiles: { first_name: string | null; last_name: string | null } | null;
-  users: { email: string | null } | null;
+  user_display?: string;
 }
 
 const AiErrorLogTab = () => {
@@ -23,41 +22,44 @@ const AiErrorLogTab = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchLogs = async () => {
+    const fetchLogsAndUsers = async () => {
       setLoading(true);
-      // Supabase does not directly support joining with auth.users table.
-      // A better approach would be an RPC function, but for simplicity, we'll fetch users separately if needed.
-      // For now, we assume a view or function might provide user details, or we handle it client-side.
-      // Let's try to join with profiles and see what we get.
-      const { data, error } = await supabase
-        .from('ai_error_logs')
-        .select(`*, user:profiles(first_name, last_name, users:auth.users(email))`)
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (error) {
-        showError("Không thể tải lịch sử lỗi.");
-        console.error(error);
-      } else {
-        // This structure is hypothetical based on a potential view. Let's adapt to what Supabase client actually returns.
-        // The select query above is not standard. Let's simplify it to what's possible.
-        const { data: simpleData, error: simpleError } = await supabase
+      try {
+        const [logsRes, usersRes] = await Promise.all([
+          supabase
             .from('ai_error_logs')
             .select(`*`)
             .order('created_at', { ascending: false })
-            .limit(100);
-        
-        if(simpleError) {
-            showError("Không thể tải lịch sử lỗi.");
-        } else {
-            // We'll need another query to get user emails if not directly joinable.
-            // For now, let's just display what we have.
-            setLogs(simpleData as any[]);
-        }
+            .limit(100),
+          supabase.functions.invoke("admin-get-users-with-roles")
+        ]);
+
+        const { data: logsData, error: logsError } = logsRes;
+        if (logsError) throw logsError;
+
+        const { data: usersData, error: usersError } = usersRes;
+        if (usersError) throw usersError;
+
+        const userMap = new Map(usersData.users.map((u: any) => {
+          const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim();
+          return [u.id, fullName || u.email];
+        }));
+
+        const enrichedLogs = logsData.map((log: any) => ({
+          ...log,
+          user_display: userMap.get(log.user_id) || log.user_id || 'Không rõ'
+        }));
+
+        setLogs(enrichedLogs);
+
+      } catch (error: any) {
+        showError("Không thể tải lịch sử lỗi.");
+        console.error(error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    fetchLogs();
+    fetchLogsAndUsers();
   }, []);
 
   return (
@@ -71,7 +73,7 @@ const AiErrorLogTab = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead><User className="inline-block h-4 w-4 mr-2" />User ID</TableHead>
+                <TableHead><User className="inline-block h-4 w-4 mr-2" />Người dùng</TableHead>
                 <TableHead><AlertTriangle className="inline-block h-4 w-4 mr-2" />Thông báo lỗi</TableHead>
                 <TableHead><Code className="inline-block h-4 w-4 mr-2" />Chức năng</TableHead>
                 <TableHead><Clock className="inline-block h-4 w-4 mr-2" />Thời gian</TableHead>
@@ -96,7 +98,7 @@ const AiErrorLogTab = () => {
               ) : (
                 logs.map(log => (
                   <TableRow key={log.id}>
-                    <TableCell className="font-mono text-xs">{log.user_id || 'Không rõ'}</TableCell>
+                    <TableCell className="font-mono text-xs">{log.user_display}</TableCell>
                     <TableCell className="text-red-600">{log.error_message}</TableCell>
                     <TableCell>{log.function_name}</TableCell>
                     <TableCell>{format(new Date(log.created_at), 'dd/MM/yy, HH:mm:ss', { locale: vi })}</TableCell>

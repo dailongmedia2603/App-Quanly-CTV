@@ -24,6 +24,10 @@ const getAccessToken = async (refreshToken: string) => {
   });
   const data = await response.json();
   if (!response.ok) {
+    // This is the critical part: handle the specific 'invalid_grant' error
+    if (data.error === 'invalid_grant') {
+      throw new Error("Kết nối Google đã hết hạn hoặc không hợp lệ. Vui lòng kết nối lại tài khoản Gmail của bạn.");
+    }
     throw new Error(`Failed to refresh token: ${data.error_description || 'Unknown error'}`);
   }
   return data.access_token;
@@ -48,7 +52,7 @@ serve(async (req) => {
       .single();
 
     if (profileError || !profile?.google_refresh_token) {
-      throw new Error("User has not connected their Google account or refresh token is missing.");
+      throw new Error("Người dùng chưa kết nối tài khoản Gmail hoặc token đã bị mất.");
     }
 
     // 2. Get a fresh access token

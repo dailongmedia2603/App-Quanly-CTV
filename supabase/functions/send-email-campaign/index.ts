@@ -33,15 +33,26 @@ async function getAccessToken(refreshToken: string) {
   return data.access_token;
 }
 
+// Basic Markdown to HTML converter
+function markdownToHtml(markdown: string): string {
+  return markdown
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')     // Italic
+    .replace(/\n/g, '<br>');                  // New lines
+}
+
 // Helper to send an email using Gmail API
 async function sendEmail(accessToken: string, from: string, to: string, subject: string, body: string) {
+  const htmlBody = markdownToHtml(body);
+  
   const emailMessage = [
     `From: <${from}>`,
     `To: <${to}>`,
-    `Subject: ${subject}`,
+    `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`, // Encode subject for UTF-8
     'Content-Type: text/html; charset=utf-8',
+    'MIME-Version: 1.0',
     '',
-    body,
+    htmlBody,
   ].join('\n');
 
   // Gmail API requires the email to be base64url encoded

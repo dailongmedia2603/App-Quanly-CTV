@@ -8,7 +8,6 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   roles: string[];
-  loading: boolean;
   signOut: () => Promise<void>;
   permissions: Record<string, string[]>;
   hasPermission: (feature: string, action?: string) => boolean;
@@ -21,7 +20,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [roles, setRoles] = useState<string[]>([]);
   const [permissions, setPermissions] = useState<Record<string, string[]>>({});
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   const fetchAndSetPermissions = async () => {
@@ -68,36 +66,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        // Step 1: Get the initial session. This handles the first page load.
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
-
-        setSession(session);
-        setUser(session?.user ?? null);
-
-        // Step 2: If there's a session, fetch permissions.
-        if (session) {
-          await fetchAndSetPermissions();
-        }
-      } catch (error) {
-        console.error("Error during initial auth setup:", error);
-        // Clear everything on error to be safe
-        setSession(null);
-        setUser(null);
-        setRoles([]);
-        setPermissions({});
-      } finally {
-        // Step 3: CRITICAL - Always set loading to false after the initial setup is complete.
-        setLoading(false);
+    // Get initial session without blocking
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session) {
+        fetchAndSetPermissions().catch(error => {
+          console.error("Initial permission fetch failed, signing out.", error);
+          supabase.auth.signOut();
+        });
       }
-    };
+    });
 
-    initializeAuth();
-
-    // Step 4: Set up the listener for subsequent auth changes (login, logout).
-    // This listener will NOT manage the initial `loading` state.
+    // Listen for subsequent auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -119,10 +100,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } catch (error) {
           console.error("Error fetching permissions on auth state change:", error);
-          await supabase.auth.signOut(); // Sign out to reset to a clean state
+          await supabase.auth.signOut();
         }
       } else {
-        // On sign out, clear roles and permissions
         setRoles([]);
         setPermissions({});
       }
@@ -144,7 +124,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return featurePermissions.length > 0;
   };
 
-  const value = { session, user, roles, loading, signOut, permissions, hasPermission };
+  // Note: The 'loading' state has been completely removed.
+  const value = { session, user, roles, signOut, permissions, hasPermission };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

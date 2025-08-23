@@ -87,8 +87,32 @@ serve(async (req) => {
     (Toàn bộ nội dung email của bạn ở đây. Nội dung này PHẢI được định dạng bằng HTML. Sử dụng các thẻ như <p> cho đoạn văn, <b> cho in đậm, <ul> và <li> cho danh sách. KHÔNG sử dụng Markdown.)
     `;
 
-    const result = await model.generateContent(finalPrompt);
-    const rawGeneratedContent = result.response.text();
+    const MAX_RETRIES = 3;
+    let lastError: Error | null = null;
+    let rawGeneratedContent = '';
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const result = await model.generateContent(finalPrompt);
+        const responseText = result.response.text();
+        
+        if (responseText && responseText.trim().length > 20) {
+            rawGeneratedContent = responseText;
+            lastError = null;
+            break; 
+        } else {
+            lastError = new Error(`AI trả về nội dung trống hoặc quá ngắn ở lần thử ${attempt}.`);
+            console.log(lastError.message);
+        }
+      } catch (e) {
+        lastError = new Error(`Lần thử ${attempt} thất bại: ${e.message}`);
+        console.error(lastError.message);
+      }
+    }
+
+    if (lastError) {
+      throw lastError;
+    }
 
     if (!rawGeneratedContent || rawGeneratedContent.trim() === '') {
       throw new Error("AI không phản hồi nội dung. Vui lòng thử lại hoặc điều chỉnh yêu cầu.");
@@ -124,6 +148,6 @@ serve(async (req) => {
       const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
       await logErrorToDb(supabaseAdmin, userId, functionName, error, requestBody);
     }
-    return new Response(JSON.stringify({ error: error.message }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 });
+    return new Response(JSON.stringify({ error: "Đang bị quá tải.... Hãy bấm tạo lại nhé" }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 });
   }
 })

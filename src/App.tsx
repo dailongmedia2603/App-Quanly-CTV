@@ -1,7 +1,7 @@
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Outlet, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
@@ -28,7 +28,6 @@ import { AppSettingsProvider, useAppSettings } from "./contexts/AppSettingsConte
 import { useEffect } from "react";
 import CreateQuote from "./pages/CreateQuote";
 import ConfigQuote from "./pages/ConfigQuote";
-import { supabase } from "./integrations/supabase/client";
 import PerformanceReport from "./pages/PerformanceReport";
 import PublicServices from "./pages/PublicServices";
 import EmailMarketing from "./pages/EmailMarketing";
@@ -80,17 +79,6 @@ const PageTitleUpdater = () => {
 
 const AppContent = () => {
   const { loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        navigate('/update-password');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
 
   if (loading) {
     return <div className="flex h-screen w-full items-center justify-center"><p>Loading...</p></div>;
@@ -136,14 +124,14 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
-          <AppSettingsProvider>
-            <Sonner position="bottom-right" toastOptions={{ classNames: { success: "bg-brand-orange-light text-brand-orange border-orange-200", error: "bg-red-100 text-red-600 border-red-200", loading: "bg-brand-orange-light text-brand-orange border-orange-200" } }} />
-            <BrowserRouter>
+        <BrowserRouter>
+          <AuthProvider>
+            <AppSettingsProvider>
+              <Sonner position="bottom-right" toastOptions={{ classNames: { success: "bg-brand-orange-light text-brand-orange border-orange-200", error: "bg-red-100 text-red-600 border-red-200", loading: "bg-brand-orange-light text-brand-orange border-orange-200" } }} />
               <AppContent />
-            </BrowserRouter>
-          </AppSettingsProvider>
-        </AuthProvider>
+            </AppSettingsProvider>
+          </AuthProvider>
+        </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
   );

@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 import { permissionConfig } from '@/lib/permissions';
@@ -21,6 +22,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [roles, setRoles] = useState<string[]>([]);
   const [permissions, setPermissions] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   const fetchAndSetPermissions = async () => {
     const { data: userRolesData, error: rolesError } = await supabase.rpc('get_user_roles_with_permissions');
@@ -29,7 +31,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error fetching user roles:", rolesError);
       setRoles([]);
       setPermissions({});
-      // Re-throw the error to be caught by the caller
       throw rolesError;
     }
 
@@ -74,39 +75,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const setData = async () => {
-      setLoading(true);
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
+    setLoading(true);
 
-        setSession(session);
-        setUser(session?.user ?? null);
-
-        if (session) {
+    // 1. Handle initial session load
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session) {
+        try {
           await fetchAndSetPermissions();
-        } else {
+        } catch (e) {
+          console.error("Initial permission fetch failed, signing out.", e);
+          // CRITICAL FIX: If permissions fail, sign out to prevent getting stuck.
+          await supabase.auth.signOut();
+          setSession(null);
+          setUser(null);
           setRoles([]);
           setPermissions({});
         }
-      } catch (error) {
-        console.error("Error during initial auth setup:", error);
-        // If setup fails, clear session data to avoid getting stuck
-        setSession(null);
-        setUser(null);
-        setRoles([]);
-        setPermissions({});
-      } finally {
-        // This is the crucial fix: ensure loading is always set to false
-        setLoading(false);
       }
-    };
+      setLoading(false);
+    });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // 2. Listen for subsequent auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
 
-      if (_event === 'SIGNED_IN' && session?.provider_refresh_token) {
+      if (event === 'PASSWORD_RECOVERY') {
+        navigate('/update-password');
+      }
+
+      if (event === 'SIGNED_IN' && session?.provider_refresh_token) {
         await supabase
           .from('profiles')
           .update({
@@ -117,7 +117,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       if (session) {
-        // Also wrap this in a try/catch to prevent crashes on auth state changes
         try {
           await fetchAndSetPermissions();
         } catch (error) {
@@ -129,12 +128,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    setData();
-
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -142,24 +139,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const hasPermission = (feature: string, action?: string): boolean => {
     const featurePermissions = permissions[feature];
-    if (!featurePermissions) {
-      return false;
-    }
-    if (action) {
-      return featurePermissions.includes(action);
-    }
+    if (!featurePermissions) return false;
+    if (action) return featurePermissions.includes(action);
     return featurePermissions.length > 0;
   };
 
-  const value = {
-    session,
-    user,
-    roles,
-    loading,
-    signOut,
-    permissions,
-    hasPermission,
-  };
+  const value = { session, user, roles, loading, signOut, permissions, hasPermission };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

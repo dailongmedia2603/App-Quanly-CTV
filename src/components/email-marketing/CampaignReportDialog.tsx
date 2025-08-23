@@ -20,6 +20,7 @@ interface ReportData {
   contacts: {
     email: string;
     status: 'pending' | 'success' | 'failed';
+    sent_at: string | null;
   }[];
 }
 
@@ -113,13 +114,16 @@ export const CampaignReportDialog = ({ isOpen, onOpenChange, campaign }: Campaig
             <h3 className="font-semibold mb-2">Chi tiết</h3>
             <ScrollArea className="h-64 border rounded-md">
               <Table>
-                <TableHeader><TableRow><TableHead>Email</TableHead><TableHead>Trạng thái</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Email</TableHead><TableHead>Trạng thái</TableHead><TableHead>Thời gian gửi</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {loading ? <TableRow><TableCell colSpan={2} className="text-center">Đang tải...</TableCell></TableRow> : !report || report.contacts.length === 0 ? <TableRow><TableCell colSpan={2} className="text-center">Không có dữ liệu.</TableCell></TableRow> : (
+                  {loading ? <TableRow><TableCell colSpan={3} className="text-center">Đang tải...</TableCell></TableRow> : !report || report.contacts.length === 0 ? <TableRow><TableCell colSpan={3} className="text-center">Không có dữ liệu.</TableCell></TableRow> : (
                     report.contacts.map(c => (
                       <TableRow key={c.email}>
                         <TableCell>{c.email}</TableCell>
                         <TableCell>{getStatusBadge(c.status)}</TableCell>
+                        <TableCell>
+                          {c.sent_at ? format(new Date(c.sent_at), 'dd/MM/yy HH:mm:ss') : '-'}
+                        </TableCell>
                       </TableRow>
                     ))
                   )}

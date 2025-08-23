@@ -10,6 +10,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+interface LogInfo {
+  status: string;
+  sent_at: string | null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -36,20 +41,24 @@ serve(async (req) => {
       .eq('list_id', campaign.email_list_id);
     if (contactsError) throw contactsError;
 
-    // 3. Get all logs for this campaign
+    // 3. Get all logs for this campaign, including sent_at
     const { data: logs, error: logsError } = await supabaseAdmin
       .from('email_campaign_logs')
-      .select('contact_email, status')
+      .select('contact_email, status, sent_at')
       .eq('campaign_id', campaign_id);
     if (logsError) throw logsError;
 
-    const logMap = new Map(logs.map(log => [log.contact_email, log.status]));
+    const logMap = new Map<string, LogInfo>(logs.map(log => [log.contact_email, { status: log.status, sent_at: log.sent_at }]));
 
     // 4. Combine data to create the final report
-    const reportContacts = contacts.map(contact => ({
-      email: contact.email,
-      status: logMap.get(contact.email) || 'pending', // 'pending' means not yet sent
-    }));
+    const reportContacts = contacts.map(contact => {
+      const log = logMap.get(contact.email);
+      return {
+        email: contact.email,
+        status: log ? log.status : 'pending',
+        sent_at: log ? log.sent_at : null,
+      };
+    });
 
     // 5. Calculate stats
     const total = contacts.length;

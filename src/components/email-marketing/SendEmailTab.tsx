@@ -22,6 +22,8 @@ export interface Campaign {
   status: string; 
   created_at: string; 
   scheduled_at: string | null;
+  send_interval_value: number | null;
+  send_interval_unit: string | null;
   email_lists: { name: string } | null; 
   email_contents: { name: string } | null; 
 }

@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
-import { Plus, Trash2, Send } from 'lucide-react';
+import { Plus, Trash2, Send, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import GmailConnection from './GmailConnection';
 
 interface EmailList { id: string; name: string; }
 interface EmailContent { id: string; name: string; }
@@ -20,6 +21,7 @@ const SendEmailTab = () => {
   const [contents, setContents] = useState<EmailContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sendingCampaignId, setSendingCampaignId] = useState<string | null>(null);
 
   // Form state
   const [campaignName, setCampaignName] = useState('');
@@ -29,7 +31,7 @@ const SendEmailTab = () => {
   const fetchData = async () => {
     setLoading(true);
     const [campaignsRes, listsRes, contentsRes] = await Promise.all([
-      supabase.from('email_campaigns').select('*, email_lists(name), email_contents(name)'),
+      supabase.from('email_campaigns').select('*, email_lists(name), email_contents(name)').order('created_at', { ascending: false }),
       supabase.from('email_lists').select('id, name'),
       supabase.from('email_contents').select('id, name')
     ]);
@@ -63,8 +65,25 @@ const SendEmailTab = () => {
     else { showSuccess("Xóa thành công!"); fetchData(); }
   };
 
+  const handleSendCampaign = async (campaignId: string) => {
+    setSendingCampaignId(campaignId);
+    const toastId = showLoading("Đang bắt đầu gửi chiến dịch...");
+    const { data, error } = await supabase.functions.invoke('send-email-campaign', {
+      body: { campaign_id: campaignId }
+    });
+    dismissToast(toastId);
+    if (error) {
+      showError(`Gửi thất bại: ${error.message}`);
+    } else {
+      showSuccess(data.message || "Chiến dịch đã được gửi thành công!");
+      fetchData();
+    }
+    setSendingCampaignId(null);
+  };
+
   return (
     <div className="space-y-6">
+      <GmailConnection />
       <Card className="border-orange-200">
         <CardHeader><CardTitle>Tạo chiến dịch mới</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -78,7 +97,7 @@ const SendEmailTab = () => {
         <CardHeader><CardTitle>Danh sách chiến dịch</CardTitle></CardHeader>
         <CardContent>
           <Table><TableHeader><TableRow><TableHead>Tên chiến dịch</TableHead><TableHead>Danh sách mail</TableHead><TableHead>Nội dung</TableHead><TableHead>Trạng thái</TableHead><TableHead>Ngày tạo</TableHead><TableHead className="text-right">Thao tác</TableHead></TableRow></TableHeader>
-            <TableBody>{loading ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Đang tải...</TableCell></TableRow> : campaigns.length === 0 ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Chưa có chiến dịch nào.</TableCell></TableRow> : (campaigns.map(c => (<TableRow key={c.id}><TableCell>{c.name}</TableCell><TableCell>{c.email_lists?.name}</TableCell><TableCell>{c.email_contents?.name}</TableCell><TableCell>{c.status}</TableCell><TableCell>{format(new Date(c.created_at), 'dd/MM/yyyy')}</TableCell><TableCell className="text-right space-x-2"><Button size="sm" variant="outline" disabled><Send className="h-4 w-4 mr-2" />Gửi</Button><Button size="icon" variant="ghost" className="text-red-500" onClick={() => handleDeleteCampaign(c.id)}><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>)))}</TableBody>
+            <TableBody>{loading ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Đang tải...</TableCell></TableRow> : campaigns.length === 0 ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Chưa có chiến dịch nào.</TableCell></TableRow> : (campaigns.map(c => (<TableRow key={c.id}><TableCell>{c.name}</TableCell><TableCell>{c.email_lists?.name}</TableCell><TableCell>{c.email_contents?.name}</TableCell><TableCell>{c.status}</TableCell><TableCell>{format(new Date(c.created_at), 'dd/MM/yyyy')}</TableCell><TableCell className="text-right space-x-2"><Button size="sm" variant="outline" onClick={() => handleSendCampaign(c.id)} disabled={sendingCampaignId === c.id || c.status !== 'draft'}>{sendingCampaignId === c.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}{c.status === 'sent' ? 'Đã gửi' : 'Gửi'}</Button><Button size="icon" variant="ghost" className="text-red-500" onClick={() => handleDeleteCampaign(c.id)}><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>)))}</TableBody>
           </Table>
         </CardContent>
       </Card>

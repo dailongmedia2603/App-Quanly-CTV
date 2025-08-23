@@ -94,9 +94,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+
+      if (_event === 'SIGNED_IN' && session?.provider_refresh_token) {
+        await supabase
+          .from('profiles')
+          .update({
+            google_refresh_token: session.provider_refresh_token,
+            google_connected_email: session.user.email,
+          })
+          .eq('id', session.user.id);
+      }
+      
       if (session) {
         fetchAndSetPermissions();
       } else {

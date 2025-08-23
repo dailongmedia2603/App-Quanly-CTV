@@ -83,18 +83,25 @@ const SendEmailTab = () => {
 
   const handleConfirmSend = async (campaignId: string, settings: any) => {
     setIsSubmitting(true);
-    const toastId = showLoading("Đang lên lịch gửi...");
-    const { data, error } = await supabase.functions.invoke('schedule-email-campaign', {
-      body: { campaign_id: campaignId, ...settings }
-    });
-    dismissToast(toastId);
-    if (error) {
-      showError(`Lên lịch thất bại: ${error.message}`);
-    } else {
-      showSuccess(data.message || "Chiến dịch đã được lên lịch thành công!");
-      fetchData();
-    }
     setIsSendDialogOpen(false);
+    
+    if (settings.send_now) {
+      const toastId = showLoading("Đang bắt đầu gửi chiến dịch... Việc này có thể mất một lúc.");
+      const { data, error } = await supabase.functions.invoke('send-campaign-directly', {
+        body: { campaign_id: campaignId }
+      });
+      dismissToast(toastId);
+      if (error) {
+        showError(`Gửi thất bại: ${error.message}`);
+      } else {
+        showSuccess(data.message || "Chiến dịch đã được gửi xong!");
+        fetchData();
+      }
+    } else {
+      // Logic for scheduling (currently disabled in dialog)
+      showError("Tính năng lên lịch đang được phát triển.");
+    }
+    
     setIsSubmitting(false);
   };
 

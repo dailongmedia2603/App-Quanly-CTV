@@ -19,16 +19,21 @@ interface SendCampaignDialogProps {
 export const SendCampaignDialog = ({ isOpen, onOpenChange, campaign, onConfirm, isSubmitting }: SendCampaignDialogProps) => {
   const [sendOption, setSendOption] = useState<'now' | 'schedule'>('now');
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(new Date());
-  const [intervalValue, setIntervalValue] = useState(1);
-  const [intervalUnit, setIntervalUnit] = useState('minute');
+  
+  // Interval settings are now only for scheduling, but we can keep them for future use
+  const [intervalValue, setIntervalValue] = useState(2);
+  const [intervalUnit, setIntervalUnit] = useState('second');
 
   const handleConfirm = () => {
     if (!campaign) return;
-    onConfirm(campaign.id, {
-      scheduled_at: sendOption === 'now' ? new Date().toISOString() : scheduleDate?.toISOString(),
-      send_interval_value: intervalValue,
-      send_interval_unit: intervalUnit,
-    });
+    
+    // For "Send Now", we just need the campaign ID. The new function handles the rest.
+    // For "Schedule", we pass the schedule info.
+    const settings = sendOption === 'now' 
+      ? { send_now: true }
+      : { scheduled_at: scheduleDate?.toISOString() };
+
+    onConfirm(campaign.id, settings);
   };
 
   return (
@@ -40,27 +45,6 @@ export const SendCampaignDialog = ({ isOpen, onOpenChange, campaign, onConfirm, 
         </DialogHeader>
         <div className="py-4 space-y-6">
           <div className="space-y-2">
-            <Label>Thời gian giãn cách giữa mỗi email</Label>
-            <div className="flex items-center space-x-2">
-              <Input 
-                type="number" 
-                min="1" 
-                value={intervalValue} 
-                onChange={(e) => setIntervalValue(parseInt(e.target.value, 10))} 
-                className="w-24" 
-              />
-              <Select value={intervalUnit} onValueChange={setIntervalUnit}>
-                <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="minute">Phút</SelectItem>
-                  <SelectItem value="hour">Giờ</SelectItem>
-                  <SelectItem value="day">Ngày</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <p className="text-xs text-gray-500">Giúp tránh bị đánh dấu spam khi gửi số lượng lớn.</p>
-          </div>
-          <div className="space-y-2">
             <Label>Thời gian gửi</Label>
             <RadioGroup value={sendOption} onValueChange={(value) => setSendOption(value as 'now' | 'schedule')} className="space-y-2">
               <div className="flex items-center space-x-2">
@@ -68,8 +52,8 @@ export const SendCampaignDialog = ({ isOpen, onOpenChange, campaign, onConfirm, 
                 <Label htmlFor="send-now">Gửi ngay bây giờ</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="schedule" id="send-schedule" />
-                <Label htmlFor="send-schedule">Lên lịch gửi</Label>
+                <RadioGroupItem value="schedule" id="send-schedule" disabled />
+                <Label htmlFor="send-schedule" className="text-gray-400">Lên lịch gửi (Sắp ra mắt)</Label>
               </div>
             </RadioGroup>
             {sendOption === 'schedule' && (
@@ -82,7 +66,7 @@ export const SendCampaignDialog = ({ isOpen, onOpenChange, campaign, onConfirm, 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Hủy</Button>
           <Button onClick={handleConfirm} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">
-            {isSubmitting ? 'Đang xử lý...' : 'Xác nhận & Gửi'}
+            {isSubmitting ? 'Đang gửi...' : 'Xác nhận & Gửi'}
           </Button>
         </DialogFooter>
       </DialogContent>

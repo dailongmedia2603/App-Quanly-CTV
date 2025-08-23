@@ -78,7 +78,12 @@ const PageTitleUpdater = () => {
 };
 
 const AppContent = () => {
-  // The loading check has been removed. The app will render routes immediately.
+  const { loading } = useAuth();
+
+  if (loading) {
+    return <div className="flex h-screen w-full items-center justify-center"><p>Loading...</p></div>;
+  }
+
   return (
     <>
       <PageTitleUpdater />

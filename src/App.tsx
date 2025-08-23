@@ -109,7 +109,7 @@ const AppContent = () => {
           <Route path="/find-customers" element={<PermissionGuard feature="find_customers"><FindCustomers /></PermissionGuard>} />
           <Route path="/create-content/post" element={<PermissionGuard feature="create_post"><CreatePost /></PermissionGuard>} />
           <Route path="/create-content/comment" element={<PermissionGuard feature="create_comment"><CreateComment /></PermissionGuard>} />
-          <Route path="/create-content/email-marketing" element={<PermissionGuard feature="email_marketing"><EmailMarketing /></PermissionGuard>} />
+          <Route path="/email-marketing" element={<PermissionGuard feature="email_marketing"><EmailMarketing /></PermissionGuard>} />
           <Route path="/create-content/customer-consulting" element={<PermissionGuard feature="customer_consulting"><CustomerConsulting /></PermissionGuard>} />
           <Route path="/create-quote" element={<PermissionGuard feature="create_quote"><CreateQuote /></PermissionGuard>} />
           <Route path="/create-plan" element={<PermissionGuard feature="create_plan"><CreatePlan /></PermissionGuard>} />

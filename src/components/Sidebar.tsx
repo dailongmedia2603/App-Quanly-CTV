@@ -128,7 +128,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
               )
             )}
 
-            {hasPermission('email_marketing') && <NavLink to="/create-content/email-marketing" icon={Mail} isCollapsed={isCollapsed}>Email Marketing</NavLink>}
+            {hasPermission('email_marketing') && <NavLink to="/email-marketing" icon={Mail} isCollapsed={isCollapsed}>Email Marketing</NavLink>}
             {hasPermission('customer_consulting') && <NavLink to="/create-content/customer-consulting" icon={UserCheck} isCollapsed={isCollapsed}>Tư vấn khách hàng</NavLink>}
             {hasPermission('create_quote') && <NavLink to="/create-quote" icon={FileSpreadsheet} isCollapsed={isCollapsed}>Tạo báo giá</NavLink>}
             {hasPermission('create_plan') && <NavLink to="/create-plan" icon={ClipboardList} isCollapsed={isCollapsed}>Tạo Plan</NavLink>}

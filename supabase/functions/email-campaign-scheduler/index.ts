@@ -30,7 +30,6 @@ serve(async (req) => {
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
     const now = new Date();
 
-    // Get campaigns that are due to be sent
     const { data: dueCampaigns, error: fetchError } = await supabaseAdmin
       .from('email_campaigns')
       .select('*')
@@ -43,49 +42,48 @@ serve(async (req) => {
     }
 
     for (const campaign of dueCampaigns) {
-      // Check if it's time to send the next email based on the interval
       if (campaign.status === 'sending' && campaign.last_sent_at) {
         const nextSendTime = calculateNextSendTime(new Date(campaign.last_sent_at), campaign.send_interval_value, campaign.send_interval_unit);
         if (now < nextSendTime) {
-          continue; // Not time yet, skip to the next campaign
+          continue;
         }
       }
 
-      // Find the next contact to email
       const { data: allContacts, error: contactsError } = await supabaseAdmin.from('email_list_contacts').select('email').eq('list_id', campaign.email_list_id);
-      if (contactsError) throw contactsError;
+      if (contactsError) { console.error(`Error fetching contacts for campaign ${campaign.id}:`, contactsError); continue; }
 
       const { data: sentLogs, error: logsError } = await supabaseAdmin.from('email_campaign_logs').select('contact_email').eq('campaign_id', campaign.id);
-      if (logsError) throw logsError;
+      if (logsError) { console.error(`Error fetching logs for campaign ${campaign.id}:`, logsError); continue; }
 
       const sentEmails = new Set(sentLogs.map(log => log.contact_email));
       const nextContact = allContacts.find(contact => !sentEmails.has(contact.email));
 
       if (nextContact) {
-        // If this is the first email being sent, update status to 'sending'
         if (campaign.status === 'scheduled') {
           await supabaseAdmin.from('email_campaigns').update({ status: 'sending' }).eq('id', campaign.id);
         }
 
-        // Invoke the function to send a single email (this function needs to be created)
-        // For now, we'll simulate the send and log it
-        // In a real scenario, you would invoke another function here:
-        // await supabaseAdmin.functions.invoke('send-single-email', { body: { campaign, contact: nextContact } });
-        
-        // Simulate success for now
-        await supabaseAdmin.from('email_campaign_logs').insert({
-          campaign_id: campaign.id,
-          user_id: campaign.user_id,
-          contact_email: nextContact.email,
-          status: 'success', // This would be the result from the send-single-email function
-          sent_at: now.toISOString(),
+        const { data: sendResult, error: sendError } = await supabaseAdmin.functions.invoke('send-single-email', {
+          body: { campaign, contact: nextContact }
         });
 
-        // Update the last_sent_at timestamp
+        if (sendError || (sendResult && !sendResult.success)) {
+          const errorMessage = sendError?.message || sendResult?.error || "Unknown error during sending.";
+          console.error(`Failed to send email to ${nextContact.email} for campaign ${campaign.id}:`, errorMessage);
+          await supabaseAdmin.from('email_campaign_logs').insert({
+            campaign_id: campaign.id, user_id: campaign.user_id, contact_email: nextContact.email,
+            status: 'failed', error_message: errorMessage, sent_at: now.toISOString(),
+          });
+        } else {
+          await supabaseAdmin.from('email_campaign_logs').insert({
+            campaign_id: campaign.id, user_id: campaign.user_id, contact_email: nextContact.email,
+            status: 'success', sent_at: now.toISOString(),
+          });
+        }
+        
         await supabaseAdmin.from('email_campaigns').update({ last_sent_at: now.toISOString() }).eq('id', campaign.id);
 
       } else {
-        // No more contacts to send to, mark campaign as 'sent'
         await supabaseAdmin.from('email_campaigns').update({ status: 'sent' }).eq('id', campaign.id);
       }
     }

@@ -68,36 +68,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        // Step 1: Get the initial session. This handles the first page load.
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
+    setLoading(true);
 
-        setSession(session);
-        setUser(session?.user ?? null);
-
-        // Step 2: If there's a session, fetch permissions.
-        if (session) {
-          await fetchAndSetPermissions();
-        }
-      } catch (error) {
-        console.error("Error during initial auth setup:", error);
-        // Clear everything on error to be safe
-        setSession(null);
-        setUser(null);
-        setRoles([]);
-        setPermissions({});
-      } finally {
-        // Step 3: CRITICAL - Always set loading to false after the initial setup is complete.
-        setLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    // Step 4: Set up the listener for subsequent auth changes (login, logout).
-    // This listener will NOT manage the initial `loading` state.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -126,6 +98,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setRoles([]);
         setPermissions({});
       }
+      
+      setLoading(false);
     });
 
     return () => {

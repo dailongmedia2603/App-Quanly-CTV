@@ -63,17 +63,22 @@ serve(async (req) => {
     if (contentError || !emailContent) throw new Error("Email content not found.");
 
     const fromEmail = profile.google_connected_email || 'me';
+    
+    // **FIX:** Correctly handle UTF-8 characters in the subject
+    const encodedSubject = btoa(unescape(encodeURIComponent(emailContent.subject)));
+
     const emailMessage = [
       `Content-Type: text/html; charset="UTF-8"`,
       `MIME-Version: 1.0`,
       `to: ${contact.email}`,
       `from: ${fromEmail}`,
-      `subject: =?utf-8?B?${btoa(unescape(encodeURIComponent(emailContent.subject)))}?=`,
+      `subject: =?utf-8?B?${encodedSubject}?=`,
       ``,
       `${emailContent.body}`
     ].join('\n');
 
-    const base64EncodedEmail = btoa(emailMessage).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    // **FIX:** Correctly handle UTF-8 characters in the entire email body before encoding
+    const base64EncodedEmail = btoa(unescape(encodeURIComponent(emailMessage))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
     const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
       method: 'POST',

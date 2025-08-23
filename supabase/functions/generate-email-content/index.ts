@@ -72,11 +72,20 @@ serve(async (req) => {
       ? documentsRes.data.map(doc => `Tài liệu: ${doc.title}\nNội dung: ${doc.content}`).join('\n\n---\n\n')
       : "Không có tài liệu tham khảo.";
 
-    const finalPrompt = templateRes.data.prompt
+    let finalPrompt = templateRes.data.prompt
       .replace(/\[dịch vụ\]/gi, serviceForPrompt)
       .replace(/\[mục tiêu\]/gi, emailGoal)
       .replace(/\[thông tin thêm\]/gi, additionalInfo || 'Không có')
       .replace(/\[biên tài liệu\]/gi, documentContent);
+
+    finalPrompt += `\n\n---
+    QUAN TRỌNG: Vui lòng trả lời theo cấu trúc sau, sử dụng chính xác các đánh dấu này:
+    **[TIÊU ĐỀ]**
+    (Tiêu đề email của bạn ở đây)
+    ---
+    **[NỘI DUNG EMAIL]**
+    (Toàn bộ nội dung email của bạn ở đây. Nội dung này PHẢI được định dạng bằng HTML. Sử dụng các thẻ như <p> cho đoạn văn, <b> cho in đậm, <ul> và <li> cho danh sách. KHÔNG sử dụng Markdown.)
+    `;
 
     const result = await model.generateContent(finalPrompt);
     const rawGeneratedContent = result.response.text();

@@ -140,7 +140,7 @@ const SendEmailTab = () => {
         </Card>
       </div>
       <SendCampaignDialog isOpen={isSendDialogOpen} onOpenChange={setIsSendDialogOpen} campaign={selectedCampaign} onConfirm={handleConfirmSend} isSubmitting={isSubmitting} />
-      <CampaignReportDialog isOpen={isReportDialogOpen} onOpenChange={setIsReportDialogOpen} campaign={selectedCampaign} />
+      <CampaignReportDialog isOpen={isReportDialogOpen} onOpenChange={setIsReportDialogOpen} campaign={selectedCampaign} onCampaignUpdate={fetchData} />
     </>
   );
 };

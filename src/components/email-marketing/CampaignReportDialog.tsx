@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import ReportWidget from '@/components/ReportWidget';
 import { Mail, CheckCircle, XCircle, Clock, Repeat } from 'lucide-react';
-import { showError } from '@/utils/toast';
+import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { Campaign } from './SendEmailTab';
 import { format } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -30,6 +30,7 @@ interface CampaignReportDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   campaign: Campaign | null;
+  onCampaignUpdate: () => void;
 }
 
 const getIntervalUnitText = (unit: string | null) => {
@@ -42,9 +43,10 @@ const getIntervalUnitText = (unit: string | null) => {
   }
 };
 
-export const CampaignReportDialog = ({ isOpen, onOpenChange, campaign }: CampaignReportDialogProps) => {
+export const CampaignReportDialog = ({ isOpen, onOpenChange, campaign, onCampaignUpdate }: CampaignReportDialogProps) => {
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -63,6 +65,26 @@ export const CampaignReportDialog = ({ isOpen, onOpenChange, campaign }: Campaig
     };
     fetchReport();
   }, [isOpen, campaign]);
+
+  const handleResendFailed = async () => {
+    if (!campaign) return;
+    setIsResending(true);
+    const toastId = showLoading("Đang yêu cầu gửi lại...");
+
+    const { data, error } = await supabase.functions.invoke('resend-failed-emails', {
+      body: { campaign_id: campaign.id }
+    });
+
+    dismissToast(toastId);
+    if (error) {
+      showError(`Gửi lại thất bại: ${error.message}`);
+    } else {
+      showSuccess(data.message || "Đã lên lịch gửi lại các email thất bại.");
+      onCampaignUpdate();
+      onOpenChange(false);
+    }
+    setIsResending(false);
+  };
 
   const getStatusBadge = (status: string, errorMessage: string | null) => {
     const badge = (() => {
@@ -147,7 +169,20 @@ export const CampaignReportDialog = ({ isOpen, onOpenChange, campaign }: Campaig
               </ScrollArea>
             </div>
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Đóng</Button></DialogFooter>
+          <DialogFooter>
+            {report && report.stats.failed > 0 && (
+              <Button 
+                variant="outline" 
+                onClick={handleResendFailed} 
+                disabled={isResending}
+                className="mr-auto text-brand-orange border-brand-orange hover:bg-brand-orange-light hover:text-brand-orange"
+              >
+                <Repeat className="h-4 w-4 mr-2" />
+                {isResending ? 'Đang xử lý...' : `Gửi lại ${report.stats.failed} mail lỗi`}
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Đóng</Button>
+          </DialogFooter>
         </DialogContent>
       </TooltipProvider>
     </Dialog>

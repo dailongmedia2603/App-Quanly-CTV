@@ -2,6 +2,7 @@ export const permissionConfig = [
   { key: 'find_customers', name: 'Tìm khách hàng', actions: ['read'] },
   { key: 'create_post', name: 'Tạo bài viết', actions: ['create'] },
   { key: 'create_comment', name: 'Tạo comment', actions: ['create'] },
+  { key: 'email_marketing', name: 'Email Marketing', actions: ['read', 'create', 'update', 'delete'] },
   { key: 'customer_consulting', name: 'Tư vấn khách hàng', actions: ['use'] },
   { key: 'create_quote', name: 'Tạo báo giá', actions: ['create'] },
   { key: 'create_plan', name: 'Tạo Plan', actions: ['read', 'create', 'update', 'delete'] },

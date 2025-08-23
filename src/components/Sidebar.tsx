@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Home, SlidersHorizontal, FilePieChart, CircleDollarSign, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog, FolderKanban, UserCheck, FileSpreadsheet, FileBarChart, Briefcase, BookOpen } from "lucide-react";
+import { Home, SlidersHorizontal, FilePieChart, CircleDollarSign, KeyRound, Settings, PanelLeftClose, PanelRightClose, Users, LifeBuoy, Search, PenSquare, ClipboardList, Cog, FolderKanban, UserCheck, FileSpreadsheet, FileBarChart, Briefcase, BookOpen, Mail } from "lucide-react";
 import * as Icons from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -80,7 +80,7 @@ interface SupportWidgetData {
 const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleSidebar: () => void }) => {
   const location = useLocation();
   const { hasPermission } = useAuth();
-  const isCreateContentActive = ['/create-content/post', '/create-content/comment'].includes(location.pathname);
+  const isCreateContentActive = ['/create-content/post', '/create-content/comment', '/create-content/email-marketing'].includes(location.pathname);
   const isConfigActive = location.pathname.startsWith('/config');
   const [supportWidgetData, setSupportWidgetData] = useState<SupportWidgetData | null>(null);
 
@@ -113,7 +113,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
             <NavLink to="/guide" icon={BookOpen} isCollapsed={isCollapsed}>Bắt đầu công việc</NavLink>
             {hasPermission('find_customers') && <NavLink to="/find-customers" icon={Search} isCollapsed={isCollapsed}>Tìm khách hàng</NavLink>}
             
-            {(hasPermission('create_post') || hasPermission('create_comment')) && (
+            {(hasPermission('create_post') || hasPermission('create_comment') || hasPermission('email_marketing')) && (
               isCollapsed ? (
                 <Tooltip><TooltipTrigger className="w-full"><div className="flex items-center justify-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600"><PenSquare className="h-5 w-5 flex-shrink-0" /></div></TooltipTrigger><TooltipContent side="right"><p>Tạo content</p></TooltipContent></Tooltip>
               ) : (
@@ -122,6 +122,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
                     <nav className="relative border-l border-gray-200 space-y-1">
                       {hasPermission('create_post') && <SubNavLink to="/create-content/post">Tạo bài viết</SubNavLink>}
                       {hasPermission('create_comment') && <SubNavLink to="/create-content/comment">Tạo comment</SubNavLink>}
+                      {hasPermission('email_marketing') && <SubNavLink to="/create-content/email-marketing">Email Marketing</SubNavLink>}
                     </nav>
                   </AccordionContent>
                 </AccordionItem></Accordion>

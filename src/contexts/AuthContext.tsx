@@ -29,7 +29,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error fetching user roles:", rolesError);
       setRoles([]);
       setPermissions({});
-      return;
+      // Re-throw the error to be caught by the caller
+      throw rolesError;
     }
 
     if (userRolesData) {
@@ -75,23 +76,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const setData = async () => {
       setLoading(true);
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("Error getting session:", error);
-        setLoading(false);
-        return;
-      }
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
 
-      setSession(session);
-      setUser(session?.user ?? null);
+        setSession(session);
+        setUser(session?.user ?? null);
 
-      if (session) {
-        await fetchAndSetPermissions();
-      } else {
+        if (session) {
+          await fetchAndSetPermissions();
+        } else {
+          setRoles([]);
+          setPermissions({});
+        }
+      } catch (error) {
+        console.error("Error during initial auth setup:", error);
+        // If setup fails, clear session data to avoid getting stuck
+        setSession(null);
+        setUser(null);
         setRoles([]);
         setPermissions({});
+      } finally {
+        // This is the crucial fix: ensure loading is always set to false
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -109,7 +117,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       if (session) {
-        fetchAndSetPermissions();
+        // Also wrap this in a try/catch to prevent crashes on auth state changes
+        try {
+          await fetchAndSetPermissions();
+        } catch (error) {
+          console.error("Error fetching permissions on auth state change:", error);
+        }
       } else {
         setRoles([]);
         setPermissions({});

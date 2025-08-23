@@ -76,12 +76,10 @@ export const CampaignReportDialog = ({ isOpen, onOpenChange, campaign }: Campaig
 
     if (status === 'failed' && errorMessage) {
       return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>{badge}</TooltipTrigger>
-            <TooltipContent><p>{errorMessage}</p></TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>{badge}</TooltipTrigger>
+          <TooltipContent><p>{errorMessage}</p></TooltipContent>
+        </Tooltip>
       );
     }
     return badge;
@@ -89,67 +87,69 @@ export const CampaignReportDialog = ({ isOpen, onOpenChange, campaign }: Campaig
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>Báo cáo chiến dịch: {campaign?.name}</DialogTitle>
-          <DialogDescription>Theo dõi trạng thái gửi email của chiến dịch.</DialogDescription>
-        </DialogHeader>
-        <div className="py-4 space-y-6">
-          <div className="grid grid-cols-3 gap-4">
-            <ReportWidget icon={<Mail className="h-5 w-5" />} title="Tổng số mail" value={report?.stats.total.toString() || '0'} />
-            <ReportWidget icon={<CheckCircle className="h-5 w-5" />} title="Thành công" value={report?.stats.success.toString() || '0'} />
-            <ReportWidget icon={<XCircle className="h-5 w-5" />} title="Thất bại" value={report?.stats.failed.toString() || '0'} />
-          </div>
-
-          {campaign && (
-            <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border">
-              <div className="flex items-start space-x-3">
-                <Clock className="h-5 w-5 text-gray-500 mt-0.5" />
-                <div>
-                  <p className="text-sm text-gray-500">Thời gian bắt đầu</p>
-                  <p className="font-semibold text-gray-800">
-                    {campaign.scheduled_at ? format(new Date(campaign.scheduled_at), 'dd/MM/yyyy, HH:mm') : 'Gửi ngay lập tức'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <Repeat className="h-5 w-5 text-gray-500 mt-0.5" />
-                <div>
-                  <p className="text-sm text-gray-500">Tần suất gửi</p>
-                  <p className="font-semibold text-gray-800">
-                    {campaign.send_interval_value && campaign.send_interval_unit
-                      ? `${campaign.send_interval_value} ${getIntervalUnitText(campaign.send_interval_unit)} / email`
-                      : 'Không có'}
-                  </p>
-                </div>
-              </div>
+      <TooltipProvider>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Báo cáo chiến dịch: {campaign?.name}</DialogTitle>
+            <DialogDescription>Theo dõi trạng thái gửi email của chiến dịch.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-6">
+            <div className="grid grid-cols-3 gap-4">
+              <ReportWidget icon={<Mail className="h-5 w-5" />} title="Tổng số mail" value={report?.stats.total.toString() || '0'} />
+              <ReportWidget icon={<CheckCircle className="h-5 w-5" />} title="Thành công" value={report?.stats.success.toString() || '0'} />
+              <ReportWidget icon={<XCircle className="h-5 w-5" />} title="Thất bại" value={report?.stats.failed.toString() || '0'} />
             </div>
-          )}
 
-          <div>
-            <h3 className="font-semibold mb-2">Chi tiết</h3>
-            <ScrollArea className="h-64 border rounded-md">
-              <Table>
-                <TableHeader><TableRow><TableHead>Email</TableHead><TableHead>Trạng thái</TableHead><TableHead>Thời gian gửi</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {loading ? <TableRow><TableCell colSpan={3} className="text-center">Đang tải...</TableCell></TableRow> : !report || report.contacts.length === 0 ? <TableRow><TableCell colSpan={3} className="text-center">Không có dữ liệu.</TableCell></TableRow> : (
-                    report.contacts.map(c => (
-                      <TableRow key={c.email}>
-                        <TableCell>{c.email}</TableCell>
-                        <TableCell>{getStatusBadge(c.status, c.error_message)}</TableCell>
-                        <TableCell>
-                          {c.sent_at ? format(new Date(c.sent_at), 'dd/MM/yy HH:mm:ss') : '-'}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </ScrollArea>
+            {campaign && (
+              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border">
+                <div className="flex items-start space-x-3">
+                  <Clock className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Thời gian bắt đầu</p>
+                    <p className="font-semibold text-gray-800">
+                      {campaign.scheduled_at ? format(new Date(campaign.scheduled_at), 'dd/MM/yyyy, HH:mm') : 'Gửi ngay lập tức'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <Repeat className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Tần suất gửi</p>
+                    <p className="font-semibold text-gray-800">
+                      {campaign.send_interval_value && campaign.send_interval_unit
+                        ? `${campaign.send_interval_value} ${getIntervalUnitText(campaign.send_interval_unit)} / email`
+                        : 'Không có'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <h3 className="font-semibold mb-2">Chi tiết</h3>
+              <ScrollArea className="h-64 border rounded-md">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Email</TableHead><TableHead>Trạng thái</TableHead><TableHead>Thời gian gửi</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {loading ? <TableRow><TableCell colSpan={3} className="text-center">Đang tải...</TableCell></TableRow> : !report || report.contacts.length === 0 ? <TableRow><TableCell colSpan={3} className="text-center">Không có dữ liệu.</TableCell></TableRow> : (
+                      report.contacts.map(c => (
+                        <TableRow key={c.email}>
+                          <TableCell>{c.email}</TableCell>
+                          <TableCell>{getStatusBadge(c.status, c.error_message)}</TableCell>
+                          <TableCell>
+                            {c.sent_at ? format(new Date(c.sent_at), 'dd/MM/yy HH:mm:ss') : '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </div>
           </div>
-        </div>
-        <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Đóng</Button></DialogFooter>
-      </DialogContent>
+          <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Đóng</Button></DialogFooter>
+        </DialogContent>
+      </TooltipProvider>
     </Dialog>
   );
 };

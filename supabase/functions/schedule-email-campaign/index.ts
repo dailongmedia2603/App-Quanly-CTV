@@ -41,40 +41,41 @@ serve(async (req) => {
 
     // If the campaign is scheduled to start now or in the past, trigger the first email immediately
     if (new Date(scheduled_at) <= now) {
-      // Find the first contact to email
-      const { data: allContacts, error: contactsError } = await supabaseAdmin.from('email_list_contacts').select('email').eq('list_id', campaign.email_list_id);
-      if (contactsError) throw contactsError;
+      try {
+        const { data: allContacts, error: contactsError } = await supabaseAdmin.from('email_list_contacts').select('email').eq('list_id', campaign.email_list_id);
+        if (contactsError) throw contactsError;
 
-      if (allContacts && allContacts.length > 0) {
-        const firstContact = allContacts[0];
+        if (allContacts && allContacts.length > 0) {
+          const firstContact = allContacts[0];
 
-        // Change status to 'sending'
-        await supabaseAdmin.from('email_campaigns').update({ status: 'sending' }).eq('id', campaign.id);
+          await supabaseAdmin.from('email_campaigns').update({ status: 'sending' }).eq('id', campaign.id);
 
-        // Invoke the function to send the single email
-        const { data: sendResult, error: sendError } = await supabaseAdmin.functions.invoke('send-single-email', {
-          body: { campaign, contact: firstContact }
-        });
-
-        if (sendError || (sendResult && !sendResult.success)) {
-          const errorMessage = sendError?.message || sendResult?.error || "Unknown error during sending.";
-          await supabaseAdmin.from('email_campaign_logs').insert({
-            campaign_id: campaign.id, user_id: campaign.user_id, contact_email: firstContact.email,
-            status: 'failed', error_message: errorMessage, sent_at: now.toISOString(),
+          const { data: sendResult, error: sendError } = await supabaseAdmin.functions.invoke('send-single-email', {
+            body: { campaign, contact: firstContact }
           });
+
+          if (sendError || (sendResult && !sendResult.success)) {
+            const errorMessage = sendError?.message || sendResult?.error || "Unknown error during sending.";
+            await supabaseAdmin.from('email_campaign_logs').insert({
+              campaign_id: campaign.id, user_id: campaign.user_id, contact_email: firstContact.email,
+              status: 'failed', error_message: errorMessage, sent_at: now.toISOString(),
+            });
+          } else {
+            await supabaseAdmin.from('email_campaign_logs').insert({
+              campaign_id: campaign.id, user_id: campaign.user_id, contact_email: firstContact.email,
+              status: 'success', sent_at: now.toISOString(),
+            });
+          }
+          
+          await supabaseAdmin.from('email_campaigns').update({ last_sent_at: now.toISOString() }).eq('id', campaign.id);
+
         } else {
-          await supabaseAdmin.from('email_campaign_logs').insert({
-            campaign_id: campaign.id, user_id: campaign.user_id, contact_email: firstContact.email,
-            status: 'success', sent_at: now.toISOString(),
-          });
+          await supabaseAdmin.from('email_campaigns').update({ status: 'sent' }).eq('id', campaign.id);
         }
-        
-        // Update the last_sent_at timestamp
-        await supabaseAdmin.from('email_campaigns').update({ last_sent_at: now.toISOString() }).eq('id', campaign.id);
-
-      } else {
-        // No contacts, mark as sent
-        await supabaseAdmin.from('email_campaigns').update({ status: 'sent' }).eq('id', campaign.id);
+      } catch (initialSendError) {
+        console.error('Error sending initial email, but scheduling was successful:', initialSendError.message);
+        // Do not re-throw. The campaign is scheduled, the first email just failed.
+        // The error is already logged in the logs table by the logic above.
       }
     }
 

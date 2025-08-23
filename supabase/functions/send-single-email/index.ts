@@ -24,7 +24,6 @@ const getAccessToken = async (refreshToken: string) => {
   });
   const data = await response.json();
   if (!response.ok) {
-    // This is the critical part: handle the specific 'invalid_grant' error
     if (data.error === 'invalid_grant') {
       throw new Error("Kết nối Google đã hết hạn hoặc không hợp lệ. Vui lòng kết nối lại tài khoản Gmail của bạn.");
     }
@@ -44,7 +43,6 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
-    // 1. Get user's refresh token
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('google_refresh_token, google_connected_email')
@@ -55,10 +53,8 @@ serve(async (req) => {
       throw new Error("Người dùng chưa kết nối tài khoản Gmail hoặc token đã bị mất.");
     }
 
-    // 2. Get a fresh access token
     const accessToken = await getAccessToken(profile.google_refresh_token);
 
-    // 3. Get email content
     const { data: emailContent, error: contentError } = await supabaseAdmin
       .from('email_contents')
       .select('subject, body')
@@ -66,14 +62,13 @@ serve(async (req) => {
       .single();
     if (contentError || !emailContent) throw new Error("Email content not found.");
 
-    // 4. Construct and send the email via Gmail API
     const fromEmail = profile.google_connected_email || 'me';
     const emailMessage = [
       `Content-Type: text/html; charset="UTF-8"`,
       `MIME-Version: 1.0`,
       `to: ${contact.email}`,
       `from: ${fromEmail}`,
-      `subject: =?utf-8?B?${btoa(unescape(encodeURIComponent(emailContent.subject)))}?=`, // Base64 encode subject for UTF-8
+      `subject: =?utf-8?B?${btoa(unescape(encodeURIComponent(emailContent.subject)))}?=`,
       ``,
       `${emailContent.body}`
     ].join('\n');
@@ -102,9 +97,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in send-single-email function:', error);
+    // This is the key change: return a 200 OK status but with a success: false payload
+    // This prevents the calling function from crashing.
     return new Response(JSON.stringify({ success: false, error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+      status: 200, 
     })
   }
 })

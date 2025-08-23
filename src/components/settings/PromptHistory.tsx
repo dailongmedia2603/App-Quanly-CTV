@@ -19,7 +19,7 @@ interface Log {
 }
 
 interface PromptHistoryProps {
-  templateType: 'post' | 'comment' | 'consulting' | 'customer_finder_comment' | 'quote';
+  templateType: 'post' | 'comment' | 'consulting' | 'customer_finder_comment' | 'quote' | 'email';
 }
 
 const getSnippet = (content: string | null, maxLength = 120): string => {

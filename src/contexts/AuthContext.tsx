@@ -77,54 +77,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     setLoading(true);
 
-    // 1. Handle initial session load
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session) {
-        try {
-          await fetchAndSetPermissions();
-        } catch (e) {
-          console.error("Initial permission fetch failed, signing out.", e);
-          // CRITICAL FIX: If permissions fail, sign out to prevent getting stuck.
-          await supabase.auth.signOut();
-          setSession(null);
-          setUser(null);
-          setRoles([]);
-          setPermissions({});
-        }
-      }
-      setLoading(false);
-    });
-
-    // 2. Listen for subsequent auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
 
-      if (event === 'PASSWORD_RECOVERY') {
-        navigate('/update-password');
-      }
-
-      if (event === 'SIGNED_IN' && session?.provider_refresh_token) {
-        await supabase
-          .from('profiles')
-          .update({
-            google_refresh_token: session.provider_refresh_token,
-            google_connected_email: session.user.email,
-          })
-          .eq('id', session.user.id);
-      }
-      
       if (session) {
+        // User is logged in or session is restored
         try {
           await fetchAndSetPermissions();
+
+          // Handle specific events after permissions are successfully set
+          if (event === 'PASSWORD_RECOVERY') {
+            navigate('/update-password');
+          }
+      
+          if (event === 'SIGNED_IN' && session?.provider_refresh_token) {
+            await supabase
+              .from('profiles')
+              .update({
+                google_refresh_token: session.provider_refresh_token,
+                google_connected_email: session.user.email,
+              })
+              .eq('id', session.user.id);
+          }
         } catch (error) {
-          console.error("Error fetching permissions on auth state change:", error);
+          console.error("Permission fetch failed, signing out.", error);
+          // If fetching permissions fails, sign out to prevent an inconsistent state.
+          // This will trigger onAuthStateChange again with a null session.
+          await supabase.auth.signOut();
+        } finally {
+          // This block ALWAYS runs after the try/catch, ensuring the loading screen is removed.
+          setLoading(false);
         }
       } else {
+        // User is logged out or there is no session
         setRoles([]);
         setPermissions({});
+        setLoading(false);
       }
     });
 

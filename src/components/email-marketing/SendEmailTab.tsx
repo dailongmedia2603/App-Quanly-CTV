@@ -13,6 +13,7 @@ import GmailConnection from './GmailConnection';
 import { SendCampaignDialog } from './SendCampaignDialog';
 import { CampaignReportDialog } from './CampaignReportDialog';
 import { Badge } from '../ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface EmailList { id: string; name: string; }
 interface EmailContent { id: string; name: string; }
@@ -29,6 +30,7 @@ export interface Campaign {
 }
 
 const SendEmailTab = () => {
+  const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [lists, setLists] = useState<EmailList[]>([]);
   const [contents, setContents] = useState<EmailContent[]>([]);
@@ -63,10 +65,16 @@ const SendEmailTab = () => {
   useEffect(() => { fetchData(); }, []);
 
   const handleSaveCampaign = async () => {
+    if (!user) return showError("Bạn cần đăng nhập để tạo chiến dịch.");
     if (!campaignName || !selectedListId || !selectedContentId) return showError("Vui lòng điền đủ thông tin.");
     setIsSubmitting(true);
     const toastId = showLoading("Đang lưu chiến dịch...");
-    const { error } = await supabase.from('email_campaigns').insert({ name: campaignName, email_list_id: selectedListId, email_content_id: selectedContentId });
+    const { error } = await supabase.from('email_campaigns').insert({ 
+      user_id: user.id,
+      name: campaignName, 
+      email_list_id: selectedListId, 
+      email_content_id: selectedContentId 
+    });
     dismissToast(toastId);
     if (error) showError(`Lưu thất bại: ${error.message}`);
     else { showSuccess("Lưu thành công!"); setCampaignName(''); setSelectedListId(''); setSelectedContentId(''); fetchData(); }

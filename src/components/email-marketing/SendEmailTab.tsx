@@ -7,12 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
-import { Plus, Trash2, Send, Loader2, Clock } from 'lucide-react';
+import { Plus, Trash2, Send, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import GmailConnection from './GmailConnection';
 import { SendCampaignDialog } from './SendCampaignDialog';
+import { CampaignReportDialog } from './CampaignReportDialog';
 import { Badge } from '../ui/badge';
-import { cn } from '@/lib/utils';
 
 interface EmailList { id: string; name: string; }
 interface EmailContent { id: string; name: string; }
@@ -34,6 +34,7 @@ const SendEmailTab = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
 
   // Form state
@@ -122,12 +123,22 @@ const SendEmailTab = () => {
           <CardHeader><CardTitle>Danh sách chiến dịch</CardTitle></CardHeader>
           <CardContent>
             <Table><TableHeader><TableRow><TableHead>Tên chiến dịch</TableHead><TableHead>Danh sách mail</TableHead><TableHead>Nội dung</TableHead><TableHead>Trạng thái</TableHead><TableHead>Ngày tạo/Lịch gửi</TableHead><TableHead className="text-right">Thao tác</TableHead></TableRow></TableHeader>
-              <TableBody>{loading ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Đang tải...</TableCell></TableRow> : campaigns.length === 0 ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Chưa có chiến dịch nào.</TableCell></TableRow> : (campaigns.map(c => (<TableRow key={c.id}><TableCell>{c.name}</TableCell><TableCell>{c.email_lists?.name}</TableCell><TableCell>{c.email_contents?.name}</TableCell><TableCell>{getStatusBadge(c.status)}</TableCell><TableCell>{c.status === 'scheduled' && c.scheduled_at ? format(new Date(c.scheduled_at), 'dd/MM/yy HH:mm') : format(new Date(c.created_at), 'dd/MM/yyyy')}</TableCell><TableCell className="text-right space-x-2"><Button size="sm" variant="outline" onClick={() => { setSelectedCampaign(c); setIsSendDialogOpen(true); }} disabled={c.status !== 'draft'}><Send className="h-4 w-4 mr-2" />Gửi</Button><Button size="icon" variant="ghost" className="text-red-500" onClick={() => handleDeleteCampaign(c.id)}><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>)))}</TableBody>
+              <TableBody>{loading ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Đang tải...</TableCell></TableRow> : campaigns.length === 0 ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Chưa có chiến dịch nào.</TableCell></TableRow> : (campaigns.map(c => (<TableRow key={c.id}><TableCell>{c.name}</TableCell><TableCell>{c.email_lists?.name}</TableCell><TableCell>{c.email_contents?.name}</TableCell><TableCell>{getStatusBadge(c.status)}</TableCell><TableCell>{c.status === 'scheduled' && c.scheduled_at ? format(new Date(c.scheduled_at), 'dd/MM/yy HH:mm') : format(new Date(c.created_at), 'dd/MM/yyyy')}</TableCell>
+                <TableCell className="text-right space-x-2">
+                  {c.status === 'draft' ? (
+                    <Button size="sm" variant="outline" onClick={() => { setSelectedCampaign(c); setIsSendDialogOpen(true); }}><Send className="h-4 w-4 mr-2" />Gửi</Button>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={() => { setSelectedCampaign(c); setIsReportDialogOpen(true); }}><FileText className="h-4 w-4 mr-2" />Xem báo cáo</Button>
+                  )}
+                  <Button size="icon" variant="ghost" className="text-red-500" onClick={() => handleDeleteCampaign(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                </TableCell>
+              </TableRow>)))}</TableBody>
             </Table>
           </CardContent>
         </Card>
       </div>
       <SendCampaignDialog isOpen={isSendDialogOpen} onOpenChange={setIsSendDialogOpen} campaign={selectedCampaign} onConfirm={handleConfirmSend} isSubmitting={isSubmitting} />
+      <CampaignReportDialog isOpen={isReportDialogOpen} onOpenChange={setIsReportDialogOpen} campaign={selectedCampaign} />
     </>
   );
 };

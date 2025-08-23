@@ -80,7 +80,7 @@ interface SupportWidgetData {
 const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleSidebar: () => void }) => {
   const location = useLocation();
   const { hasPermission } = useAuth();
-  const isCreateContentActive = ['/create-content/post', '/create-content/comment', '/create-content/email-marketing'].includes(location.pathname);
+  const isCreateContentActive = ['/create-content/post', '/create-content/comment'].includes(location.pathname);
   const isConfigActive = location.pathname.startsWith('/config');
   const [supportWidgetData, setSupportWidgetData] = useState<SupportWidgetData | null>(null);
 
@@ -113,7 +113,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
             <NavLink to="/guide" icon={BookOpen} isCollapsed={isCollapsed}>Bắt đầu công việc</NavLink>
             {hasPermission('find_customers') && <NavLink to="/find-customers" icon={Search} isCollapsed={isCollapsed}>Tìm khách hàng</NavLink>}
             
-            {(hasPermission('create_post') || hasPermission('create_comment') || hasPermission('email_marketing')) && (
+            {(hasPermission('create_post') || hasPermission('create_comment')) && (
               isCollapsed ? (
                 <Tooltip><TooltipTrigger className="w-full"><div className="flex items-center justify-center space-x-3 rounded-md px-3 py-2 text-sm font-medium text-gray-600"><PenSquare className="h-5 w-5 flex-shrink-0" /></div></TooltipTrigger><TooltipContent side="right"><p>Tạo content</p></TooltipContent></Tooltip>
               ) : (
@@ -122,13 +122,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar }: { isCollapsed: boolean, toggleS
                     <nav className="relative border-l border-gray-200 space-y-1">
                       {hasPermission('create_post') && <SubNavLink to="/create-content/post">Tạo bài viết</SubNavLink>}
                       {hasPermission('create_comment') && <SubNavLink to="/create-content/comment">Tạo comment</SubNavLink>}
-                      {hasPermission('email_marketing') && <SubNavLink to="/create-content/email-marketing">Email Marketing</SubNavLink>}
                     </nav>
                   </AccordionContent>
                 </AccordionItem></Accordion>
               )
             )}
 
+            {hasPermission('email_marketing') && <NavLink to="/create-content/email-marketing" icon={Mail} isCollapsed={isCollapsed}>Email Marketing</NavLink>}
             {hasPermission('customer_consulting') && <NavLink to="/create-content/customer-consulting" icon={UserCheck} isCollapsed={isCollapsed}>Tư vấn khách hàng</NavLink>}
             {hasPermission('create_quote') && <NavLink to="/create-quote" icon={FileSpreadsheet} isCollapsed={isCollapsed}>Tạo báo giá</NavLink>}
             {hasPermission('create_plan') && <NavLink to="/create-plan" icon={ClipboardList} isCollapsed={isCollapsed}>Tạo Plan</NavLink>}

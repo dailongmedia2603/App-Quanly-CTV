@@ -10,6 +10,7 @@ import { Mail, CheckCircle, XCircle, Clock, Repeat } from 'lucide-react';
 import { showError } from '@/utils/toast';
 import { Campaign } from './SendEmailTab';
 import { format } from 'date-fns';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ReportData {
   stats: {
@@ -21,6 +22,7 @@ interface ReportData {
     email: string;
     status: 'pending' | 'success' | 'failed';
     sent_at: string | null;
+    error_message: string | null;
   }[];
 }
 
@@ -62,13 +64,27 @@ export const CampaignReportDialog = ({ isOpen, onOpenChange, campaign }: Campaig
     fetchReport();
   }, [isOpen, campaign]);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending': return <Badge variant="secondary">Chưa gửi</Badge>;
-      case 'success': return <Badge className="bg-green-100 text-green-800">Đã gửi</Badge>;
-      case 'failed': return <Badge variant="destructive">Thất bại</Badge>;
-      default: return <Badge>{status}</Badge>;
+  const getStatusBadge = (status: string, errorMessage: string | null) => {
+    const badge = (() => {
+      switch (status) {
+        case 'pending': return <Badge variant="secondary">Chưa gửi</Badge>;
+        case 'success': return <Badge className="bg-green-100 text-green-800">Đã gửi</Badge>;
+        case 'failed': return <Badge variant="destructive">Thất bại</Badge>;
+        default: return <Badge>{status}</Badge>;
+      }
+    })();
+
+    if (status === 'failed' && errorMessage) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>{badge}</TooltipTrigger>
+            <TooltipContent><p>{errorMessage}</p></TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
     }
+    return badge;
   };
 
   return (
@@ -120,7 +136,7 @@ export const CampaignReportDialog = ({ isOpen, onOpenChange, campaign }: Campaig
                     report.contacts.map(c => (
                       <TableRow key={c.email}>
                         <TableCell>{c.email}</TableCell>
-                        <TableCell>{getStatusBadge(c.status)}</TableCell>
+                        <TableCell>{getStatusBadge(c.status, c.error_message)}</TableCell>
                         <TableCell>
                           {c.sent_at ? format(new Date(c.sent_at), 'dd/MM/yy HH:mm:ss') : '-'}
                         </TableCell>

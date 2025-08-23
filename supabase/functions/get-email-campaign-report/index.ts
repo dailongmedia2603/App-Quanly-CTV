@@ -13,6 +13,7 @@ const corsHeaders = {
 interface LogInfo {
   status: string;
   sent_at: string | null;
+  error_message: string | null;
 }
 
 serve(async (req) => {
@@ -26,7 +27,6 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
-    // 1. Get the email list ID from the campaign
     const { data: campaign, error: campaignError } = await supabaseAdmin
       .from('email_campaigns')
       .select('email_list_id')
@@ -34,33 +34,30 @@ serve(async (req) => {
       .single();
     if (campaignError || !campaign) throw new Error("Campaign not found.");
 
-    // 2. Get all contacts for that list
     const { data: contacts, error: contactsError } = await supabaseAdmin
       .from('email_list_contacts')
       .select('email')
       .eq('list_id', campaign.email_list_id);
     if (contactsError) throw contactsError;
 
-    // 3. Get all logs for this campaign, including sent_at
     const { data: logs, error: logsError } = await supabaseAdmin
       .from('email_campaign_logs')
-      .select('contact_email, status, sent_at')
+      .select('contact_email, status, sent_at, error_message')
       .eq('campaign_id', campaign_id);
     if (logsError) throw logsError;
 
-    const logMap = new Map<string, LogInfo>(logs.map(log => [log.contact_email, { status: log.status, sent_at: log.sent_at }]));
+    const logMap = new Map<string, LogInfo>(logs.map(log => [log.contact_email, { status: log.status, sent_at: log.sent_at, error_message: log.error_message }]));
 
-    // 4. Combine data to create the final report
     const reportContacts = contacts.map(contact => {
       const log = logMap.get(contact.email);
       return {
         email: contact.email,
         status: log ? log.status : 'pending',
         sent_at: log ? log.sent_at : null,
+        error_message: log ? log.error_message : null,
       };
     });
 
-    // 5. Calculate stats
     const total = contacts.length;
     const success = logs.filter(log => log.status === 'success').length;
     const failed = logs.filter(log => log.status === 'failed').length;

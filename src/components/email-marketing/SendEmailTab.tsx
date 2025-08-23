@@ -97,7 +97,7 @@ const SendEmailTab = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'draft': return <Badge variant="secondary">Bản nháp</Badge>;
+      case 'draft': return <Badge variant="secondary">Chưa gửi</Badge>;
       case 'scheduled': return <Badge className="bg-blue-100 text-blue-800">Đã lên lịch</Badge>;
       case 'sending': return <Badge className="bg-yellow-100 text-yellow-800">Đang gửi</Badge>;
       case 'sent': return <Badge className="bg-green-100 text-green-800">Hoàn thành</Badge>;

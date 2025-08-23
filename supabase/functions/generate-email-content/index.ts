@@ -81,8 +81,13 @@ serve(async (req) => {
     const result = await model.generateContent(finalPrompt);
     const rawGeneratedContent = result.response.text();
 
-    const subjectMatch = rawGeneratedContent.match(/\*\*\[TIÊU ĐỀ\]\*\*\s*([\s\S]*?)\s*---/);
+    if (!rawGeneratedContent || rawGeneratedContent.trim() === '') {
+      throw new Error("AI không phản hồi nội dung. Vui lòng thử lại hoặc điều chỉnh yêu cầu.");
+    }
+
+    const subjectMatch = rawGeneratedContent.match(/\*\*\[TIÊU ĐỀ\]\*\*\s*([\s\S]*?)(?=\*\*\[NỘI DUNG EMAIL\]\*\*|---|$)/);
     const bodyMatch = rawGeneratedContent.match(/\*\*\[NỘI DUNG EMAIL\]\*\*\s*([\s\S]*)/);
+    
     const subject = subjectMatch ? subjectMatch[1].trim() : 'Không tìm thấy tiêu đề';
     const body = bodyMatch ? bodyMatch[1].trim() : rawGeneratedContent;
 

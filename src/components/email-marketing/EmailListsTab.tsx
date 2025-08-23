@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
 import { format } from 'date-fns';
 import { Plus, Trash2, Users, MoreHorizontal } from 'lucide-react';
@@ -25,6 +26,7 @@ const EmailListsTab = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [listName, setListName] = useState('');
+  const [initialEmails, setInitialEmails] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [listToDelete, setListToDelete] = useState<EmailList | null>(null);
   const [isContactsDialogOpen, setIsContactsDialogOpen] = useState(false);
@@ -52,15 +54,26 @@ const EmailListsTab = () => {
   const handleSave = async () => {
     if (!listName.trim()) return showError("Tên danh sách không được để trống.");
     setIsSubmitting(true);
-    const toastId = showLoading("Đang lưu...");
-    const { error } = await supabase.from('email_lists').insert({ name: listName });
+    const toastId = showLoading("Đang tạo danh sách...");
+
+    const emails = initialEmails
+      .split('\n')
+      .map(email => email.trim())
+      .filter(email => email.length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+
+    const { error } = await supabase.rpc('create_email_list_with_contacts', {
+      list_name: listName.trim(),
+      contact_emails: emails,
+    });
+
     dismissToast(toastId);
     if (error) {
-      showError(`Lưu thất bại: ${error.message}`);
+      showError(`Tạo danh sách thất bại: ${error.message}`);
     } else {
       showSuccess("Tạo danh sách thành công!");
       setIsDialogOpen(false);
       setListName('');
+      setInitialEmails('');
       fetchLists();
     }
     setIsSubmitting(false);
@@ -123,7 +136,29 @@ const EmailListsTab = () => {
         </CardContent>
       </Card>
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent><DialogHeader><DialogTitle>Tạo danh sách mới</DialogTitle></DialogHeader><div className="py-4"><Label htmlFor="list-name">Tên danh sách</Label><Input id="list-name" value={listName} onChange={e => setListName(e.target.value)} /></div><DialogFooter><Button variant="outline" onClick={() => setIsDialogOpen(false)}>Hủy</Button><Button onClick={handleSave} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? 'Đang lưu...' : 'Lưu'}</Button></DialogFooter></DialogContent>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Tạo danh sách mới</DialogTitle></DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="list-name">Tên danh sách</Label>
+              <Input id="list-name" value={listName} onChange={e => setListName(e.target.value)} placeholder="VD: Khách hàng tiềm năng T8" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="initial-emails">Danh sách Email (tùy chọn)</Label>
+              <Textarea 
+                id="initial-emails" 
+                value={initialEmails} 
+                onChange={e => setInitialEmails(e.target.value)} 
+                placeholder="Dán danh sách email vào đây, mỗi email một dòng."
+                className="min-h-[150px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Hủy</Button>
+            <Button onClick={handleSave} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? 'Đang lưu...' : 'Lưu'}</Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
       <AlertDialog open={!!listToDelete} onOpenChange={() => setListToDelete(null)}>
         <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Xác nhận xóa</AlertDialogTitle><AlertDialogDescription>Bạn có chắc muốn xóa danh sách "{listToDelete?.name}" không? Tất cả liên hệ trong danh sách này cũng sẽ bị xóa.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Hủy</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} disabled={isSubmitting} className="bg-red-600 hover:bg-red-700">{isSubmitting ? 'Đang xóa...' : 'Xóa'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent>

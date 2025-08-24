@@ -6,7 +6,7 @@ import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { Copy, History, ArrowLeft, Trash2, Folder, FolderPlus, Move } from 'lucide-react';
+import { Copy, History, ArrowLeft, Trash2, Folder, FolderPlus, Move, FileCode } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useAuth } from '@/contexts/AuthContext';
+import { ScrollArea } from '../ui/scroll-area';
 
 interface EmailContent {
   id: string;
@@ -47,6 +48,7 @@ const EmailContentHistoryView = ({ onBack }: { onBack: () => void }) => {
   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [isMovePopoverOpen, setIsMovePopoverOpen] = useState(false);
+  const [htmlContent, setHtmlContent] = useState<{ title: string; body: string } | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -150,14 +152,14 @@ const EmailContentHistoryView = ({ onBack }: { onBack: () => void }) => {
                 <AccordionItem value={group.id} key={group.id}>
                   <AccordionTrigger className="font-semibold"><div className="flex items-center space-x-2"><Folder className="h-5 w-5 text-brand-orange" /><span>{group.name} ({groupedContent[group.id]?.length || 0})</span></div></AccordionTrigger>
                   <AccordionContent className="pt-2 space-y-2">
-                    {(groupedContent[group.id] || []).map(item => <ContentItem key={item.id} item={item} selectedIds={selectedIds} onSelect={handleSelect} onCopy={handleCopy} />)}
+                    {(groupedContent[group.id] || []).map(item => <ContentItem key={item.id} item={item} selectedIds={selectedIds} onSelect={handleSelect} onCopy={handleCopy} onViewHtml={() => setHtmlContent({ title: item.name, body: item.body })} />)}
                   </AccordionContent>
                 </AccordionItem>
               ))}
               <AccordionItem value="ungrouped">
                 <AccordionTrigger className="font-semibold"><div className="flex items-center space-x-2"><Folder className="h-5 w-5 text-gray-400" /><span>Chưa phân loại ({groupedContent['ungrouped']?.length || 0})</span></div></AccordionTrigger>
                 <AccordionContent className="pt-2 space-y-2">
-                  {(groupedContent['ungrouped'] || []).map(item => <ContentItem key={item.id} item={item} selectedIds={selectedIds} onSelect={handleSelect} onCopy={handleCopy} />)}
+                  {(groupedContent['ungrouped'] || []).map(item => <ContentItem key={item.id} item={item} selectedIds={selectedIds} onSelect={handleSelect} onCopy={handleCopy} onViewHtml={() => setHtmlContent({ title: item.name, body: item.body })} />)}
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -166,11 +168,18 @@ const EmailContentHistoryView = ({ onBack }: { onBack: () => void }) => {
       </Card>
       <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}><DialogContent><DialogHeader><DialogTitle>Tạo nhóm mới</DialogTitle></DialogHeader><div className="py-4"><Label>Tên nhóm</Label><Input value={newGroupName} onChange={e => setNewGroupName(e.target.value)} /></div><DialogFooter><Button variant="outline" onClick={() => setIsGroupDialogOpen(false)}>Hủy</Button><Button onClick={handleCreateGroup} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? 'Đang tạo...' : 'Tạo'}</Button></DialogFooter></DialogContent></Dialog>
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Xác nhận xóa</AlertDialogTitle><AlertDialogDescription>Bạn có chắc muốn xóa {selectedIds.length} nội dung đã chọn không?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Hủy</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} disabled={isSubmitting} className="bg-red-600 hover:bg-red-700">{isSubmitting ? 'Đang xóa...' : 'Xóa'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      <Dialog open={!!htmlContent} onOpenChange={(open) => !open && setHtmlContent(null)}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader><DialogTitle>Mã HTML của: {htmlContent?.title}</DialogTitle></DialogHeader>
+          <ScrollArea className="h-[60vh] mt-4"><pre className="text-xs bg-gray-100 p-4 rounded-md">{htmlContent?.body}</pre></ScrollArea>
+          <DialogFooter><Button variant="outline" onClick={() => setHtmlContent(null)}>Đóng</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
 
-const ContentItem = ({ item, selectedIds, onSelect, onCopy }: { item: EmailContent, selectedIds: string[], onSelect: (id: string, checked: boolean) => void, onCopy: (subject: string, body: string) => void }) => (
+const ContentItem = ({ item, selectedIds, onSelect, onCopy, onViewHtml }: { item: EmailContent, selectedIds: string[], onSelect: (id: string, checked: boolean) => void, onCopy: (subject: string, body: string) => void, onViewHtml: () => void }) => (
   <div className="border border-orange-100 rounded-lg bg-white shadow-sm">
     <div className="p-4 flex items-center w-full gap-4">
       <Checkbox checked={selectedIds.includes(item.id)} onCheckedChange={(c) => onSelect(item.id, c as boolean)} />
@@ -179,7 +188,8 @@ const ContentItem = ({ item, selectedIds, onSelect, onCopy }: { item: EmailConte
         <p className="text-sm text-gray-600 truncate">Tiêu đề: {item.subject}</p>
         <p className="text-xs text-gray-400">{format(new Date(item.created_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}</p>
       </div>
-      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:bg-orange-100" onClick={() => onCopy(item.subject, item.body)}><Copy className="h-4 w-4" /></Button>
+      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:bg-orange-100" onClick={onViewHtml} title="Xem mã HTML"><FileCode className="h-4 w-4" /></Button>
+      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:bg-orange-100" onClick={() => onCopy(item.subject, item.body)} title="Sao chép"><Copy className="h-4 w-4" /></Button>
     </div>
   </div>
 );

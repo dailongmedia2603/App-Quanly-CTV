@@ -24,7 +24,6 @@ serve(async (req) => {
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
     const now = new Date();
 
-    // First, update the campaign with the scheduling info
     const { data: campaign, error: updateError } = await supabaseAdmin
       .from('email_campaigns')
       .update({
@@ -39,7 +38,6 @@ serve(async (req) => {
 
     if (updateError) throw updateError;
 
-    // If the campaign is scheduled to start now or in the past, trigger the first email immediately
     if (new Date(scheduled_at) <= now) {
       try {
         const { data: allContacts, error: contactsError } = await supabaseAdmin.from('email_list_contacts').select('email').eq('list_id', campaign.email_list_id);
@@ -47,6 +45,7 @@ serve(async (req) => {
 
         if (allContacts && allContacts.length > 0) {
           const firstContact = allContacts[0];
+          const firstContentId = (campaign.email_content_ids && campaign.email_content_ids.length > 0) ? campaign.email_content_ids[0] : null;
 
           await supabaseAdmin.from('email_campaigns').update({ 
             status: 'sending',
@@ -62,11 +61,13 @@ serve(async (req) => {
             await supabaseAdmin.from('email_campaign_logs').insert({
               campaign_id: campaign.id, user_id: campaign.user_id, contact_email: firstContact.email,
               status: 'failed', error_message: errorMessage, sent_at: now.toISOString(),
+              email_content_id: firstContentId
             });
           } else {
             await supabaseAdmin.from('email_campaign_logs').insert({
               campaign_id: campaign.id, user_id: campaign.user_id, contact_email: firstContact.email,
               status: 'success', sent_at: now.toISOString(),
+              email_content_id: firstContentId
             });
           }
         } else {
@@ -74,8 +75,6 @@ serve(async (req) => {
         }
       } catch (initialSendError) {
         console.error('Error sending initial email, but scheduling was successful:', initialSendError.message);
-        // Do not re-throw. The campaign is scheduled, the first email just failed.
-        // The error is already logged in the logs table by the logic above.
       }
     }
 

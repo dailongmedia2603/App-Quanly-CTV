@@ -23,6 +23,7 @@ interface ReportData {
     status: 'pending' | 'success' | 'failed';
     sent_at: string | null;
     error_message: string | null;
+    content_name: string | null;
   }[];
 }
 
@@ -110,7 +111,7 @@ export const CampaignReportDialog = ({ isOpen, onOpenChange, campaign, onCampaig
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <TooltipProvider>
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>Báo cáo chiến dịch: {campaign?.name}</DialogTitle>
             <DialogDescription>Theo dõi trạng thái gửi email của chiến dịch.</DialogDescription>
@@ -151,14 +152,15 @@ export const CampaignReportDialog = ({ isOpen, onOpenChange, campaign, onCampaig
               <h3 className="font-semibold mb-2">Chi tiết</h3>
               <ScrollArea className="h-64 border rounded-md">
                 <Table>
-                  <TableHeader><TableRow><TableHead>Email</TableHead><TableHead>Trạng thái</TableHead><TableHead>Thời gian gửi</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead>Email</TableHead><TableHead>Nội dung</TableHead><TableHead>Trạng thái</TableHead><TableHead>Thời gian gửi</TableHead></TableRow></TableHeader>
                   <TableBody>
-                    {loading ? <TableRow><TableCell colSpan={3} className="text-center">Đang tải...</TableCell></TableRow> : !report || report.contacts.length === 0 ? <TableRow><TableCell colSpan={3} className="text-center">Không có dữ liệu.</TableCell></TableRow> : (
+                    {loading ? <TableRow><TableCell colSpan={4} className="text-center">Đang tải...</TableCell></TableRow> : !report || report.contacts.length === 0 ? <TableRow><TableCell colSpan={4} className="text-center">Không có dữ liệu.</TableCell></TableRow> : (
                       report.contacts.map(c => (
                         <TableRow key={c.email}>
-                          <TableCell>{c.email}</TableCell>
+                          <TableCell className="font-medium">{c.email}</TableCell>
+                          <TableCell className="text-gray-600">{c.content_name || '-'}</TableCell>
                           <TableCell>{getStatusBadge(c.status, c.error_message)}</TableCell>
-                          <TableCell>
+                          <TableCell className="text-gray-600">
                             {c.sent_at ? format(new Date(c.sent_at), 'dd/MM/yy HH:mm:ss') : '-'}
                           </TableCell>
                         </TableRow>

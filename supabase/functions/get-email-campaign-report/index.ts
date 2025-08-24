@@ -10,10 +10,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface LogInfo {
+interface CampaignLog {
+  contact_email: string;
   status: string;
   sent_at: string | null;
   error_message: string | null;
+  email_contents: { name: string } | null;
 }
 
 serve(async (req) => {
@@ -32,42 +34,50 @@ serve(async (req) => {
       .select('email_list_id')
       .eq('id', campaign_id)
       .single();
+
     if (campaignError || !campaign) throw new Error("Campaign not found.");
 
-    const { data: contacts, error: contactsError } = await supabaseAdmin
-      .from('email_list_contacts')
-      .select('email')
-      .eq('list_id', campaign.email_list_id);
-    if (contactsError) throw contactsError;
+    const [contactsRes, logsRes] = await Promise.all([
+      supabaseAdmin.from('email_list_contacts').select('email').eq('list_id', campaign.email_list_id),
+      supabaseAdmin.from('email_campaign_logs').select('*, email_contents(name)').eq('campaign_id', campaign_id)
+    ]);
 
-    const { data: logs, error: logsError } = await supabaseAdmin
-      .from('email_campaign_logs')
-      .select('contact_email, status, sent_at, error_message')
-      .eq('campaign_id', campaign_id);
-    if (logsError) throw logsError;
+    if (contactsRes.error) throw contactsRes.error;
+    if (logsRes.error) throw logsRes.error;
 
-    const logMap = new Map<string, LogInfo>(logs.map(log => [log.contact_email, { status: log.status, sent_at: log.sent_at, error_message: log.error_message }]));
+    const allContacts = contactsRes.data || [];
+    const campaignLogs: CampaignLog[] = logsRes.data || [];
 
-    const reportContacts = contacts.map(contact => {
-      const log = logMap.get(contact.email);
-      return {
-        email: contact.email,
-        status: log ? log.status : 'pending',
-        sent_at: log ? log.sent_at : null,
-        error_message: log ? log.error_message : null,
-      };
+    const logsByEmail = new Map(campaignLogs.map(log => [log.contact_email, log]));
+
+    const reportContacts = allContacts.map(contact => {
+      const log = logsByEmail.get(contact.email);
+      if (log) {
+        return {
+          email: contact.email,
+          status: log.status,
+          sent_at: log.sent_at,
+          error_message: log.error_message,
+          content_name: log.email_contents?.name || 'N/A',
+        };
+      } else {
+        return {
+          email: contact.email,
+          status: 'pending',
+          sent_at: null,
+          error_message: null,
+          content_name: 'Chưa gửi',
+        };
+      }
     });
 
-    const total = contacts.length;
-    const success = logs.filter(log => log.status === 'success').length;
-    const failed = logs.filter(log => log.status === 'failed').length;
-
-    const report = {
-      stats: { total, success, failed },
-      contacts: reportContacts,
+    const stats = {
+      total: allContacts.length,
+      success: campaignLogs.filter(log => log.status === 'success').length,
+      failed: campaignLogs.filter(log => log.status === 'failed').length,
     };
 
-    return new Response(JSON.stringify(report), {
+    return new Response(JSON.stringify({ stats, contacts: reportContacts }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

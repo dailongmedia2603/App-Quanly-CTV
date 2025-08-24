@@ -25,8 +25,11 @@ export interface Campaign {
   scheduled_at: string | null;
   send_interval_value: number | null;
   send_interval_unit: string | null;
-  email_lists: { name: string } | null; 
+  email_list_id: string;
+  email_lists: { id: string; name: string } | null; 
   email_contents: { name: string } | null; 
+  sent_count: number;
+  total_contacts: number;
 }
 
 const SendEmailTab = () => {
@@ -49,20 +52,85 @@ const SendEmailTab = () => {
   const fetchData = async () => {
     setLoading(true);
     const [campaignsRes, listsRes, contentsRes] = await Promise.all([
-      supabase.from('email_campaigns').select('*, email_lists(name), email_contents(name)').order('created_at', { ascending: false }),
+      supabase.from('email_campaigns').select('*, email_lists(id, name), email_contents(name)').order('created_at', { ascending: false }),
       supabase.from('email_lists').select('id, name'),
       supabase.from('email_contents').select('id, name')
     ]);
-    if (campaignsRes.error || listsRes.error || contentsRes.error) showError("Lỗi tải dữ liệu.");
-    else {
-      setCampaigns(campaignsRes.data as Campaign[]);
-      setLists(listsRes.data as EmailList[]);
-      setContents(contentsRes.data as EmailContent[]);
+
+    if (campaignsRes.error || listsRes.error || contentsRes.error) {
+      showError("Lỗi tải dữ liệu.");
+      setLoading(false);
+      return;
     }
+
+    const campaignsData = campaignsRes.data;
+    setLists(listsRes.data as EmailList[]);
+    setContents(contentsRes.data as EmailContent[]);
+
+    if (campaignsData.length === 0) {
+      setCampaigns([]);
+      setLoading(false);
+      return;
+    }
+
+    const listIds = campaignsData.map(c => c.email_list_id).filter(Boolean);
+    const campaignIds = campaignsData.map(c => c.id);
+
+    const { data: allContacts, error: contactsError } = await supabase.from('email_list_contacts').select('list_id').in('list_id', listIds);
+    const { data: allLogs, error: logsError } = await supabase.from('email_campaign_logs').select('campaign_id').in('campaign_id', campaignIds);
+
+    if (contactsError || logsError) {
+      showError("Lỗi tải dữ liệu chi tiết chiến dịch.");
+      setCampaigns(campaignsData as any);
+      setLoading(false);
+      return;
+    }
+
+    const contactCounts = allContacts.reduce((acc, contact) => {
+      acc[contact.list_id] = (acc[contact.list_id] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const logCounts = allLogs.reduce((acc, log) => {
+      acc[log.campaign_id] = (acc[log.campaign_id] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const campaignsWithCounts = campaignsData.map(campaign => ({
+      ...campaign,
+      total_contacts: contactCounts[campaign.email_list_id] || 0,
+      sent_count: logCounts[campaign.id] || 0,
+    }));
+
+    setCampaigns(campaignsWithCounts as Campaign[]);
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+
+    const channel = supabase.channel('email-marketing-realtime');
+    channel
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'email_campaigns' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'email_campaign_logs' }, (payload) => {
+          const newLog = payload.new as { campaign_id: string };
+          setCampaigns(currentCampaigns =>
+            currentCampaigns.map(c => {
+              if (c.id === newLog.campaign_id) {
+                const newSentCount = (c.sent_count || 0) + 1;
+                const newStatus = newSentCount >= c.total_contacts ? 'sent' : c.status;
+                return { ...c, sent_count: newSentCount, status: newStatus };
+              }
+              return c;
+            })
+          );
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const handleSaveCampaign = async () => {
     if (!user) return showError("Bạn cần đăng nhập để tạo chiến dịch.");
@@ -107,12 +175,13 @@ const SendEmailTab = () => {
   };
 
   const getStatusBadge = (status: string) => {
+    const baseClasses = "pointer-events-none";
     switch (status) {
-      case 'draft': return <Badge variant="secondary">Chưa gửi</Badge>;
-      case 'scheduled': return <Badge className="bg-blue-100 text-blue-800">Đã lên lịch</Badge>;
-      case 'sending': return <Badge className="bg-yellow-100 text-yellow-800">Đang gửi</Badge>;
-      case 'sent': return <Badge className="bg-green-100 text-green-800">Hoàn thành</Badge>;
-      default: return <Badge>{status}</Badge>;
+      case 'draft': return <Badge variant="secondary" className={`${baseClasses} hover:bg-secondary`}>Chưa gửi</Badge>;
+      case 'scheduled': return <Badge className={`bg-blue-100 text-blue-800 hover:bg-blue-100 ${baseClasses}`}>Đã lên lịch</Badge>;
+      case 'sending': return <Badge className={`bg-yellow-100 text-yellow-800 hover:bg-yellow-100 ${baseClasses}`}>Đang gửi</Badge>;
+      case 'sent': return <Badge className={`bg-green-100 text-green-800 hover:bg-green-100 ${baseClasses}`}>Hoàn thành</Badge>;
+      default: return <Badge className={baseClasses}>{status}</Badge>;
     }
   };
 
@@ -138,7 +207,14 @@ const SendEmailTab = () => {
                   {c.status === 'draft' ? (
                     <Button size="sm" variant="outline" onClick={() => { setSelectedCampaign(c); setIsSendDialogOpen(true); }}><Send className="h-4 w-4 mr-2" />Gửi</Button>
                   ) : (
-                    <Button size="sm" variant="outline" onClick={() => { setSelectedCampaign(c); setIsReportDialogOpen(true); }}><FileText className="h-4 w-4 mr-2" />Xem báo cáo</Button>
+                    <div className="relative inline-block">
+                      <Button size="sm" variant="outline" onClick={() => { setSelectedCampaign(c); setIsReportDialogOpen(true); }}><FileText className="h-4 w-4 mr-2" />Xem báo cáo</Button>
+                      {c.total_contacts > 0 && (
+                        <div className="absolute -top-2 -right-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs font-medium">
+                          <span>{c.sent_count}/{c.total_contacts}</span>
+                        </div>
+                      )}
+                    </div>
                   )}
                   <Button size="icon" variant="ghost" className="text-red-500" onClick={() => handleDeleteCampaign(c.id)}><Trash2 className="h-4 w-4" /></Button>
                 </TableCell>

@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface EmailContent {
   id: string;
@@ -36,6 +37,7 @@ const getHtmlBodyContent = (htmlString: string | null): string => {
 };
 
 const EmailContentHistoryView = ({ onBack }: { onBack: () => void }) => {
+  const { user } = useAuth();
   const [history, setHistory] = useState<EmailContent[]>([]);
   const [groups, setGroups] = useState<EmailContentGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,10 +101,13 @@ const EmailContentHistoryView = ({ onBack }: { onBack: () => void }) => {
   };
 
   const handleCreateGroup = async () => {
-    if (!newGroupName.trim()) return;
+    if (!newGroupName.trim() || !user) return;
     setIsSubmitting(true);
-    const { error } = await supabase.from('email_content_groups').insert({ name: newGroupName });
-    if (error) showError("Tạo nhóm thất bại.");
+    const { error } = await supabase.from('email_content_groups').insert({ name: newGroupName, user_id: user.id });
+    if (error) {
+      showError("Tạo nhóm thất bại.");
+      console.error(error);
+    }
     else { showSuccess("Tạo nhóm thành công!"); setIsGroupDialogOpen(false); setNewGroupName(''); fetchData(); }
     setIsSubmitting(false);
   };

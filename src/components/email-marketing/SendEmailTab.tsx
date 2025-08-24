@@ -118,7 +118,15 @@ const SendEmailTab = () => {
             currentCampaigns.map(c => {
               if (c.id === newLog.campaign_id) {
                 const newSentCount = (c.sent_count || 0) + 1;
-                const newStatus = newSentCount >= c.total_contacts ? 'sent' : c.status;
+                let newStatus = c.status;
+                // If it was scheduled, the first email being sent moves it to 'sending'
+                if (c.status === 'scheduled') {
+                    newStatus = 'sending';
+                }
+                // If all emails are sent, move it to 'sent'
+                if (newSentCount >= c.total_contacts) {
+                    newStatus = 'sent';
+                }
                 return { ...c, sent_count: newSentCount, status: newStatus };
               }
               return c;
@@ -177,10 +185,10 @@ const SendEmailTab = () => {
   const getStatusBadge = (status: string) => {
     const baseClasses = "pointer-events-none";
     switch (status) {
-      case 'draft': return <Badge variant="secondary" className={`${baseClasses} hover:bg-secondary`}>Chưa gửi</Badge>;
-      case 'scheduled': return <Badge className={`bg-blue-100 text-blue-800 hover:bg-blue-100 ${baseClasses}`}>Đã lên lịch</Badge>;
-      case 'sending': return <Badge className={`bg-yellow-100 text-yellow-800 hover:bg-yellow-100 ${baseClasses}`}>Đang gửi</Badge>;
-      case 'sent': return <Badge className={`bg-green-100 text-green-800 hover:bg-green-100 ${baseClasses}`}>Hoàn thành</Badge>;
+      case 'draft': return <Badge variant="secondary" className={baseClasses}>Chưa gửi</Badge>;
+      case 'scheduled': return <Badge className={`bg-blue-100 text-blue-800 ${baseClasses}`}>Đã lên lịch</Badge>;
+      case 'sending': return <Badge className={`bg-yellow-100 text-yellow-800 ${baseClasses}`}>Đang gửi</Badge>;
+      case 'sent': return <Badge className={`bg-green-100 text-green-800 ${baseClasses}`}>Hoàn thành</Badge>;
       default: return <Badge className={baseClasses}>{status}</Badge>;
     }
   };

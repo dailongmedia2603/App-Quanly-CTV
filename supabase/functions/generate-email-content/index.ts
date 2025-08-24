@@ -4,6 +4,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 // @ts-ignore
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.15.0";
+// @ts-ignore
+import { marked } from 'https://esm.sh/marked@4.3.0';
 
 declare const Deno: any;
 
@@ -83,12 +85,9 @@ serve(async (req) => {
       .replace(/\[link_cta\]/gi, ctaLink || 'https://vuaseeding.top/lien-he');
 
     finalPrompt += `\n\n---
-    QUAN TRỌNG: Vui lòng trả lời theo cấu trúc sau, sử dụng chính xác các đánh dấu này:
-    **[TIÊU ĐỀ]**
-    (Tiêu đề email của bạn ở đây)
-    ---
-    **[NỘI DUNG EMAIL]**
-    (Toàn bộ nội dung email của bạn ở đây. Nội dung này PHẢI được định dạng bằng HTML. Sử dụng các thẻ như <p> cho đoạn văn, <b> cho in đậm, <ul> và <li> cho danh sách. KHÔNG sử dụng Markdown.)
+    QUAN TRỌNG: Vui lòng trả lời bằng một đối tượng JSON hợp lệ DUY NHẤT. Đối tượng JSON phải có hai khóa:
+    1. "subject": (string) Tiêu đề của email.
+    2. "body": (string) Nội dung của email. Bạn có thể sử dụng Markdown đơn giản (ví dụ: **để in đậm**, * để in nghiêng, và - cho danh sách).
     `;
 
     const MAX_RETRIES = 3;
@@ -126,26 +125,27 @@ serve(async (req) => {
       throw lastError;
     }
 
-    const subjectMatch = rawGeneratedContent.match(/\*\*\[TIÊU ĐỀ\]\*\*\s*([\s\S]*?)(?=\*\*\[NỘI DUNG EMAIL\]\*\*|---|$)/);
-    const bodyMatch = rawGeneratedContent.match(/\*\*\[NỘI DUNG EMAIL\]\*\*\s*([\s\S]*)/);
-    
-    if (!subjectMatch || !bodyMatch) {
-      console.error("Invalid AI response format. Raw response:", rawGeneratedContent);
-      throw new Error("AI đã trả về định dạng không hợp lệ. Vui lòng thử lại hoặc điều chỉnh prompt trong Cấu hình.");
+    let aiResult;
+    try {
+        const cleanedJsonString = rawGeneratedContent.replace(/```json/g, '').replace(/```/g, '').trim();
+        aiResult = JSON.parse(cleanedJsonString);
+    } catch (e) {
+        console.error("Failed to parse AI JSON response:", rawGeneratedContent);
+        throw new Error("AI đã trả về một định dạng JSON không hợp lệ.");
     }
 
-    const subject = subjectMatch[1].trim();
-    let body = bodyMatch[1].trim();
+    if (!aiResult.subject || !aiResult.body) {
+        throw new Error("Phản hồi JSON của AI thiếu các trường 'subject' hoặc 'body'.");
+    }
+
+    const subject = aiResult.subject;
+    let body = marked.parse(aiResult.body);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-email-open?log_id=%%LOG_ID%%`;
     const trackingPixelImg = `<img src="${trackingPixelUrl}" width="1" height="1" alt="" style="display:none;"/>`;
 
-    if (body.includes('</body>')) {
-      body = body.replace('</body>', `${trackingPixelImg}</body>`);
-    } else {
-      body += trackingPixelImg;
-    }
+    body += trackingPixelImg;
 
     const linkRegex = /<a\s+(?:[^>]*?\s+)?href="([^"]*)"/g;
     body = body.replace(linkRegex, (match, originalUrl) => {

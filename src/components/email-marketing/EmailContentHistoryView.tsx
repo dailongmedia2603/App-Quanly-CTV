@@ -171,7 +171,9 @@ const EmailContentHistoryView = ({ onBack }: { onBack: () => void }) => {
       <Dialog open={!!htmlContent} onOpenChange={(open) => !open && setHtmlContent(null)}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader><DialogTitle>Mã HTML của: {htmlContent?.title}</DialogTitle></DialogHeader>
-          <ScrollArea className="h-[60vh] mt-4"><pre className="text-xs bg-gray-100 p-4 rounded-md">{htmlContent?.body}</pre></ScrollArea>
+          <ScrollArea className="h-[60vh] mt-4">
+            <pre className="text-xs bg-gray-100 p-4 rounded-md whitespace-pre-wrap">{htmlContent?.body}</pre>
+          </ScrollArea>
           <DialogFooter><Button variant="outline" onClick={() => setHtmlContent(null)}>Đóng</Button></DialogFooter>
         </DialogContent>
       </Dialog>

@@ -45,6 +45,7 @@ serve(async (req) => {
 
   const { campaign, contact, sent_count, log_id } = await req.json();
   const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
 
   try {
     if (!campaign || !contact || sent_count === undefined || !log_id) {
@@ -88,13 +89,13 @@ serve(async (req) => {
     emailBody = emailBody.replace(/href="([^"]+)"/g, (match, originalUrl) => {
       if (originalUrl.startsWith('http')) { // Only track absolute URLs
         const encodedUrl = encodeURIComponent(originalUrl);
-        return `href="${trackingClickUrl}?log_id=${log_id}&redirect_url=${encodedUrl}"`;
+        return `href="${trackingClickUrl}?log_id=${log_id}&redirect_url=${encodedUrl}&apikey=${anonKey}"`;
       }
       return match; // Don't modify non-http links (e.g., mailto:)
     });
 
     // 2. Inject Open Tracking Pixel
-    const trackingOpenUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/track-email-open?log_id=${log_id}`;
+    const trackingOpenUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/track-email-open?log_id=${log_id}&apikey=${anonKey}`;
     const trackingPixel = `<img src="${trackingOpenUrl}" width="1" height="1" alt="" style="display:none;"/>`;
     if (emailBody.includes('</body>')) {
       emailBody = emailBody.replace('</body>', `${trackingPixel}</body>`);

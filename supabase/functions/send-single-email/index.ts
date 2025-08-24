@@ -32,6 +32,14 @@ const getAccessToken = async (refreshToken: string) => {
   return data.access_token;
 };
 
+const cleanHtmlBodyForSending = (html: string | null): string => {
+  if (!html) return '';
+  let cleanedHtml = html.trim();
+  // Remove markdown code fences like ```html or ```
+  cleanedHtml = cleanedHtml.replace(/^```(html)?\s*\n/i, '').replace(/\n\s*```$/, '');
+  return cleanedHtml;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -64,8 +72,8 @@ serve(async (req) => {
 
     const fromEmail = profile.google_connected_email || 'me';
     
-    // **FIX:** Correctly handle UTF-8 characters in the subject
     const encodedSubject = btoa(unescape(encodeURIComponent(emailContent.subject)));
+    const cleanedBody = cleanHtmlBodyForSending(emailContent.body);
 
     const emailMessage = [
       `Content-Type: text/html; charset="UTF-8"`,
@@ -74,10 +82,9 @@ serve(async (req) => {
       `from: ${fromEmail}`,
       `subject: =?utf-8?B?${encodedSubject}?=`,
       ``,
-      `${emailContent.body}`
+      `${cleanedBody}`
     ].join('\n');
 
-    // **FIX:** Correctly handle UTF-8 characters in the entire email body before encoding
     const base64EncodedEmail = btoa(unescape(encodeURIComponent(emailMessage))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
     const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
@@ -102,8 +109,6 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in send-single-email function:', error);
-    // This is the key change: return a 200 OK status but with a success: false payload
-    // This prevents the calling function from crashing.
     return new Response(JSON.stringify({ success: false, error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200, 

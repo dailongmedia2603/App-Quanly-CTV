@@ -1,0 +1,1 @@
+SELECT cron.unschedule('keep-tracking-functions-warm');

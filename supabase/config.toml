@@ -1,2 +1,5 @@
 [functions.public-track-click]
 verify_jwt = false
+
+[functions.public-track-open]
+verify_jwt = false

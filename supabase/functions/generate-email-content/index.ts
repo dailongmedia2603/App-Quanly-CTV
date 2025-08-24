@@ -129,8 +129,13 @@ serve(async (req) => {
     const subjectMatch = rawGeneratedContent.match(/\*\*\[TIÊU ĐỀ\]\*\*\s*([\s\S]*?)(?=\*\*\[NỘI DUNG EMAIL\]\*\*|---|$)/);
     const bodyMatch = rawGeneratedContent.match(/\*\*\[NỘI DUNG EMAIL\]\*\*\s*([\s\S]*)/);
     
-    const subject = subjectMatch ? subjectMatch[1].trim() : 'Không tìm thấy tiêu đề';
-    let body = bodyMatch ? bodyMatch[1].trim() : rawGeneratedContent;
+    if (!subjectMatch || !bodyMatch) {
+      console.error("Invalid AI response format. Raw response:", rawGeneratedContent);
+      throw new Error("AI đã trả về định dạng không hợp lệ. Vui lòng thử lại hoặc điều chỉnh prompt trong Cấu hình.");
+    }
+
+    const subject = subjectMatch[1].trim();
+    let body = bodyMatch[1].trim();
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-email-open?log_id=%%LOG_ID%%`;
@@ -170,7 +175,7 @@ serve(async (req) => {
       const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
       await logErrorToDb(supabaseAdmin, userId, functionName, error, requestBody);
     }
-    return new Response(JSON.stringify({ error: "Đang bị quá tải.... Hãy bấm tạo lại nhé" }), {
+    return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });

@@ -148,7 +148,7 @@ serve(async (req) => {
             .join('\n\n---\n\n');
     }
 
-    let finalPrompt = templateData.prompt
+    let basePrompt = templateData.prompt
         .replace(/\[dịch vụ\]/gi, serviceForPrompt)
         .replace(/\[dạng bài\]/gi, postType)
         .replace(/\[ngành\]/gi, industry)
@@ -156,14 +156,14 @@ serve(async (req) => {
         .replace(/\[biên tài liệu\]/gi, documentContent);
 
     if (regenerateDirection) {
-        finalPrompt = `Dựa trên bài viết gốc sau:\n---\n${originalPost}\n---\nHãy tạo lại bài viết theo định hướng mới này: "${regenerateDirection}".\n\n${finalPrompt}`;
+        basePrompt = `Dựa trên bài viết gốc sau:\n---\n${originalPost}\n---\nHãy tạo lại bài viết theo định hướng mới này: "${regenerateDirection}".\n\n${basePrompt}`;
     }
 
     if (wordCount && typeof wordCount === 'number' && wordCount > 0) {
-        finalPrompt += `\n\nYêu cầu về độ dài: Bài viết nên có khoảng ${wordCount} từ.`;
+        basePrompt += `\n\nYêu cầu về độ dài: Bài viết nên có khoảng ${wordCount} từ.`;
     }
 
-    finalPrompt += `\n\n---
+    basePrompt += `\n\n---
     QUAN TRỌNG: Vui lòng trả lời theo cấu trúc sau, sử dụng chính xác các đánh dấu này:
     **[GỢI Ý HÌNH ẢNH ĐI KÈM]**
     (Gợi ý hình ảnh của bạn ở đây)
@@ -175,9 +175,16 @@ serve(async (req) => {
     const MAX_RETRIES = 3;
     let lastError: Error | null = null;
     let rawGeneratedText = '';
+    let finalPrompt = '';
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
+        if (attempt > 1) {
+          finalPrompt = `Lần trước bạn đã trả về một phản hồi không hợp lệ. Vui lòng thử lại và đảm bảo bạn tuân thủ nghiêm ngặt định dạng được yêu cầu.\n\n${basePrompt}`;
+        } else {
+          finalPrompt = basePrompt;
+        }
+
         const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
         if (apiKeyError || !geminiApiKey) {
             throw new Error("Không thể lấy Gemini API Key từ hệ thống.");

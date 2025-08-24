@@ -74,7 +74,7 @@ serve(async (req) => {
       </p>
     `;
 
-    let finalPrompt = templateRes.data.prompt
+    let basePrompt = templateRes.data.prompt
       .replace(/\[dịch vụ\]/gi, serviceForPrompt)
       .replace(/\[mục tiêu\]/gi, emailGoal)
       .replace(/\[thông tin thêm\]/gi, additionalInfo || 'Không có')
@@ -82,7 +82,7 @@ serve(async (req) => {
       .replace(/\[thông tin liên hệ\]/gi, contactInfo)
       .replace(/\[link_cta\]/gi, ctaLink || 'https://vuaseeding.top/lien-he');
 
-    finalPrompt += `\n\n---
+    basePrompt += `\n\n---
     QUAN TRỌNG: Vui lòng trả lời bằng một đối tượng JSON hợp lệ DUY NHẤT, không có văn bản giải thích nào khác. Đối tượng JSON phải có cấu trúc sau:
     {
       "subject": "Tiêu đề email hấp dẫn của bạn ở đây",
@@ -93,9 +93,16 @@ serve(async (req) => {
     const MAX_RETRIES = 3;
     let lastError: Error | null = null;
     let rawGeneratedContent = '';
+    let finalPrompt = '';
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
+        if (attempt > 1) {
+          finalPrompt = `Lần trước bạn đã trả về một phản hồi không hợp lệ. Vui lòng thử lại và đảm bảo bạn tuân thủ nghiêm ngặt định dạng JSON được yêu cầu.\n\n${basePrompt}`;
+        } else {
+          finalPrompt = basePrompt;
+        }
+
         const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
         if (apiKeyError || !geminiApiKey) {
             throw new Error("Không thể lấy Gemini API Key từ hệ thống.");

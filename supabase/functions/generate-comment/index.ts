@@ -135,16 +135,16 @@ serve(async (req) => {
     promptText = promptText.replace(/\[cảm xúc\]/gi, '');
     promptText = promptText.replace(/\[mục tiêu comment\]/gi, '');
 
-    let finalPrompt = promptText
+    let basePrompt = promptText
         .replace(/\[dịch vụ\]/gi, serviceForPrompt)
         .replace(/\[nội dung gốc\]/gi, originalPostContent)
         .replace(/\[biên tài liệu\]/gi, documentContent);
 
     if (regenerateDirection) {
-        finalPrompt = `Dựa trên comment gốc sau:\n---\n${originalComment}\n---\nHãy tạo lại comment theo định hướng mới này: "${regenerateDirection}".\n\n${finalPrompt}`;
+        basePrompt = `Dựa trên comment gốc sau:\n---\n${originalComment}\n---\nHãy tạo lại comment theo định hướng mới này: "${regenerateDirection}".\n\n${basePrompt}`;
     }
 
-    finalPrompt += `\n\n---
+    basePrompt += `\n\n---
     QUAN TRỌNG: Vui lòng trả lời theo cấu trúc sau, sử dụng chính xác các đánh dấu này:
     **[NỘI DUNG COMMENT]**
     (Toàn bộ nội dung comment của bạn ở đây, sẵn sàng để sao chép và sử dụng)
@@ -153,9 +153,16 @@ serve(async (req) => {
     const MAX_RETRIES = 3;
     let lastError: Error | null = null;
     let rawGeneratedText = '';
+    let finalPrompt = '';
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
+        if (attempt > 1) {
+          finalPrompt = `Lần trước bạn đã trả về một phản hồi không hợp lệ. Vui lòng thử lại và đảm bảo bạn tuân thủ nghiêm ngặt định dạng được yêu cầu.\n\n${basePrompt}`;
+        } else {
+          finalPrompt = basePrompt;
+        }
+
         const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
         if (apiKeyError || !geminiApiKey) {
             throw new Error("Không thể lấy Gemini API Key từ hệ thống.");

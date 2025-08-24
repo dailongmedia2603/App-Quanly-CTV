@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { showError, showLoading, showSuccess, dismissToast } from '@/utils/toast';
-import { Briefcase, Wand2, Sparkles, Copy, Mail } from 'lucide-react';
+import { Briefcase, Mail, Wand2, Sparkles, Copy, Phone } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -50,6 +50,7 @@ const CreateEmailContentTab = () => {
   const [name, setName] = useState('');
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [emailGoal, setEmailGoal] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
 
   useEffect(() => {
@@ -69,7 +70,7 @@ const CreateEmailContentTab = () => {
     setGeneratedContent(null);
     const toastId = showLoading("AI đang viết email...");
     try {
-      const { data, error } = await supabase.functions.invoke('generate-email-content', { body: { name, serviceId: selectedServiceId, emailGoal, additionalInfo } });
+      const { data, error } = await supabase.functions.invoke('generate-email-content', { body: { name, serviceId: selectedServiceId, emailGoal, additionalInfo, phoneNumber } });
       if (error) throw error;
       setGeneratedContent(data);
       showSuccess("Tạo nội dung email thành công!");
@@ -87,7 +88,7 @@ const CreateEmailContentTab = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-      <Card className="lg:col-span-1 border-orange-200"><CardHeader><CardTitle className="flex items-center space-x-2"><Wand2 className="h-6 w-6 text-brand-orange" /><span>Cấu hình</span></CardTitle><CardDescription>Nhập thông tin để AI tạo nội dung email.</CardDescription></CardHeader><CardContent className="space-y-4"><FormInput icon={Mail} label="Tên nội dung (để quản lý)"><Input value={name} onChange={e => setName(e.target.value)} /></FormInput><FormInput icon={Briefcase} label="Dịch vụ"><Select value={selectedServiceId} onValueChange={setSelectedServiceId}><SelectTrigger><SelectValue placeholder="Chọn dịch vụ" /></SelectTrigger><SelectContent>{loadingServices ? <SelectItem value="loading" disabled>Đang tải...</SelectItem> : services.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select></FormInput><FormInput icon={Mail} label="Mục tiêu email"><Textarea placeholder="VD: Giới thiệu dịch vụ, khuyến mãi..." value={emailGoal} onChange={e => setEmailGoal(e.target.value)} /></FormInput><FormInput icon={Mail} label="Thông tin thêm (nếu có)"><Textarea placeholder="VD: Chương trình giảm giá 20%..." value={additionalInfo} onChange={e => setAdditionalInfo(e.target.value)} /></FormInput></CardContent><CardFooter className="flex flex-col gap-2"><Button className="w-full bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={handleGenerate} disabled={isGenerating}><Wand2 className="mr-2 h-4 w-4" />{isGenerating ? 'Đang tạo...' : 'Tạo nội dung'}</Button></CardFooter></Card>
+      <Card className="lg:col-span-1 border-orange-200"><CardHeader><CardTitle className="flex items-center space-x-2"><Wand2 className="h-6 w-6 text-brand-orange" /><span>Cấu hình</span></CardTitle><CardDescription>Nhập thông tin để AI tạo nội dung email.</CardDescription></CardHeader><CardContent className="space-y-4"><FormInput icon={Mail} label="Tên nội dung (để quản lý)"><Input value={name} onChange={e => setName(e.target.value)} /></FormInput><FormInput icon={Briefcase} label="Dịch vụ"><Select value={selectedServiceId} onValueChange={setSelectedServiceId}><SelectTrigger><SelectValue placeholder="Chọn dịch vụ" /></SelectTrigger><SelectContent>{loadingServices ? <SelectItem value="loading" disabled>Đang tải...</SelectItem> : services.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select></FormInput><FormInput icon={Mail} label="Mục tiêu email"><Textarea placeholder="VD: Giới thiệu dịch vụ, khuyến mãi..." value={emailGoal} onChange={e => setEmailGoal(e.target.value)} /></FormInput><FormInput icon={Phone} label="Số điện thoại liên hệ"><Input value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} placeholder="Nhập số điện thoại của bạn" /></FormInput><FormInput icon={Mail} label="Thông tin thêm (nếu có)"><Textarea placeholder="VD: Chương trình giảm giá 20%..." value={additionalInfo} onChange={e => setAdditionalInfo(e.target.value)} /></FormInput></CardContent><CardFooter className="flex flex-col gap-2"><Button className="w-full bg-brand-orange hover:bg-brand-orange/90 text-white" onClick={handleGenerate} disabled={isGenerating}><Wand2 className="mr-2 h-4 w-4" />{isGenerating ? 'Đang tạo...' : 'Tạo nội dung'}</Button></CardFooter></Card>
       <Card className="lg:col-span-2 border-orange-200 min-h-[500px]"><CardHeader><CardTitle className="flex items-center space-x-2"><Sparkles className="h-6 w-6 text-brand-orange" /><span>Kết quả</span></CardTitle></CardHeader><CardContent>{isGenerating ? <p>AI đang viết...</p> : generatedContent ? <div className="space-y-4"><div className="flex justify-between items-center"><div><Label>Tiêu đề</Label><p className="font-semibold">{generatedContent.subject}</p></div><Button variant="ghost" size="icon" onClick={() => handleCopy(generatedContent.subject)}><Copy className="h-4 w-4" /></Button></div><div className="relative"><Label>Nội dung</Label><div className="prose max-w-none bg-gray-50 p-4 rounded-md border"><ReactMarkdown remarkPlugins={[remarkGfm]}>{generatedContent.body}</ReactMarkdown></div><Button variant="ghost" size="icon" className="absolute top-6 right-2" onClick={() => handleCopy(generatedContent.body)}><Copy className="h-4 w-4" /></Button></div></div> : <p className="text-center text-gray-500 py-20">Nội dung email sẽ xuất hiện ở đây.</p>}</CardContent></Card>
     </div>
   );

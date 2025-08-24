@@ -42,7 +42,7 @@ serve(async (req) => {
     userId = user.id;
 
     requestBody = await req.json();
-    const { name, serviceId, emailGoal, additionalInfo } = requestBody;
+    const { name, serviceId, emailGoal, additionalInfo, phoneNumber } = requestBody;
     if (!name || !serviceId || !emailGoal) {
       throw new Error("Cần có tên nội dung, dịch vụ và mục tiêu email.");
     }
@@ -72,11 +72,20 @@ serve(async (req) => {
       ? documentsRes.data.map(doc => `Tài liệu: ${doc.title}\nNội dung: ${doc.content}`).join('\n\n---\n\n')
       : "Không có tài liệu tham khảo.";
 
+    const contactInfo = `
+      <p>
+        <b>VUA SEEDING - TRUYỀN THÔNG ĐIỀU HƯỚNG CỘNG ĐỒNG</b><br>
+        Hotline: ${phoneNumber || 'Chưa cung cấp'}<br>
+        Website: Vuaseeding.top
+      </p>
+    `;
+
     let finalPrompt = templateRes.data.prompt
       .replace(/\[dịch vụ\]/gi, serviceForPrompt)
       .replace(/\[mục tiêu\]/gi, emailGoal)
       .replace(/\[thông tin thêm\]/gi, additionalInfo || 'Không có')
-      .replace(/\[biên tài liệu\]/gi, documentContent);
+      .replace(/\[biên tài liệu\]/gi, documentContent)
+      .replace(/\[thông tin liên hệ\]/gi, contactInfo);
 
     finalPrompt += `\n\n---
     QUAN TRỌNG: Vui lòng trả lời theo cấu trúc sau, sử dụng chính xác các đánh dấu này:

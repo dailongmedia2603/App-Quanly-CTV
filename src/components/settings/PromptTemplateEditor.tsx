@@ -51,6 +51,7 @@ const variableConfig = {
     { name: 'Mục tiêu', value: '[mục tiêu]' },
     { name: 'Thông tin thêm', value: '[thông tin thêm]' },
     { name: 'Biên tài liệu', value: '[biên tài liệu]' },
+    { name: 'Thông tin liên hệ', value: '[thông tin liên hệ]' },
   ],
 };
 

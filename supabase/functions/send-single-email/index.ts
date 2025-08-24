@@ -10,7 +10,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Function to get a new access token from a refresh token
 const getAccessToken = async (refreshToken: string) => {
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -35,7 +34,6 @@ const getAccessToken = async (refreshToken: string) => {
 const cleanHtmlBodyForSending = (html: string | null): string => {
   if (!html) return '';
   let cleanedHtml = html.trim();
-  // Remove markdown code fences like ```html or ```
   cleanedHtml = cleanedHtml.replace(/^```(html)?\s*\n/i, '').replace(/\n\s*```$/, '');
   return cleanedHtml;
 };
@@ -46,8 +44,10 @@ serve(async (req) => {
   }
 
   try {
-    const { campaign, contact, sent_count } = await req.json();
-    if (!campaign || !contact || sent_count === undefined) throw new Error("Campaign, contact info, and sent_count are required.");
+    const { campaign, contact, sent_count, log_id } = await req.json();
+    if (!campaign || !contact || sent_count === undefined || !log_id) {
+      throw new Error("Campaign, contact info, sent_count, and log_id are required.");
+    }
 
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
@@ -80,7 +80,10 @@ serve(async (req) => {
     const fromEmail = profile.google_connected_email || 'me';
     
     const encodedSubject = btoa(unescape(encodeURIComponent(emailContent.subject)));
-    const cleanedBody = cleanHtmlBodyForSending(emailContent.body);
+    
+    let emailBody = emailContent.body || '';
+    emailBody = emailBody.replace(/%%LOG_ID%%/g, log_id);
+    const cleanedBody = cleanHtmlBodyForSending(emailBody);
 
     const emailMessage = [
       `Content-Type: text/html; charset="UTF-8"`,

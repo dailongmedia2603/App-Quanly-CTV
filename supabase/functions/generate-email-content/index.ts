@@ -97,52 +97,38 @@ serve(async (req) => {
     (Toàn bộ nội dung email của bạn ở đây. Nội dung này PHẢI được định dạng bằng HTML. Sử dụng các thẻ như <p> cho đoạn văn, <b> cho in đậm, <ul> và <li> cho danh sách. KHÔNG sử dụng Markdown.)
     `;
 
-    const MAX_RETRIES = 3;
-    let lastError: Error | null = null;
-    let rawGeneratedContent = '';
-
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        const result = await model.generateContent(finalPrompt);
-        const responseText = result.response.text();
-        
-        if (responseText && responseText.trim().length > 20) {
-            rawGeneratedContent = responseText;
-            lastError = null;
-            break; 
-        } else {
-            lastError = new Error(`AI trả về nội dung trống hoặc quá ngắn ở lần thử ${attempt}.`);
-            console.log(lastError.message);
-        }
-      } catch (e) {
-        lastError = new Error(`Lần thử ${attempt} thất bại: ${e.message}`);
-        console.error(lastError.message);
-      }
-    }
-
-    if (lastError) {
-      throw lastError;
-    }
-
-    if (!rawGeneratedContent || rawGeneratedContent.trim() === '') {
-      throw new Error("AI không phản hồi nội dung. Vui lòng thử lại hoặc điều chỉnh yêu cầu.");
-    }
+    const result = await model.generateContent(finalPrompt);
+    const rawGeneratedContent = result.response.text();
 
     const subjectMatch = rawGeneratedContent.match(/\*\*\[TIÊU ĐỀ\]\*\*\s*([\s\S]*?)(?=\*\*\[NỘI DUNG EMAIL\]\*\*|---|$)/);
     const bodyMatch = rawGeneratedContent.match(/\*\*\[NỘI DUNG EMAIL\]\*\*\s*([\s\S]*)/);
     
     const subject = subjectMatch ? subjectMatch[1].trim() : 'Không tìm thấy tiêu đề';
-    const body = bodyMatch ? bodyMatch[1].trim() : rawGeneratedContent;
+    let body = bodyMatch ? bodyMatch[1].trim() : rawGeneratedContent;
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-email-open?log_id=%%LOG_ID%%`;
+    const trackingPixelImg = `<img src="${trackingPixelUrl}" width="1" height="1" alt="" style="display:none;"/>`;
+
+    if (body.includes('</body>')) {
+      body = body.replace('</body>', `${trackingPixelImg}</body>`);
+    } else {
+      body += trackingPixelImg;
+    }
+
+    const linkRegex = /<a\s+(?:[^>]*?\s+)?href="([^"]*)"/g;
+    body = body.replace(linkRegex, (match, originalUrl) => {
+      if (originalUrl.startsWith('http')) {
+        const encodedUrl = encodeURIComponent(originalUrl);
+        const trackingUrl = `${supabaseUrl}/functions/v1/track-email-click?log_id=%%LOG_ID%%&redirect_url=${encodedUrl}`;
+        return match.replace(originalUrl, trackingUrl);
+      }
+      return match;
+    });
 
     const { data: savedContent, error: saveError } = await supabaseAdmin
       .from('email_contents')
-      .insert({
-        user_id: user.id,
-        name,
-        service_id: serviceId,
-        subject,
-        body,
-      })
+      .insert({ user_id: user.id, name, service_id: serviceId, subject, body })
       .select()
       .single();
 

@@ -45,7 +45,6 @@ serve(async (req) => {
 
   const { campaign, contact, sent_count, log_id } = await req.json();
   const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
   let emailBody = ''; // Define emailBody here to be accessible in catch block
 
   try {
@@ -85,18 +84,18 @@ serve(async (req) => {
     
     emailBody = cleanHtmlBodyForSending(emailContent.body);
 
-    // 1. Inject Click Tracking
-    const trackingClickUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/track-email-click`;
+    // 1. Inject Click Tracking using the new public function
+    const trackingClickUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/public-track-click`;
     emailBody = emailBody.replace(/href="([^"]+)"/g, (match, originalUrl) => {
-      if (originalUrl.startsWith('http')) { // Only track absolute URLs
+      if (originalUrl.startsWith('http')) {
         const encodedUrl = encodeURIComponent(originalUrl);
-        return `href="${trackingClickUrl}?log_id=${log_id}&redirect_url=${encodedUrl}&apikey=${anonKey}"`;
+        return `href="${trackingClickUrl}?log_id=${log_id}&redirect_url=${encodedUrl}"`;
       }
-      return match; // Don't modify non-http links (e.g., mailto:)
+      return match;
     });
 
-    // 2. Inject Open Tracking Pixel
-    const trackingOpenUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/track-email-open?log_id=${log_id}&apikey=${anonKey}`;
+    // 2. Inject Open Tracking Pixel using the new public function
+    const trackingOpenUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/public-track-open?log_id=${log_id}`;
     const trackingPixel = `<img src="${trackingOpenUrl}" width="1" height="1" alt="" style="display:none;"/>`;
     if (emailBody.includes('</body>')) {
       emailBody = emailBody.replace('</body>', `${trackingPixel}</body>`);
@@ -131,7 +130,6 @@ serve(async (req) => {
       throw new Error(`Gmail API error: ${sendResult.error?.message || 'Failed to send email'}`);
     }
 
-    // Update log to success
     await supabaseAdmin.from('email_campaign_logs').update({
       status: 'success',
       sent_at: new Date().toISOString(),
@@ -145,7 +143,6 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in send-single-email function:', error);
-    // Update log to failed
     await supabaseAdmin.from('email_campaign_logs').update({
       status: 'failed',
       error_message: error.message,

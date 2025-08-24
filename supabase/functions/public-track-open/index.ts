@@ -5,20 +5,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 declare const Deno: any;
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-// Dữ liệu của ảnh GIF trong suốt 1x1 pixel
 const PIXEL_B64 = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 const PIXEL_DATA = atob(PIXEL_B64);
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
-
   try {
     const url = new URL(req.url);
     const logId = url.searchParams.get('log_id');
@@ -29,22 +19,16 @@ serve(async (req) => {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
       );
 
-      // Await the update to ensure it completes
-      const { error } = await supabaseAdmin
+      await supabaseAdmin
         .from('email_campaign_logs')
         .update({ opened_at: new Date().toISOString() })
         .eq('id', logId)
         .is('opened_at', null);
-
-      if (error) {
-        console.error(`Lỗi CSDL khi theo dõi mở mail cho log ID ${logId}:`, error);
-      }
     }
   } catch (error) {
-    console.error('Lỗi không mong muốn khi theo dõi mở mail:', error.message);
+    console.error('Error tracking open:', error.message);
   }
 
-  // Luôn trả về ảnh pixel ngay lập tức sau khi xử lý
   const pixelBuf = new Uint8Array(PIXEL_DATA.length);
   for (let i = 0; i < PIXEL_DATA.length; i++) {
     pixelBuf[i] = PIXEL_DATA.charCodeAt(i);
@@ -52,7 +36,6 @@ serve(async (req) => {
 
   return new Response(pixelBuf, {
     headers: {
-      ...corsHeaders,
       'Content-Type': 'image/gif',
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
@@ -60,4 +43,7 @@ serve(async (req) => {
     },
     status: 200,
   });
-})
+}, { 
+  // Quan trọng: Tắt xác thực JWT cho function này
+  verifyJwt: false 
+});

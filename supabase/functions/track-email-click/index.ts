@@ -10,7 +10,29 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+const updateLog = async (logId: string) => {
+  try {
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Chỉ cập nhật clicked_at nếu nó chưa được ghi nhận, để đếm lượt click đầu tiên
+    const { error } = await supabaseAdmin
+      .from('email_campaign_logs')
+      .update({ clicked_at: new Date().toISOString() })
+      .eq('id', logId)
+      .is('clicked_at', null);
+    
+    if (error) {
+      console.error(`Lỗi CSDL khi theo dõi click mail cho log ID ${logId}:`, error);
+    }
+  } catch (e) {
+    console.error('Lỗi không mong muốn khi theo dõi click mail:', e.message);
+  }
+};
+
+serve((req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -26,30 +48,11 @@ serve(async (req) => {
     });
   }
 
-  try {
-    if (logId) {
-      const supabaseAdmin = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      );
-
-      // Chỉ cập nhật clicked_at nếu nó chưa được ghi nhận, để đếm lượt click đầu tiên
-      await supabaseAdmin
-        .from('email_campaign_logs')
-        .update({ clicked_at: new Date().toISOString() })
-        .eq('id', logId)
-        .is('clicked_at', null);
-    }
-  } catch (error) {
-    console.error('Lỗi khi theo dõi click email:', error.message);
+  if (logId) {
+    // Không await, thực hiện cập nhật trong nền
+    updateLog(logId);
   }
 
-  // Luôn chuyển hướng người dùng đến link đích
-  return new Response(null, {
-    status: 302, // Found (Temporary Redirect)
-    headers: {
-      ...corsHeaders,
-      'Location': redirectUrl,
-    },
-  });
+  // Luôn chuyển hướng người dùng đến link đích ngay lập tức
+  return Response.redirect(redirectUrl, 302);
 })

@@ -42,12 +42,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
-
-    const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
-    if (apiKeyError || !geminiApiKey) {
-        throw new Error("Chưa cấu hình hoặc không thể lấy Gemini API Key.");
-    }
-
+    
     const { data: settings, error: settingsError } = await supabaseAdmin
         .from('app_settings')
         .select('gemini_model')
@@ -122,35 +117,38 @@ serve(async (req) => {
         finalPrompt = `QUAN TRỌNG: Khách hàng là "${customerSalutation}". Hãy xưng hô cho phù hợp trong câu trả lời của bạn (ví dụ: "Chào ${customerSalutation}", "Dạ ${customerSalutation} ạ", "bên em gửi ${customerSalutation}").\n\n---\n\n${finalPrompt}`;
     }
 
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: settings.gemini_model });
-
     const MAX_RETRIES = 3;
-    let attempt = 0;
+    let lastError: Error | null = null;
     let aiResponse = '';
-    let success = false;
 
-    while (attempt < MAX_RETRIES && !success) {
-        attempt++;
-        try {
-            const result = await model.generateContent(finalPrompt);
-            const responseText = result.response.text();
-            
-            if (responseText && responseText.trim().length > 0) {
-                aiResponse = responseText;
-                success = true;
-            } else {
-                console.log(`Attempt ${attempt} failed: AI returned empty response.`);
-                if (attempt >= MAX_RETRIES) {
-                    throw new Error("AI không phản hồi sau nhiều lần thử.");
-                }
-            }
-        } catch (e) {
-            console.error(`Attempt ${attempt} failed with error:`, e.message);
-            if (attempt >= MAX_RETRIES) {
-                throw new Error(`Tạo nội dung thất bại sau ${MAX_RETRIES} lần thử. Lỗi cuối cùng: ${e.message}`);
-            }
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
+        if (apiKeyError || !geminiApiKey) {
+            throw new Error("Chưa cấu hình hoặc không thể lấy Gemini API Key.");
         }
+
+        const genAI = new GoogleGenerativeAI(geminiApiKey);
+        const model = genAI.getGenerativeModel({ model: settings.gemini_model });
+
+        const result = await model.generateContent(finalPrompt);
+        const responseText = result.response.text();
+        
+        if (responseText && responseText.trim().length > 0) {
+            aiResponse = responseText;
+            lastError = null;
+            break;
+        } else {
+            lastError = new Error(`AI không phản hồi sau lần thử ${attempt}.`);
+        }
+      } catch (e) {
+        lastError = new Error(`Tạo nội dung thất bại ở lần thử ${attempt}. Lỗi: ${e.message}`);
+        console.error(lastError.message);
+      }
+    }
+
+    if (lastError) {
+      throw lastError;
     }
 
     const { error: insertMsgError } = await supabase.from('consulting_messages').insert({

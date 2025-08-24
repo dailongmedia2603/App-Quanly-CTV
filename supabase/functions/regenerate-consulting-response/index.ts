@@ -43,12 +43,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
-
-    const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
-    if (apiKeyError || !geminiApiKey) {
-        throw new Error("Chưa cấu hình hoặc không thể lấy Gemini API Key.");
-    }
-
+    
     const { data: settings, error: settingsError } = await supabaseAdmin
         .from('app_settings')
         .select('gemini_model')
@@ -136,6 +131,11 @@ serve(async (req) => {
 
     if (customerSalutation) {
         finalPrompt = `QUAN TRỌNG: Khách hàng là "${customerSalutation}". Hãy xưng hô cho phù hợp trong câu trả lời của bạn (ví dụ: "Chào ${customerSalutation}", "Dạ ${customerSalutation} ạ", "bên em gửi ${customerSalutation}").\n\n---\n\n${finalPrompt}`;
+    }
+
+    const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
+    if (apiKeyError || !geminiApiKey) {
+        throw new Error("Chưa cấu hình hoặc không thể lấy Gemini API Key.");
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);

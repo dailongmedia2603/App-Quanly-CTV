@@ -57,15 +57,9 @@ serve(async (req) => {
     if (!user) throw new Error("Không tìm thấy người dùng.");
 
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
-
-    const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
-    if (apiKeyError || !geminiApiKey) throw new Error("Không thể lấy Gemini API Key.");
     
     const { data: settings, error: settingsError } = await supabaseAdmin.from('app_settings').select('gemini_model').eq('id', 1).single();
     if (settingsError || !settings?.gemini_model) throw new Error("Chưa cấu hình model Gemini.");
-
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: settings.gemini_model });
 
     const [pricesRes, templatesRes, promptTemplateRes] = await Promise.all([
       supabaseAdmin.from('service_prices').select('name, description, unit, price, category'),
@@ -96,6 +90,12 @@ serve(async (req) => {
       .replace(/\[other_requirements\]/gi, otherRequirements || "Không có.")
       .replace(/\[service_prices\]/gi, servicePricesText)
       .replace(/\[quote_templates\]/gi, quoteTemplatesText);
+
+    const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
+    if (apiKeyError || !geminiApiKey) throw new Error("Không thể lấy Gemini API Key.");
+
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const model = genAI.getGenerativeModel({ model: settings.gemini_model });
 
     const result = await model.generateContent(prompt);
     const rawGeneratedContent = result.response.text();

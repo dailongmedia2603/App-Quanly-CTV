@@ -59,15 +59,9 @@ serve(async (req) => {
     if (!reportId || !postContent) throw new Error("Yêu cầu ID báo cáo và nội dung bài đăng.");
 
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
-
-    const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
-    if (apiKeyError || !geminiApiKey) throw new Error("Không thể lấy Gemini API Key.");
     
     const { data: settings, error: settingsError } = await supabaseAdmin.from('app_settings').select('gemini_model').eq('id', 1).single();
     if (settingsError || !settings?.gemini_model) throw new Error("Chưa cấu hình model Gemini.");
-
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: settings.gemini_model });
 
     // Step 1: Fetch all services and the master prompt template
     const [servicesRes, templateRes] = await Promise.all([
@@ -101,9 +95,36 @@ serve(async (req) => {
         .replace(/\[nội dung gốc\]/gi, postContent)
         .replace(/\[danh sách dịch vụ và tài liệu\]/gi, serviceAndDocsPrompt);
 
-    // Step 4: Call AI
-    const result = await model.generateContent(finalPrompt);
-    const rawResponse = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+    // Step 4: Call AI with retry and key rotation logic
+    const MAX_RETRIES = 3;
+    let lastError: Error | null = null;
+    let rawResponse = '';
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
+        if (apiKeyError || !geminiApiKey) throw new Error("Không thể lấy Gemini API Key.");
+        
+        const genAI = new GoogleGenerativeAI(geminiApiKey);
+        const model = genAI.getGenerativeModel({ model: settings.gemini_model });
+
+        const result = await model.generateContent(finalPrompt);
+        const responseText = result.response.text();
+        
+        if (responseText && responseText.trim().length > 10) {
+            rawResponse = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+            lastError = null;
+            break;
+        } else {
+            lastError = new Error(`AI trả về nội dung trống hoặc quá ngắn ở lần thử ${attempt}.`);
+        }
+      } catch (e) {
+        lastError = new Error(`Lần thử ${attempt} thất bại: ${e.message}`);
+        console.error(lastError.message);
+      }
+    }
+
+    if (lastError) throw lastError;
     
     let aiResult;
     try {

@@ -1,5 +1,4 @@
 import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 import { permissionConfig } from '@/lib/permissions';
@@ -22,7 +21,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [roles, setRoles] = useState<string[]>([]);
   const [permissions, setPermissions] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   const fetchAndSetPermissions = async () => {
     const { data: userRolesData, error: rolesError } = await supabase.rpc('get_user_roles_with_permissions');
@@ -31,7 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error fetching user roles:", rolesError);
       setRoles([]);
       setPermissions({});
-      throw rolesError;
+      return;
     }
 
     if (userRolesData) {
@@ -39,7 +37,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setRoles(roleNames);
 
       const mergedPermissions: Record<string, string[]> = {};
-      const isSuperAdmin = userRolesData.some((role: any) => role.permissions?.super_admin);
+      let isSuperAdmin = false;
+
+      for (const role of userRolesData) {
+        if (role.permissions?.super_admin) {
+          isSuperAdmin = true;
+          break;
+        }
+      }
 
       if (isSuperAdmin) {
         permissionConfig.forEach(p => {
@@ -68,42 +73,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      try {
-        setSession(session);
-        setUser(session?.user ?? null);
+    const setData = async () => {
+      setLoading(true);
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Error getting session:", error);
+        setLoading(false);
+        return;
+      }
 
-        if (session) {
-          await fetchAndSetPermissions();
-          if (event === 'PASSWORD_RECOVERY') {
-            navigate('/update-password');
-          }
-          if (event === 'SIGNED_IN' && session?.provider_refresh_token) {
-            await supabase
-              .from('profiles')
-              .update({
-                google_refresh_token: session.provider_refresh_token,
-                google_connected_email: session.user.email,
-              })
-              .eq('id', session.user.id);
-          }
-        } else {
-          setRoles([]);
-          setPermissions({});
-        }
-      } catch (error) {
-        console.error("Auth state change error:", error);
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session) {
+        await fetchAndSetPermissions();
+      } else {
         setRoles([]);
         setPermissions({});
-      } finally {
-        setLoading(false);
+      }
+      setLoading(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (_event === 'SIGNED_IN' && session?.provider_refresh_token) {
+        await supabase
+          .from('profiles')
+          .update({
+            google_refresh_token: session.provider_refresh_token,
+            google_connected_email: session.user.email,
+          })
+          .eq('id', session.user.id);
+      }
+      
+      if (session) {
+        fetchAndSetPermissions();
+      } else {
+        setRoles([]);
+        setPermissions({});
       }
     });
+
+    setData();
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, []);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -111,12 +129,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const hasPermission = (feature: string, action?: string): boolean => {
     const featurePermissions = permissions[feature];
-    if (!featurePermissions) return false;
-    if (action) return featurePermissions.includes(action);
+    if (!featurePermissions) {
+      return false;
+    }
+    if (action) {
+      return featurePermissions.includes(action);
+    }
     return featurePermissions.length > 0;
   };
 
-  const value = { session, user, roles, loading, signOut, permissions, hasPermission };
+  const value = {
+    session,
+    user,
+    roles,
+    loading,
+    signOut,
+    permissions,
+    hasPermission,
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

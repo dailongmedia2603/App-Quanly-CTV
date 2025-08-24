@@ -48,7 +48,10 @@ serve(async (req) => {
         if (allContacts && allContacts.length > 0) {
           const firstContact = allContacts[0];
 
-          await supabaseAdmin.from('email_campaigns').update({ status: 'sending' }).eq('id', campaign.id);
+          await supabaseAdmin.from('email_campaigns').update({ 
+            status: 'sending',
+            last_sent_at: now.toISOString() 
+          }).eq('id', campaign.id);
 
           const { data: sendResult, error: sendError } = await supabaseAdmin.functions.invoke('send-single-email', {
             body: { campaign, contact: firstContact }
@@ -66,9 +69,6 @@ serve(async (req) => {
               status: 'success', sent_at: now.toISOString(),
             });
           }
-          
-          await supabaseAdmin.from('email_campaigns').update({ last_sent_at: now.toISOString() }).eq('id', campaign.id);
-
         } else {
           await supabaseAdmin.from('email_campaigns').update({ status: 'sent' }).eq('id', campaign.id);
         }

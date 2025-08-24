@@ -6,8 +6,6 @@ import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { Copy, History, ArrowLeft, Trash2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -19,6 +17,25 @@ interface EmailContent {
   body: string;
   created_at: string;
 }
+
+const getHtmlBodyContent = (htmlString: string | null): string => {
+  if (!htmlString) return '';
+  const bodyMatch = htmlString.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  return bodyMatch ? bodyMatch[1] : htmlString;
+};
+
+const getPostTitle = (content: string): string => {
+  if (!content) return 'Nội dung không có tiêu đề';
+  const firstLine = content.split('\n')[0].trim();
+  const cleanTitle = firstLine.replace(/^(#+\s*|\*\*\s*|\s*\*)/, '').replace(/\s*\*\*$/, '').trim();
+  
+  const words = cleanTitle.split(/\s+/);
+  if (words.length > 5) {
+    return words.slice(0, 5).join(' ') + '...';
+  }
+
+  return cleanTitle || 'Nội dung không có tiêu đề';
+};
 
 const EmailContentHistoryView = ({ onBack }: { onBack: () => void }) => {
   const [history, setHistory] = useState<EmailContent[]>([]);
@@ -39,8 +56,16 @@ const EmailContentHistoryView = ({ onBack }: { onBack: () => void }) => {
     fetchHistory();
   }, []);
 
-  const handleCopy = (content: string) => {
-    navigator.clipboard.writeText(content).then(() => showSuccess("Đã sao chép!"));
+  const handleCopy = (subject: string, body: string) => {
+    const bodyContent = getHtmlBodyContent(body);
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = bodyContent;
+    const plainText = `Tiêu đề: ${subject}\n\n${tempDiv.innerText || ""}`;
+    navigator.clipboard.writeText(plainText).then(() => {
+      showSuccess("Đã sao chép nội dung!");
+    }).catch(err => {
+      showError("Không thể sao chép.");
+    });
   };
 
   const handleSelect = (id: string, checked: boolean) => {
@@ -127,15 +152,13 @@ const EmailContentHistoryView = ({ onBack }: { onBack: () => void }) => {
                           variant="ghost" 
                           size="icon" 
                           className="absolute top-2 right-2 h-8 w-8 text-gray-600 hover:bg-orange-100"
-                          onClick={() => handleCopy(item.body)}
+                          onClick={() => handleCopy(item.subject, item.body)}
                         >
                           <Copy className="h-4 w-4" />
                         </Button>
                         <h4 className="font-bold !mb-2">Tiêu đề: {item.subject}</h4>
                         <hr className="!my-2" />
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {item.body}
-                        </ReactMarkdown>
+                        <div dangerouslySetInnerHTML={{ __html: getHtmlBodyContent(item.body) }} />
                       </div>
                     </AccordionContent>
                   </AccordionItem>

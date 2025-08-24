@@ -43,13 +43,13 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  const { campaign, contact, sent_count, log_id } = await req.json();
+  const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+
   try {
-    const { campaign, contact, sent_count, log_id } = await req.json();
     if (!campaign || !contact || sent_count === undefined || !log_id) {
       throw new Error("Campaign, contact info, sent_count, and log_id are required.");
     }
-
-    const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -112,6 +112,12 @@ serve(async (req) => {
       throw new Error(`Gmail API error: ${sendResult.error?.message || 'Failed to send email'}`);
     }
 
+    // Update log to success
+    await supabaseAdmin.from('email_campaign_logs').update({
+      status: 'success',
+      sent_at: new Date().toISOString()
+    }).eq('id', log_id);
+
     return new Response(JSON.stringify({ success: true, messageId: sendResult.id }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
@@ -119,6 +125,13 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in send-single-email function:', error);
+    // Update log to failed
+    await supabaseAdmin.from('email_campaign_logs').update({
+      status: 'failed',
+      error_message: error.message,
+      sent_at: new Date().toISOString()
+    }).eq('id', log_id);
+
     return new Response(JSON.stringify({ success: false, error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200, 

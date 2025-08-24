@@ -68,22 +68,20 @@ serve(async (req) => {
           ? campaign.email_content_ids[sent_count % campaign.email_content_ids.length]
           : null;
 
-        const { data: sendResult, error: sendError } = await supabaseAdmin.functions.invoke('send-single-email', {
-          body: { campaign, contact: nextContact, sent_count }
-        });
+        // Create log entry first to get an ID
+        const { data: newLog, error: logCreateError } = await supabaseAdmin.from('email_campaign_logs').insert({
+          campaign_id: campaign.id, user_id: campaign.user_id, contact_email: nextContact.email,
+          status: 'sending', email_content_id: contentId
+        }).select('id').single();
 
-        if (sendError || (sendResult && !sendResult.success)) {
-          const errorMessage = sendError?.message || sendResult?.error || "Unknown error during sending.";
-          await supabaseAdmin.from('email_campaign_logs').insert({
-            campaign_id: campaign.id, user_id: campaign.user_id, contact_email: nextContact.email,
-            status: 'failed', error_message: errorMessage, sent_at: now.toISOString(), email_content_id: contentId
-          });
-        } else {
-          await supabaseAdmin.from('email_campaign_logs').insert({
-            campaign_id: campaign.id, user_id: campaign.user_id, contact_email: nextContact.email,
-            status: 'success', sent_at: now.toISOString(), email_content_id: contentId
-          });
+        if (logCreateError) {
+          console.error(`Failed to create log for ${nextContact.email}:`, logCreateError);
+          continue;
         }
+
+        await supabaseAdmin.functions.invoke('send-single-email', {
+          body: { campaign, contact: nextContact, sent_count, log_id: newLog.id }
+        });
         
         await supabaseAdmin.from('email_campaigns').update({ last_sent_at: now.toISOString() }).eq('id', campaign.id);
 

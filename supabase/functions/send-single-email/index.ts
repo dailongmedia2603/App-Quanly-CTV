@@ -81,9 +81,26 @@ serve(async (req) => {
     
     const encodedSubject = btoa(unescape(encodeURIComponent(emailContent.subject)));
     
-    let emailBody = emailContent.body || '';
-    emailBody = emailBody.replace(/%%LOG_ID%%/g, log_id);
-    const cleanedBody = cleanHtmlBodyForSending(emailBody);
+    let emailBody = cleanHtmlBodyForSending(emailContent.body);
+
+    // 1. Inject Click Tracking
+    const trackingClickUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/track-email-click`;
+    emailBody = emailBody.replace(/href="([^"]+)"/g, (match, originalUrl) => {
+      if (originalUrl.startsWith('http')) { // Only track absolute URLs
+        const encodedUrl = encodeURIComponent(originalUrl);
+        return `href="${trackingClickUrl}?log_id=${log_id}&redirect_url=${encodedUrl}"`;
+      }
+      return match; // Don't modify non-http links (e.g., mailto:)
+    });
+
+    // 2. Inject Open Tracking Pixel
+    const trackingOpenUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/track-email-open?log_id=${log_id}`;
+    const trackingPixel = `<img src="${trackingOpenUrl}" width="1" height="1" alt="" style="display:none;"/>`;
+    if (emailBody.includes('</body>')) {
+      emailBody = emailBody.replace('</body>', `${trackingPixel}</body>`);
+    } else {
+      emailBody += trackingPixel;
+    }
 
     const emailMessage = [
       `Content-Type: text/html; charset="UTF-8"`,
@@ -92,7 +109,7 @@ serve(async (req) => {
       `from: ${fromEmail}`,
       `subject: =?utf-8?B?${encodedSubject}?=`,
       ``,
-      `${cleanedBody}`
+      `${emailBody}`
     ].join('\n');
 
     const base64EncodedEmail = btoa(unescape(encodeURIComponent(emailMessage))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');

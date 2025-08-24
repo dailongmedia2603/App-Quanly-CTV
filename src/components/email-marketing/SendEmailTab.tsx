@@ -96,11 +96,22 @@ const SendEmailTab = () => {
       return acc;
     }, {} as Record<string, number>);
 
-    const campaignsWithCounts = campaignsData.map(campaign => ({
-      ...campaign,
-      total_contacts: contactCounts[campaign.email_list_id] || 0,
-      sent_count: logCounts[campaign.id] || 0,
-    }));
+    const campaignsWithCounts = campaignsData.map(campaign => {
+      const total_contacts = contactCounts[campaign.email_list_id] || 0;
+      const sent_count = logCounts[campaign.id] || 0;
+      let status = campaign.status;
+
+      if (total_contacts > 0 && sent_count >= total_contacts && status !== 'sent') {
+        status = 'sent';
+      }
+
+      return {
+        ...campaign,
+        total_contacts,
+        sent_count,
+        status,
+      };
+    });
 
     setCampaigns(campaignsWithCounts as Campaign[]);
     setLoading(false);
@@ -119,12 +130,10 @@ const SendEmailTab = () => {
               if (c.id === newLog.campaign_id) {
                 const newSentCount = (c.sent_count || 0) + 1;
                 let newStatus = c.status;
-                // If it was scheduled, the first email being sent moves it to 'sending'
-                if (c.status === 'scheduled') {
+                if (c.status === 'scheduled' || c.status === 'draft') {
                     newStatus = 'sending';
                 }
-                // If all emails are sent, move it to 'sent'
-                if (newSentCount >= c.total_contacts) {
+                if (newSentCount >= c.total_contacts && c.total_contacts > 0) {
                     newStatus = 'sent';
                 }
                 return { ...c, sent_count: newSentCount, status: newStatus };

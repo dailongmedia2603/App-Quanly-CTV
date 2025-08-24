@@ -49,14 +49,8 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
-    const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
-    if (apiKeyError || !geminiApiKey) throw new Error("Không thể lấy Gemini API Key.");
-    
     const { data: settings, error: settingsError } = await supabaseAdmin.from('app_settings').select('gemini_model').eq('id', 1).single();
     if (settingsError || !settings?.gemini_model) throw new Error("Chưa cấu hình model Gemini.");
-
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: settings.gemini_model });
 
     const [serviceRes, templateRes, documentsRes] = await Promise.all([
       supabaseAdmin.from('document_services').select('name, description').eq('id', serviceId).single(),
@@ -97,8 +91,40 @@ serve(async (req) => {
     (Toàn bộ nội dung email của bạn ở đây. Nội dung này PHẢI được định dạng bằng HTML. Sử dụng các thẻ như <p> cho đoạn văn, <b> cho in đậm, <ul> và <li> cho danh sách. KHÔNG sử dụng Markdown.)
     `;
 
-    const result = await model.generateContent(finalPrompt);
-    const rawGeneratedContent = result.response.text();
+    const MAX_RETRIES = 3;
+    let lastError: Error | null = null;
+    let rawGeneratedContent = '';
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
+        if (apiKeyError || !geminiApiKey) {
+            throw new Error("Không thể lấy Gemini API Key từ hệ thống.");
+        }
+
+        const genAI = new GoogleGenerativeAI(geminiApiKey);
+        const model = genAI.getGenerativeModel({ model: settings.gemini_model });
+
+        const result = await model.generateContent(finalPrompt);
+        const responseText = result.response.text();
+        
+        if (responseText && responseText.trim().length > 20) {
+            rawGeneratedContent = responseText;
+            lastError = null;
+            break; 
+        } else {
+            lastError = new Error(`AI trả về nội dung trống hoặc quá ngắn ở lần thử ${attempt}.`);
+            console.log(lastError.message);
+        }
+      } catch (e) {
+        lastError = new Error(`Lần thử ${attempt} thất bại: ${e.message}`);
+        console.error(lastError.message);
+      }
+    }
+
+    if (lastError) {
+      throw lastError;
+    }
 
     const subjectMatch = rawGeneratedContent.match(/\*\*\[TIÊU ĐỀ\]\*\*\s*([\s\S]*?)(?=\*\*\[NỘI DUNG EMAIL\]\*\*|---|$)/);
     const bodyMatch = rawGeneratedContent.match(/\*\*\[NỘI DUNG EMAIL\]\*\*\s*([\s\S]*)/);
@@ -144,6 +170,9 @@ serve(async (req) => {
       const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
       await logErrorToDb(supabaseAdmin, userId, functionName, error, requestBody);
     }
-    return new Response(JSON.stringify({ error: "Đang bị quá tải.... Hãy bấm tạo lại nhé" }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 });
+    return new Response(JSON.stringify({ error: "Đang bị quá tải.... Hãy bấm tạo lại nhé" }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500,
+    });
   }
 })

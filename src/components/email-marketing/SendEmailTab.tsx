@@ -14,10 +14,11 @@ import { SendCampaignDialog } from './SendCampaignDialog';
 import { CampaignReportDialog } from './CampaignReportDialog';
 import { Badge } from '../ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { MultiSelectCombobox, SelectOption } from '@/components/ui/multi-select-combobox';
+import { GroupedMultiSelectCombobox, GroupedSelectOption } from '@/components/ui/grouped-multi-select-combobox';
 
 interface EmailList { id: string; name: string; }
-interface EmailContent { id: string; name: string; }
+interface EmailContent { id: string; name: string; group_id: string | null; }
+interface EmailContentGroup { id: string; name: string; }
 export interface Campaign { 
   id: string; 
   name: string; 
@@ -39,6 +40,7 @@ const SendEmailTab = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [lists, setLists] = useState<EmailList[]>([]);
   const [contents, setContents] = useState<EmailContent[]>([]);
+  const [groups, setGroups] = useState<EmailContentGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -51,19 +53,28 @@ const SendEmailTab = () => {
   const [selectedListId, setSelectedListId] = useState('');
   const [selectedContentIds, setSelectedContentIds] = useState<string[]>([]);
 
-  const contentOptions = useMemo<SelectOption[]>(() => {
-    return contents.map(c => ({ value: c.id, label: c.name }));
-  }, [contents]);
+  const contentOptions = useMemo<GroupedSelectOption[]>(() => {
+    const grouped: GroupedSelectOption[] = groups.map(g => ({
+      label: g.name,
+      options: contents.filter(c => c.group_id === g.id).map(c => ({ value: c.id, label: c.name }))
+    }));
+    const ungrouped = contents.filter(c => !c.group_id);
+    if (ungrouped.length > 0) {
+      grouped.push({ label: 'Chưa phân loại', options: ungrouped.map(c => ({ value: c.id, label: c.name })) });
+    }
+    return grouped;
+  }, [contents, groups]);
 
   const fetchData = async () => {
     setLoading(true);
-    const [campaignsRes, listsRes, contentsRes] = await Promise.all([
+    const [campaignsRes, listsRes, contentsRes, groupsRes] = await Promise.all([
       supabase.from('email_campaigns').select('*, email_lists(id, name)').order('created_at', { ascending: false }),
       supabase.from('email_lists').select('id, name'),
-      supabase.from('email_contents').select('id, name')
+      supabase.from('email_contents').select('id, name, group_id'),
+      supabase.from('email_content_groups').select('id, name')
     ]);
 
-    if (campaignsRes.error || listsRes.error || contentsRes.error) {
+    if (campaignsRes.error || listsRes.error || contentsRes.error || groupsRes.error) {
       showError("Lỗi tải dữ liệu.");
       setLoading(false);
       return;
@@ -72,6 +83,7 @@ const SendEmailTab = () => {
     const campaignsData = campaignsRes.data;
     setLists(listsRes.data as EmailList[]);
     setContents(contentsRes.data as EmailContent[]);
+    setGroups(groupsRes.data as EmailContentGroup[]);
 
     if (campaignsData.length === 0) {
       setCampaigns([]);
@@ -137,6 +149,8 @@ const SendEmailTab = () => {
     const channel = supabase.channel('email-marketing-realtime');
     channel
       .on('postgres_changes', { event: '*', schema: 'public', table: 'email_campaigns' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'email_content_groups' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'email_contents' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'email_campaign_logs' }, (payload) => {
           const newLog = payload.new as { campaign_id: string };
           setCampaigns(currentCampaigns =>
@@ -225,7 +239,7 @@ const SendEmailTab = () => {
           <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2"><Label>Tên chiến dịch</Label><Input value={campaignName} onChange={e => setCampaignName(e.target.value)} /></div>
             <div className="space-y-2"><Label>Danh sách mail</Label><Select value={selectedListId} onValueChange={setSelectedListId}><SelectTrigger><SelectValue placeholder="Chọn danh sách" /></SelectTrigger><SelectContent>{lists.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent></Select></div>
-            <div className="space-y-2"><Label>Nội dung mail</Label><MultiSelectCombobox options={contentOptions} selected={selectedContentIds} onChange={setSelectedContentIds} placeholder="Chọn nội dung" searchPlaceholder="Tìm nội dung..." emptyPlaceholder="Không tìm thấy." /></div>
+            <div className="space-y-2"><Label>Nội dung mail</Label><GroupedMultiSelectCombobox options={contentOptions} selected={selectedContentIds} onChange={setSelectedContentIds} placeholder="Chọn nội dung" searchPlaceholder="Tìm nội dung..." emptyPlaceholder="Không tìm thấy." /></div>
             <div className="flex items-end"><Button onClick={handleSaveCampaign} disabled={isSubmitting} className="w-full bg-brand-orange hover:bg-brand-orange/90 text-white"><Plus className="mr-2 h-4 w-4" />{isSubmitting ? 'Đang lưu...' : 'Lưu chiến dịch'}</Button></div>
           </CardContent>
         </Card>

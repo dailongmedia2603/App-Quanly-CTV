@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -6,9 +6,14 @@ import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { Copy, History, ArrowLeft, Trash2 } from 'lucide-react';
+import { Copy, History, ArrowLeft, Trash2, Folder, FolderPlus, Move } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 interface EmailContent {
   id: string;
@@ -16,6 +21,12 @@ interface EmailContent {
   subject: string;
   body: string;
   created_at: string;
+  group_id: string | null;
+}
+
+interface EmailContentGroup {
+  id: string;
+  name: string;
 }
 
 const getHtmlBodyContent = (htmlString: string | null): string => {
@@ -24,56 +35,55 @@ const getHtmlBodyContent = (htmlString: string | null): string => {
   return bodyMatch ? bodyMatch[1] : htmlString;
 };
 
-const getPostTitle = (content: string): string => {
-  if (!content) return 'Nội dung không có tiêu đề';
-  const firstLine = content.split('\n')[0].trim();
-  const cleanTitle = firstLine.replace(/^(#+\s*|\*\*\s*|\s*\*)/, '').replace(/\s*\*\*$/, '').trim();
-  
-  const words = cleanTitle.split(/\s+/);
-  if (words.length > 5) {
-    return words.slice(0, 5).join(' ') + '...';
-  }
-
-  return cleanTitle || 'Nội dung không có tiêu đề';
-};
-
 const EmailContentHistoryView = ({ onBack }: { onBack: () => void }) => {
   const [history, setHistory] = useState<EmailContent[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [groups, setGroups] = useState<EmailContentGroup[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [isMovePopoverOpen, setIsMovePopoverOpen] = useState(false);
 
-  const fetchHistory = async () => {
-    setLoadingHistory(true);
-    const { data, error } = await supabase.from('email_contents').select('*').order('created_at', { ascending: false });
-    if (error) showError("Không thể tải lịch sử.");
-    else setHistory(data as EmailContent[]);
-    setLoadingHistory(false);
+  const fetchData = async () => {
+    setLoading(true);
+    const [historyRes, groupsRes] = await Promise.all([
+      supabase.from('email_contents').select('*').order('created_at', { ascending: false }),
+      supabase.from('email_content_groups').select('*').order('name')
+    ]);
+    if (historyRes.error) showError("Không thể tải lịch sử.");
+    else setHistory(historyRes.data as EmailContent[]);
+    if (groupsRes.error) showError("Không thể tải nhóm.");
+    else setGroups(groupsRes.data as EmailContentGroup[]);
+    setLoading(false);
   };
 
   useEffect(() => {
-    fetchHistory();
+    fetchData();
   }, []);
+
+  const groupedContent = useMemo(() => {
+    const grouped: Record<string, EmailContent[]> = { 'ungrouped': [] };
+    groups.forEach(g => grouped[g.id] = []);
+    history.forEach(item => {
+      const groupId = item.group_id || 'ungrouped';
+      if (!grouped[groupId]) grouped[groupId] = [];
+      grouped[groupId].push(item);
+    });
+    return grouped;
+  }, [history, groups]);
 
   const handleCopy = (subject: string, body: string) => {
     const bodyContent = getHtmlBodyContent(body);
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = bodyContent;
     const plainText = `Tiêu đề: ${subject}\n\n${tempDiv.innerText || ""}`;
-    navigator.clipboard.writeText(plainText).then(() => {
-      showSuccess("Đã sao chép nội dung!");
-    }).catch(err => {
-      showError("Không thể sao chép.");
-    });
+    navigator.clipboard.writeText(plainText).then(() => showSuccess("Đã sao chép!"));
   };
 
   const handleSelect = (id: string, checked: boolean) => {
     setSelectedIds(prev => checked ? [...prev, id] : prev.filter(i => i !== id));
-  };
-
-  const handleSelectAll = (checked: boolean) => {
-    setSelectedIds(checked ? history.map(h => h.id) : []);
   };
 
   const confirmDelete = async () => {
@@ -82,18 +92,30 @@ const EmailContentHistoryView = ({ onBack }: { onBack: () => void }) => {
     const toastId = showLoading(`Đang xóa ${selectedIds.length} mục...`);
     const { error } = await supabase.from('email_contents').delete().in('id', selectedIds);
     dismissToast(toastId);
-    if (error) {
-      showError(`Xóa thất bại: ${error.message}`);
-    } else {
-      showSuccess("Xóa thành công!");
-      setSelectedIds([]);
-      fetchHistory();
-    }
+    if (error) showError(`Xóa thất bại: ${error.message}`);
+    else { showSuccess("Xóa thành công!"); setSelectedIds([]); fetchData(); }
     setIsDeleteAlertOpen(false);
     setIsSubmitting(false);
   };
 
-  const isAllSelected = history.length > 0 && selectedIds.length === history.length;
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return;
+    setIsSubmitting(true);
+    const { error } = await supabase.from('email_content_groups').insert({ name: newGroupName });
+    if (error) showError("Tạo nhóm thất bại.");
+    else { showSuccess("Tạo nhóm thành công!"); setIsGroupDialogOpen(false); setNewGroupName(''); fetchData(); }
+    setIsSubmitting(false);
+  };
+
+  const handleMoveToGroup = async (groupId: string | null) => {
+    setIsMovePopoverOpen(false);
+    if (selectedIds.length === 0) return;
+    const toastId = showLoading("Đang di chuyển...");
+    const { error } = await supabase.from('email_contents').update({ group_id: groupId }).in('id', selectedIds);
+    dismissToast(toastId);
+    if (error) showError("Di chuyển thất bại.");
+    else { showSuccess("Di chuyển thành công!"); setSelectedIds([]); fetchData(); }
+  };
 
   return (
     <>
@@ -103,89 +125,58 @@ const EmailContentHistoryView = ({ onBack }: { onBack: () => void }) => {
             <CardTitle>Nội dung mail đã tạo</CardTitle>
             <div className="flex items-center space-x-2">
               {selectedIds.length > 0 && (
-                <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)}>
-                  <Trash2 className="mr-2 h-4 w-4" /> Xóa ({selectedIds.length})
-                </Button>
+                <>
+                  <Popover open={isMovePopoverOpen} onOpenChange={setIsMovePopoverOpen}>
+                    <PopoverTrigger asChild><Button variant="outline"><Move className="mr-2 h-4 w-4" />Chuyển tới nhóm</Button></PopoverTrigger>
+                    <PopoverContent className="p-0 w-56"><Command><CommandInput placeholder="Tìm nhóm..." /><CommandList><CommandEmpty>Không tìm thấy nhóm.</CommandEmpty><CommandGroup><CommandItem onSelect={() => handleMoveToGroup(null)}>Bỏ nhóm</CommandItem>{groups.map(g => <CommandItem key={g.id} onSelect={() => handleMoveToGroup(g.id)}>{g.name}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
+                  </Popover>
+                  <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)}><Trash2 className="mr-2 h-4 w-4" /> Xóa ({selectedIds.length})</Button>
+                </>
               )}
-              <Button onClick={onBack} variant="outline">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Quay lại
-              </Button>
+              <Button onClick={() => setIsGroupDialogOpen(true)} variant="outline"><FolderPlus className="mr-2 h-4 w-4" />Tạo nhóm mới</Button>
+              <Button onClick={onBack} className="bg-brand-orange hover:bg-brand-orange/90 text-white"><ArrowLeft className="mr-2 h-4 w-4" />Tạo nội dung</Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {loadingHistory ? (
-            <p>Đang tải...</p>
-          ) : history.length === 0 ? (
-            <p className="text-center text-gray-500 py-10">Chưa có nội dung nào được tạo.</p>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center p-2 border rounded-md bg-gray-50">
-                <Checkbox id="select-all" checked={isAllSelected} onCheckedChange={handleSelectAll} />
-                <label htmlFor="select-all" className="ml-3 text-sm font-medium">Chọn tất cả</label>
-              </div>
-              <Accordion type="single" collapsible className="w-full space-y-3">
-                {history.map(item => (
-                  <AccordionItem value={item.id} key={item.id} className="border border-orange-200 rounded-lg bg-white shadow-sm">
-                    <AccordionTrigger className="p-4 hover:no-underline hover:bg-orange-50/50 rounded-t-lg data-[state=open]:border-b data-[state=open]:border-orange-200">
-                      <div className="flex items-center w-full gap-4">
-                        <Checkbox
-                          checked={selectedIds.includes(item.id)}
-                          onCheckedChange={(c) => handleSelect(item.id, c as boolean)}
-                          onClick={e => e.stopPropagation()}
-                        />
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center w-full min-w-0 gap-1 sm:gap-4 text-left">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-gray-800 truncate">{item.name}</p>
-                            <p className="text-sm text-gray-600 truncate">Tiêu đề: {item.subject}</p>
-                          </div>
-                          <span className="text-sm text-gray-500 font-normal sm:flex-shrink-0 sm:pl-4">
-                            {format(new Date(item.created_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}
-                          </span>
-                        </div>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="p-4 bg-white rounded-b-lg">
-                      <div className="prose max-w-none relative bg-orange-50/30 p-4 rounded-md border border-orange-100">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="absolute top-2 right-2 h-8 w-8 text-gray-600 hover:bg-orange-100"
-                          onClick={() => handleCopy(item.subject, item.body)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <h4 className="font-bold !mb-2">Tiêu đề: {item.subject}</h4>
-                        <hr className="!my-2" />
-                        <div dangerouslySetInnerHTML={{ __html: getHtmlBodyContent(item.body) }} />
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </div>
+          {loading ? <p>Đang tải...</p> : (
+            <Accordion type="multiple" className="w-full space-y-4" defaultValue={['ungrouped', ...groups.map(g => g.id)]}>
+              {groups.map(group => (
+                <AccordionItem value={group.id} key={group.id}>
+                  <AccordionTrigger className="font-semibold"><div className="flex items-center space-x-2"><Folder className="h-5 w-5 text-brand-orange" /><span>{group.name} ({groupedContent[group.id]?.length || 0})</span></div></AccordionTrigger>
+                  <AccordionContent className="pt-2 space-y-2">
+                    {(groupedContent[group.id] || []).map(item => <ContentItem key={item.id} item={item} selectedIds={selectedIds} onSelect={handleSelect} onCopy={handleCopy} />)}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+              <AccordionItem value="ungrouped">
+                <AccordionTrigger className="font-semibold"><div className="flex items-center space-x-2"><Folder className="h-5 w-5 text-gray-400" /><span>Chưa phân loại ({groupedContent['ungrouped']?.length || 0})</span></div></AccordionTrigger>
+                <AccordionContent className="pt-2 space-y-2">
+                  {(groupedContent['ungrouped'] || []).map(item => <ContentItem key={item.id} item={item} selectedIds={selectedIds} onSelect={handleSelect} onCopy={handleCopy} />)}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           )}
         </CardContent>
       </Card>
-      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bạn có chắc muốn xóa {selectedIds.length} nội dung đã chọn không? Hành động này không thể hoàn tác.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} disabled={isSubmitting} className="bg-red-600 hover:bg-red-700">
-              {isSubmitting ? 'Đang xóa...' : 'Xóa'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}><DialogContent><DialogHeader><DialogTitle>Tạo nhóm mới</DialogTitle></DialogHeader><div className="py-4"><Label>Tên nhóm</Label><Input value={newGroupName} onChange={e => setNewGroupName(e.target.value)} /></div><DialogFooter><Button variant="outline" onClick={() => setIsGroupDialogOpen(false)}>Hủy</Button><Button onClick={handleCreateGroup} disabled={isSubmitting} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSubmitting ? 'Đang tạo...' : 'Tạo'}</Button></DialogFooter></DialogContent></Dialog>
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Xác nhận xóa</AlertDialogTitle><AlertDialogDescription>Bạn có chắc muốn xóa {selectedIds.length} nội dung đã chọn không?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Hủy</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} disabled={isSubmitting} className="bg-red-600 hover:bg-red-700">{isSubmitting ? 'Đang xóa...' : 'Xóa'}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </>
   );
 };
+
+const ContentItem = ({ item, selectedIds, onSelect, onCopy }: { item: EmailContent, selectedIds: string[], onSelect: (id: string, checked: boolean) => void, onCopy: (subject: string, body: string) => void }) => (
+  <div className="border border-orange-100 rounded-lg bg-white shadow-sm">
+    <div className="p-4 flex items-center w-full gap-4">
+      <Checkbox checked={selectedIds.includes(item.id)} onCheckedChange={(c) => onSelect(item.id, c as boolean)} />
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-gray-800 truncate">{item.name}</p>
+        <p className="text-sm text-gray-600 truncate">Tiêu đề: {item.subject}</p>
+        <p className="text-xs text-gray-400">{format(new Date(item.created_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}</p>
+      </div>
+      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:bg-orange-100" onClick={() => onCopy(item.subject, item.body)}><Copy className="h-4 w-4" /></Button>
+    </div>
+  </div>
+);
 
 export default EmailContentHistoryView;

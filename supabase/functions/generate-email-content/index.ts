@@ -4,8 +4,6 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 // @ts-ignore
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.15.0";
-// @ts-ignore
-import { marked } from 'https://esm.sh/marked@4.3.0';
 
 declare const Deno: any;
 
@@ -85,10 +83,11 @@ serve(async (req) => {
       .replace(/\[link_cta\]/gi, ctaLink || 'https://vuaseeding.top/lien-he');
 
     finalPrompt += `\n\n---
-    QUAN TRỌNG: Vui lòng trả lời theo cấu trúc sau:
-    - Dòng ĐẦU TIÊN của câu trả lời của bạn PHẢI là tiêu đề email.
-    - Tất cả các dòng tiếp theo sẽ là nội dung email, được định dạng bằng Markdown đơn giản (sử dụng **, *, -).
-    - KHÔNG thêm bất kỳ lời giải thích hay văn bản nào khác.
+    QUAN TRỌNG: Vui lòng trả lời bằng một đối tượng JSON hợp lệ DUY NHẤT, không có văn bản giải thích nào khác. Đối tượng JSON phải có cấu trúc sau:
+    {
+      "subject": "Tiêu đề email hấp dẫn của bạn ở đây",
+      "body": "Nội dung email của bạn ở đây, được định dạng bằng HTML. Sử dụng các thẻ HTML cơ bản như <p>, <b>, <ul>, <li>, <a>."
+    }
     `;
 
     const MAX_RETRIES = 3;
@@ -126,13 +125,19 @@ serve(async (req) => {
       throw lastError;
     }
 
-    const lines = rawGeneratedContent.split('\n');
-    if (lines.length < 2) {
-        throw new Error("AI đã trả về định dạng không hợp lệ (quá ít dòng).");
+    let aiResult;
+    try {
+        const cleanedResponse = rawGeneratedContent.replace(/```json/g, '').replace(/```/g, '').trim();
+        aiResult = JSON.parse(cleanedResponse);
+    } catch (e) {
+        console.error("Failed to parse AI JSON response:", rawGeneratedContent);
+        throw new Error("AI đã trả về một định dạng JSON không hợp lệ.");
     }
-    const subject = lines[0].trim();
-    const markdownBody = lines.slice(1).join('\n').trim();
-    const body = marked.parse(markdownBody);
+
+    const { subject, body } = aiResult;
+    if (!subject || !body) {
+        throw new Error("Phản hồi JSON của AI thiếu các trường 'subject' hoặc 'body'.");
+    }
 
     const { data: savedContent, error: saveError } = await supabaseAdmin
       .from('email_contents')

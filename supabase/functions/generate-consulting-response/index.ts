@@ -12,6 +12,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const safetyInstruction = "Bạn là một trợ lý AI chuyên nghiệp, hữu ích và an toàn. Hãy tập trung vào việc tạo ra nội dung marketing chất lượng cao, phù hợp với ngữ cảnh được cung cấp. TUYỆT ĐỐI TRÁNH các chủ đề nhạy cảm, gây tranh cãi, hoặc có thể bị hiểu lầm là tiêu cực. Luôn duy trì một thái độ tích cực và chuyên nghiệp.\n\n---\n\n";
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -101,12 +103,12 @@ serve(async (req) => {
         `${msg.role === 'user' ? 'Khách hàng nhắn' : 'Bạn sẽ trả lời'}: ${msg.content}`
     ).join('\n');
 
-    let promptText = templateData.prompt;
-    promptText = promptText.replace(/\[câu hỏi khách hàng\]/gi, '');
-    promptText = promptText.replace(/\[sản phẩm liên quan\]/gi, '');
-    promptText = promptText.replace(/\[thông tin thêm\]/gi, '');
+    let basePrompt = templateData.prompt;
+    basePrompt = basePrompt.replace(/\[câu hỏi khách hàng\]/gi, '');
+    basePrompt = basePrompt.replace(/\[sản phẩm liên quan\]/gi, '');
+    basePrompt = basePrompt.replace(/\[thông tin thêm\]/gi, '');
 
-    let finalPrompt = promptText
+    basePrompt = basePrompt
         .replace(/\[dịch vụ\]/gi, serviceForPrompt)
         .replace(/\[lịch sử trò chuyện\]/gi, chatHistory || 'Đây là tin nhắn đầu tiên trong cuộc trò chuyện.')
         .replace(/\[tin nhắn cần trả lời\]/gi, latestUserMessage)
@@ -114,15 +116,22 @@ serve(async (req) => {
         .replace(/\[báo giá dịch vụ\]/gi, quoteTemplatesContent);
 
     if (customerSalutation) {
-        finalPrompt = `QUAN TRỌNG: Khách hàng là "${customerSalutation}". Hãy xưng hô cho phù hợp trong câu trả lời của bạn (ví dụ: "Chào ${customerSalutation}", "Dạ ${customerSalutation} ạ", "bên em gửi ${customerSalutation}").\n\n---\n\n${finalPrompt}`;
+        basePrompt = `QUAN TRỌNG: Khách hàng là "${customerSalutation}". Hãy xưng hô cho phù hợp trong câu trả lời của bạn (ví dụ: "Chào ${customerSalutation}", "Dạ ${customerSalutation} ạ", "bên em gửi ${customerSalutation}").\n\n---\n\n${basePrompt}`;
     }
 
     const MAX_RETRIES = 3;
     let lastError: Error | null = null;
     let aiResponse = '';
+    let finalPrompt = '';
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
+        if (attempt > 1) {
+          finalPrompt = safetyInstruction + `Lần trước bạn đã trả về một phản hồi không hợp lệ. Vui lòng thử lại.\n\n${basePrompt}`;
+        } else {
+          finalPrompt = safetyInstruction + basePrompt;
+        }
+
         const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
         if (apiKeyError || !geminiApiKey) {
             throw new Error("Chưa cấu hình hoặc không thể lấy Gemini API Key.");

@@ -12,6 +12,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const safetyInstruction = "Bạn là một trợ lý AI chuyên nghiệp, hữu ích và an toàn. Hãy tập trung vào việc tạo ra nội dung marketing chất lượng cao, phù hợp với ngữ cảnh được cung cấp. TUYỆT ĐỐI TRÁNH các chủ đề nhạy cảm, gây tranh cãi, hoặc có thể bị hiểu lầm là tiêu cực. Luôn duy trì một thái độ tích cực và chuyên nghiệp.\n\n---\n\n";
+
 const formatDate = (date: Date): string => {
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -83,7 +85,7 @@ serve(async (req) => {
       ? quoteTemplates.map(t => `--- MẪU: ${t.name} ---\n${t.content}`).join('\n\n')
       : "Không có mẫu báo giá tham khảo.";
 
-    const prompt = promptTemplateData.prompt
+    const prompt = safetyInstruction + promptTemplateData.prompt
       .replace(/\[budget\]/gi, budget.toLocaleString('vi-VN'))
       .replace(/\[vat_info\]/gi, includesVat ? "Báo giá CÓ bao gồm 8% VAT." : "Báo giá KHÔNG bao gồm VAT.")
       .replace(/\[thời gian triển khai\]/gi, implementationTime || "Chưa xác định")

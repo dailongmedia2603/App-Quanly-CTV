@@ -12,6 +12,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const safetyInstruction = "Bạn là một trợ lý AI chuyên nghiệp, hữu ích và an toàn. Hãy tập trung vào việc tạo ra nội dung marketing chất lượng cao, phù hợp với ngữ cảnh được cung cấp. TUYỆT ĐỐI TRÁNH các chủ đề nhạy cảm, gây tranh cãi, hoặc có thể bị hiểu lầm là tiêu cực. Luôn duy trì một thái độ tích cực và chuyên nghiệp.\n\n---\n\n";
+
 const cleanAiResponse = (rawText: string): string => {
   if (!rawText) return '';
   let text = rawText.trim();
@@ -158,9 +160,9 @@ serve(async (req) => {
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
         if (attempt > 1) {
-          finalPrompt = `Lần trước bạn đã trả về một phản hồi không hợp lệ. Vui lòng thử lại và đảm bảo bạn tuân thủ nghiêm ngặt định dạng được yêu cầu.\n\n${basePrompt}`;
+          finalPrompt = safetyInstruction + `Lần trước bạn đã trả về một phản hồi không hợp lệ. Vui lòng thử lại và đảm bảo bạn tuân thủ nghiêm ngặt định dạng được yêu cầu.\n\n${basePrompt}`;
         } else {
-          finalPrompt = basePrompt;
+          finalPrompt = safetyInstruction + basePrompt;
         }
 
         const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');

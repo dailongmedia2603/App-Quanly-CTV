@@ -12,6 +12,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const safetyInstruction = "Bạn là một trợ lý AI chuyên nghiệp, hữu ích và an toàn. Hãy tập trung vào việc tạo ra nội dung marketing chất lượng cao, phù hợp với ngữ cảnh được cung cấp. TUYỆT ĐỐI TRÁNH các chủ đề nhạy cảm, gây tranh cãi, hoặc có thể bị hiểu lầm là tiêu cực. Luôn duy trì một thái độ tích cực và chuyên nghiệp.\n\n---\n\n";
+
 // Helper function to convert date to Unix timestamp
 const toUnixTimestamp = (dateStr: string | null | undefined): number | null => {
   if (!dateStr) return null;
@@ -261,7 +263,7 @@ serve(async (req) => {
             const genAI = new GoogleGenerativeAI(geminiApiKey);
             const model = genAI.getGenerativeModel({ model: gemini_model });
 
-            const prompt = `
+            const prompt = safetyInstruction + `
                 ${campaign.ai_prompt}
                 
                 Analyze the following post content:

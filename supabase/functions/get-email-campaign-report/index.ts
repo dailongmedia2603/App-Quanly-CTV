@@ -16,6 +16,8 @@ interface CampaignLog {
   sent_at: string | null;
   error_message: string | null;
   email_contents: { name: string } | null;
+  opened_at: string | null;
+  clicked_at: string | null;
 }
 
 serve(async (req) => {
@@ -59,6 +61,8 @@ serve(async (req) => {
           sent_at: log.sent_at,
           error_message: log.error_message,
           content_name: log.email_contents?.name || 'N/A',
+          opened_at: log.opened_at,
+          clicked_at: log.clicked_at,
         };
       } else {
         return {
@@ -67,6 +71,8 @@ serve(async (req) => {
           sent_at: null,
           error_message: null,
           content_name: 'Chưa gửi',
+          opened_at: null,
+          clicked_at: null,
         };
       }
     });
@@ -75,6 +81,8 @@ serve(async (req) => {
       total: allContacts.length,
       success: campaignLogs.filter(log => log.status === 'success').length,
       failed: campaignLogs.filter(log => log.status === 'failed').length,
+      opened: campaignLogs.filter(log => log.opened_at !== null).length,
+      clicked: campaignLogs.filter(log => log.clicked_at !== null).length,
     };
 
     return new Response(JSON.stringify({ stats, contacts: reportContacts }), {

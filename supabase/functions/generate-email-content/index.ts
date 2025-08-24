@@ -85,12 +85,10 @@ serve(async (req) => {
       .replace(/\[link_cta\]/gi, ctaLink || 'https://vuaseeding.top/lien-he');
 
     finalPrompt += `\n\n---
-    QUAN TRỌNG: Vui lòng trả lời theo cấu trúc sau, sử dụng chính xác các đánh dấu này:
-    **[TIÊU ĐỀ]**
-    (Tiêu đề email của bạn ở đây)
-    ---
-    **[NỘI DUNG EMAIL]**
-    (Toàn bộ nội dung email của bạn ở đây. Nội dung này PHẢI được định dạng bằng Markdown đơn giản. Sử dụng các cú pháp như **để in đậm**, * để in nghiêng, và - cho danh sách.)
+    QUAN TRỌNG: Vui lòng trả lời theo cấu trúc sau:
+    - Dòng ĐẦU TIÊN của câu trả lời của bạn PHẢI là tiêu đề email.
+    - Tất cả các dòng tiếp theo sẽ là nội dung email, được định dạng bằng Markdown đơn giản (sử dụng **, *, -).
+    - KHÔNG thêm bất kỳ lời giải thích hay văn bản nào khác.
     `;
 
     const MAX_RETRIES = 3;
@@ -128,16 +126,12 @@ serve(async (req) => {
       throw lastError;
     }
 
-    const subjectMatch = rawGeneratedContent.match(/\*\*\[TIÊU ĐỀ\]\*\*\s*([\s\S]*?)(?=\*\*\[NỘI DUNG EMAIL\]\*\*|---|$)/);
-    const bodyMatch = rawGeneratedContent.match(/\*\*\[NỘI DUNG EMAIL\]\*\*\s*([\s\S]*)/);
-    
-    if (!subjectMatch || !bodyMatch) {
-      console.error("Invalid AI response format. Raw response:", rawGeneratedContent);
-      throw new Error("AI đã trả về định dạng không hợp lệ. Vui lòng thử lại hoặc điều chỉnh prompt trong Cấu hình.");
+    const lines = rawGeneratedContent.split('\n');
+    if (lines.length < 2) {
+        throw new Error("AI đã trả về định dạng không hợp lệ (quá ít dòng).");
     }
-
-    const subject = subjectMatch[1].trim();
-    const markdownBody = bodyMatch[1].trim();
+    const subject = lines[0].trim();
+    const markdownBody = lines.slice(1).join('\n').trim();
     let body = marked.parse(markdownBody);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');

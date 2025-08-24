@@ -46,6 +46,7 @@ serve(async (req) => {
   const { campaign, contact, sent_count, log_id } = await req.json();
   const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  let emailBody = ''; // Define emailBody here to be accessible in catch block
 
   try {
     if (!campaign || !contact || sent_count === undefined || !log_id) {
@@ -82,7 +83,7 @@ serve(async (req) => {
     
     const encodedSubject = btoa(unescape(encodeURIComponent(emailContent.subject)));
     
-    let emailBody = cleanHtmlBodyForSending(emailContent.body);
+    emailBody = cleanHtmlBodyForSending(emailContent.body);
 
     // 1. Inject Click Tracking
     const trackingClickUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/track-email-click`;
@@ -133,7 +134,8 @@ serve(async (req) => {
     // Update log to success
     await supabaseAdmin.from('email_campaign_logs').update({
       status: 'success',
-      sent_at: new Date().toISOString()
+      sent_at: new Date().toISOString(),
+      sent_html_content: emailBody
     }).eq('id', log_id);
 
     return new Response(JSON.stringify({ success: true, messageId: sendResult.id }), {
@@ -147,7 +149,8 @@ serve(async (req) => {
     await supabaseAdmin.from('email_campaign_logs').update({
       status: 'failed',
       error_message: error.message,
-      sent_at: new Date().toISOString()
+      sent_at: new Date().toISOString(),
+      sent_html_content: emailBody
     }).eq('id', log_id);
 
     return new Response(JSON.stringify({ success: false, error: error.message }), {

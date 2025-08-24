@@ -18,6 +18,7 @@ interface CampaignLog {
   email_contents: { name: string } | null;
   opened_at: string | null;
   clicked_at: string | null;
+  sent_html_content: string | null;
 }
 
 serve(async (req) => {
@@ -63,6 +64,7 @@ serve(async (req) => {
           content_name: log.email_contents?.name || 'N/A',
           opened_at: log.opened_at,
           clicked_at: log.clicked_at,
+          sent_html_content: log.sent_html_content,
         };
       } else {
         return {
@@ -73,6 +75,7 @@ serve(async (req) => {
           content_name: 'Chưa gửi',
           opened_at: null,
           clicked_at: null,
+          sent_html_content: null,
         };
       }
     });

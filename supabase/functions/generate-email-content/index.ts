@@ -42,7 +42,7 @@ serve(async (req) => {
     userId = user.id;
 
     requestBody = await req.json();
-    const { name, serviceId, emailGoal, additionalInfo, phoneNumber } = requestBody;
+    const { name, serviceId, emailGoal, additionalInfo, phoneNumber, ctaLink } = requestBody;
     if (!name || !serviceId || !emailGoal) {
       throw new Error("Cần có tên nội dung, dịch vụ và mục tiêu email.");
     }
@@ -85,7 +85,8 @@ serve(async (req) => {
       .replace(/\[mục tiêu\]/gi, emailGoal)
       .replace(/\[thông tin thêm\]/gi, additionalInfo || 'Không có')
       .replace(/\[biên tài liệu\]/gi, documentContent)
-      .replace(/\[thông tin liên hệ\]/gi, contactInfo);
+      .replace(/\[thông tin liên hệ\]/gi, contactInfo)
+      .replace(/\[link_cta\]/gi, ctaLink || 'https://vuaseeding.top/lien-he');
 
     finalPrompt += `\n\n---
     QUAN TRỌNG: Vui lòng trả lời theo cấu trúc sau, sử dụng chính xác các đánh dấu này:

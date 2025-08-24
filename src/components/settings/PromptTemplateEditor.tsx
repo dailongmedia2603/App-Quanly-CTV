@@ -52,6 +52,7 @@ const variableConfig = {
     { name: 'Thông tin thêm', value: '[thông tin thêm]' },
     { name: 'Biên tài liệu', value: '[biên tài liệu]' },
     { name: 'Thông tin liên hệ', value: '[thông tin liên hệ]' },
+    { name: 'Link CTA', value: '[link_cta]' },
   ],
 };
 

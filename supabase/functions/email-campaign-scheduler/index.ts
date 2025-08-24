@@ -75,6 +75,7 @@ serve(async (req) => {
       if (logsError) { console.error(`Error fetching logs for campaign ${campaign.id}:`, logsError); continue; }
 
       const sentEmails = new Set(sentLogs.map(log => log.contact_email));
+      const sent_count = sentEmails.size;
       const nextContact = allContacts.find(contact => !sentEmails.has(contact.email));
 
       if (nextContact) {
@@ -86,7 +87,7 @@ serve(async (req) => {
 
         console.log(`Invoking send-single-email for ${nextContact.email}`);
         const { data: sendResult, error: sendError } = await supabaseAdmin.functions.invoke('send-single-email', {
-          body: { campaign, contact: nextContact }
+          body: { campaign, contact: nextContact, sent_count }
         });
 
         if (sendError || (sendResult && !sendResult.success)) {

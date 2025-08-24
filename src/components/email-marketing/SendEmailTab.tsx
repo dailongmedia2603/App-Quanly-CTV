@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { SendCampaignDialog } from './SendCampaignDialog';
 import { CampaignReportDialog } from './CampaignReportDialog';
 import { Badge } from '../ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { MultiSelectCombobox, SelectOption } from '@/components/ui/multi-select-combobox';
 
 interface EmailList { id: string; name: string; }
 interface EmailContent { id: string; name: string; }
@@ -27,7 +28,8 @@ export interface Campaign {
   send_interval_unit: string | null;
   email_list_id: string;
   email_lists: { id: string; name: string } | null; 
-  email_contents: { name: string } | null; 
+  email_content_ids: string[];
+  content_names: string;
   sent_count: number;
   total_contacts: number;
 }
@@ -47,12 +49,16 @@ const SendEmailTab = () => {
   // Form state
   const [campaignName, setCampaignName] = useState('');
   const [selectedListId, setSelectedListId] = useState('');
-  const [selectedContentId, setSelectedContentId] = useState('');
+  const [selectedContentIds, setSelectedContentIds] = useState<string[]>([]);
+
+  const contentOptions = useMemo<SelectOption[]>(() => {
+    return contents.map(c => ({ value: c.id, label: c.name }));
+  }, [contents]);
 
   const fetchData = async () => {
     setLoading(true);
     const [campaignsRes, listsRes, contentsRes] = await Promise.all([
-      supabase.from('email_campaigns').select('*, email_lists(id, name), email_contents(name)').order('created_at', { ascending: false }),
+      supabase.from('email_campaigns').select('*, email_lists(id, name)').order('created_at', { ascending: false }),
       supabase.from('email_lists').select('id, name'),
       supabase.from('email_contents').select('id, name')
     ]);
@@ -75,45 +81,53 @@ const SendEmailTab = () => {
 
     const listIds = campaignsData.map(c => c.email_list_id).filter(Boolean);
     const campaignIds = campaignsData.map(c => c.id);
+    const allContentIds = campaignsData.flatMap(c => c.email_content_ids || []).filter(Boolean);
+    const uniqueContentIds = [...new Set(allContentIds)];
 
-    const { data: allContacts, error: contactsError } = await supabase.from('email_list_contacts').select('list_id').in('list_id', listIds);
-    const { data: allLogs, error: logsError } = await supabase.from('email_campaign_logs').select('campaign_id').in('campaign_id', campaignIds);
+    const [contactsRes, logsRes, allContentsRes] = await Promise.all([
+      supabase.from('email_list_contacts').select('list_id').in('list_id', listIds),
+      supabase.from('email_campaign_logs').select('campaign_id').in('campaign_id', campaignIds),
+      uniqueContentIds.length > 0 ? supabase.from('email_contents').select('id, name').in('id', uniqueContentIds) : Promise.resolve({ data: [], error: null })
+    ]);
 
-    if (contactsError || logsError) {
+    if (contactsRes.error || logsRes.error || allContentsRes.error) {
       showError("Lỗi tải dữ liệu chi tiết chiến dịch.");
       setCampaigns(campaignsData as any);
       setLoading(false);
       return;
     }
 
-    const contactCounts = allContacts.reduce((acc, contact) => {
+    const contactCounts = (contactsRes.data || []).reduce((acc, contact) => {
       acc[contact.list_id] = (acc[contact.list_id] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    const logCounts = allLogs.reduce((acc, log) => {
+    const logCounts = (logsRes.data || []).reduce((acc, log) => {
       acc[log.campaign_id] = (acc[log.campaign_id] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    const campaignsWithCounts = campaignsData.map(campaign => {
+    const contentMap = new Map((allContentsRes.data || []).map(c => [c.id, c.name]));
+
+    const campaignsWithDetails = campaignsData.map(campaign => {
       const total_contacts = contactCounts[campaign.email_list_id] || 0;
       const sent_count = logCounts[campaign.id] || 0;
       let status = campaign.status;
-
       if (total_contacts > 0 && sent_count >= total_contacts && status !== 'sent') {
         status = 'sent';
       }
+      const content_names = (campaign.email_content_ids || []).map((id: string) => contentMap.get(id) || 'N/A').join(', ');
 
       return {
         ...campaign,
         total_contacts,
         sent_count,
         status,
+        content_names,
       };
     });
 
-    setCampaigns(campaignsWithCounts as Campaign[]);
+    setCampaigns(campaignsWithDetails as Campaign[]);
     setLoading(false);
   };
 
@@ -151,18 +165,18 @@ const SendEmailTab = () => {
 
   const handleSaveCampaign = async () => {
     if (!user) return showError("Bạn cần đăng nhập để tạo chiến dịch.");
-    if (!campaignName || !selectedListId || !selectedContentId) return showError("Vui lòng điền đủ thông tin.");
+    if (!campaignName || !selectedListId || selectedContentIds.length === 0) return showError("Vui lòng điền đủ thông tin.");
     setIsSubmitting(true);
     const toastId = showLoading("Đang lưu chiến dịch...");
     const { error } = await supabase.from('email_campaigns').insert({ 
       user_id: user.id,
       name: campaignName, 
       email_list_id: selectedListId, 
-      email_content_id: selectedContentId 
+      email_content_ids: selectedContentIds 
     });
     dismissToast(toastId);
     if (error) showError(`Lưu thất bại: ${error.message}`);
-    else { showSuccess("Lưu thành công!"); setCampaignName(''); setSelectedListId(''); setSelectedContentId(''); fetchData(); }
+    else { showSuccess("Lưu thành công!"); setCampaignName(''); setSelectedListId(''); setSelectedContentIds([]); fetchData(); }
     setIsSubmitting(false);
   };
 
@@ -211,7 +225,7 @@ const SendEmailTab = () => {
           <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2"><Label>Tên chiến dịch</Label><Input value={campaignName} onChange={e => setCampaignName(e.target.value)} /></div>
             <div className="space-y-2"><Label>Danh sách mail</Label><Select value={selectedListId} onValueChange={setSelectedListId}><SelectTrigger><SelectValue placeholder="Chọn danh sách" /></SelectTrigger><SelectContent>{lists.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent></Select></div>
-            <div className="space-y-2"><Label>Nội dung mail</Label><Select value={selectedContentId} onValueChange={setSelectedContentId}><SelectTrigger><SelectValue placeholder="Chọn nội dung" /></SelectTrigger><SelectContent>{contents.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-2"><Label>Nội dung mail</Label><MultiSelectCombobox options={contentOptions} selected={selectedContentIds} onChange={setSelectedContentIds} placeholder="Chọn nội dung" searchPlaceholder="Tìm nội dung..." emptyPlaceholder="Không tìm thấy." /></div>
             <div className="flex items-end"><Button onClick={handleSaveCampaign} disabled={isSubmitting} className="w-full bg-brand-orange hover:bg-brand-orange/90 text-white"><Plus className="mr-2 h-4 w-4" />{isSubmitting ? 'Đang lưu...' : 'Lưu chiến dịch'}</Button></div>
           </CardContent>
         </Card>
@@ -219,7 +233,7 @@ const SendEmailTab = () => {
           <CardHeader><CardTitle>Danh sách chiến dịch</CardTitle></CardHeader>
           <CardContent>
             <Table><TableHeader><TableRow><TableHead>Tên chiến dịch</TableHead><TableHead>Danh sách mail</TableHead><TableHead>Nội dung</TableHead><TableHead>Trạng thái</TableHead><TableHead>Ngày tạo/Lịch gửi</TableHead><TableHead className="text-right">Thao tác</TableHead></TableRow></TableHeader>
-              <TableBody>{loading ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Đang tải...</TableCell></TableRow> : campaigns.length === 0 ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Chưa có chiến dịch nào.</TableCell></TableRow> : (campaigns.map(c => (<TableRow key={c.id}><TableCell>{c.name}</TableCell><TableCell>{c.email_lists?.name}</TableCell><TableCell>{c.email_contents?.name}</TableCell><TableCell>{getStatusBadge(c.status)}</TableCell><TableCell>{c.status === 'scheduled' && c.scheduled_at ? format(new Date(c.scheduled_at), 'dd/MM/yy HH:mm') : format(new Date(c.created_at), 'dd/MM/yyyy')}</TableCell>
+              <TableBody>{loading ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Đang tải...</TableCell></TableRow> : campaigns.length === 0 ? <TableRow><TableCell colSpan={6} className="h-24 text-center">Chưa có chiến dịch nào.</TableCell></TableRow> : (campaigns.map(c => (<TableRow key={c.id}><TableCell>{c.name}</TableCell><TableCell>{c.email_lists?.name}</TableCell><TableCell className="max-w-xs truncate">{c.content_names}</TableCell><TableCell>{getStatusBadge(c.status)}</TableCell><TableCell>{c.status === 'scheduled' && c.scheduled_at ? format(new Date(c.scheduled_at), 'dd/MM/yy HH:mm') : format(new Date(c.created_at), 'dd/MM/yyyy')}</TableCell>
                 <TableCell className="text-right space-x-2">
                   {c.status === 'draft' ? (
                     <Button size="sm" variant="outline" onClick={() => { setSelectedCampaign(c); setIsSendDialogOpen(true); }}><Send className="h-4 w-4 mr-2" />Gửi</Button>

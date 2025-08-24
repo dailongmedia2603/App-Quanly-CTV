@@ -46,8 +46,8 @@ serve(async (req) => {
   }
 
   try {
-    const { campaign, contact } = await req.json();
-    if (!campaign || !contact) throw new Error("Campaign and contact info are required.");
+    const { campaign, contact, sent_count } = await req.json();
+    if (!campaign || !contact || sent_count === undefined) throw new Error("Campaign, contact info, and sent_count are required.");
 
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
@@ -63,12 +63,19 @@ serve(async (req) => {
 
     const accessToken = await getAccessToken(profile.google_refresh_token);
 
+    if (!campaign.email_content_ids || campaign.email_content_ids.length === 0) {
+      throw new Error("Chiến dịch không có nội dung email nào được chọn.");
+    }
+
+    const contentIndex = sent_count % campaign.email_content_ids.length;
+    const contentId = campaign.email_content_ids[contentIndex];
+
     const { data: emailContent, error: contentError } = await supabaseAdmin
       .from('email_contents')
       .select('subject, body')
-      .eq('id', campaign.email_content_id)
+      .eq('id', contentId)
       .single();
-    if (contentError || !emailContent) throw new Error("Email content not found.");
+    if (contentError || !emailContent) throw new Error(`Không tìm thấy nội dung email với ID: ${contentId}`);
 
     const fromEmail = profile.google_connected_email || 'me';
     

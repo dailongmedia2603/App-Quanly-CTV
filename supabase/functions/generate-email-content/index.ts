@@ -132,23 +132,7 @@ serve(async (req) => {
     }
     const subject = lines[0].trim();
     const markdownBody = lines.slice(1).join('\n').trim();
-    let body = marked.parse(markdownBody);
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-email-open?log_id=%%LOG_ID%%`;
-    const trackingPixelImg = `<img src="${trackingPixelUrl}" width="1" height="1" alt="" style="display:none;"/>`;
-
-    body += trackingPixelImg;
-
-    const linkRegex = /<a\s+(?:[^>]*?\s+)?href="([^"]*)"/g;
-    body = body.replace(linkRegex, (match, originalUrl) => {
-      if (originalUrl.startsWith('http')) {
-        const encodedUrl = encodeURIComponent(originalUrl);
-        const trackingUrl = `${supabaseUrl}/functions/v1/track-email-click?log_id=%%LOG_ID%%&redirect_url=${encodedUrl}`;
-        return match.replace(originalUrl, trackingUrl);
-      }
-      return match;
-    });
+    const body = marked.parse(markdownBody);
 
     const { data: savedContent, error: saveError } = await supabaseAdmin
       .from('email_contents')

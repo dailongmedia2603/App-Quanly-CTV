@@ -55,7 +55,7 @@ export const CampaignReportDialog = ({ isOpen, onOpenChange, campaign, onCampaig
 
   useEffect(() => {
     const fetchReport = async () => {
-      if (!isOpen || !campaign) return;
+      if (!campaign) return;
       setLoading(true);
       const { data, error } = await supabase.functions.invoke('get-email-campaign-report', {
         body: { campaign_id: campaign.id }
@@ -68,7 +68,34 @@ export const CampaignReportDialog = ({ isOpen, onOpenChange, campaign, onCampaig
       }
       setLoading(false);
     };
-    fetchReport();
+
+    if (isOpen) {
+      fetchReport();
+    }
+
+    if (isOpen && campaign) {
+      const channel = supabase
+        .channel(`campaign-report-${campaign.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'email_campaign_logs',
+            filter: `campaign_id=eq.${campaign.id}`,
+          },
+          () => {
+            console.log('Change detected, refetching report...');
+            fetchReport();
+            onCampaignUpdate(); // Also update the main campaign list
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [isOpen, campaign]);
 
   const handleResendFailed = async () => {

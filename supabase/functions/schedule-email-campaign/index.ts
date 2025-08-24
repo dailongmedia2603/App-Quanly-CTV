@@ -54,7 +54,7 @@ serve(async (req) => {
           }).eq('id', campaign.id);
 
           const { data: sendResult, error: sendError } = await supabaseAdmin.functions.invoke('send-single-email', {
-            body: { campaign, contact: firstContact }
+            body: { campaign, contact: firstContact, sent_count: 0 }
           });
 
           if (sendError || (sendResult && !sendResult.success)) {

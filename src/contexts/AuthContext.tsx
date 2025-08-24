@@ -68,14 +68,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    setLoading(true);
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+      try {
+        setSession(session);
+        setUser(session?.user ?? null);
 
-      if (session) {
-        try {
+        if (session) {
           await fetchAndSetPermissions();
           if (event === 'PASSWORD_RECOVERY') {
             navigate('/update-password');
@@ -89,17 +87,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               })
               .eq('id', session.user.id);
           }
-        } catch (error) {
-          console.error("Error fetching permissions on auth state change:", error);
-          await supabase.auth.signOut(); // Sign out to reset to a clean state
+        } else {
+          setRoles([]);
+          setPermissions({});
         }
-      } else {
-        // On sign out, clear roles and permissions
+      } catch (error) {
+        console.error("Auth state change error:", error);
         setRoles([]);
         setPermissions({});
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     return () => {

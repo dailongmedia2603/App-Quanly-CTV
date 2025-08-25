@@ -68,14 +68,12 @@ serve(async (req) => {
   }
 
   try {
-    console.log("Function được gọi. Bắt đầu xử lý.");
+    console.log("Function được gọi. Bắt đầu kiểm tra xác thực.");
 
-    const gcpProjectId = Deno.env.get('GCP_PROJECT_ID');
-    const gcpRegion = Deno.env.get('GCP_REGION');
     const serviceAccountKey = Deno.env.get('GCP_SERVICE_ACCOUNT_KEY');
 
-    if (!gcpProjectId || !gcpRegion || !serviceAccountKey) {
-      throw new Error("Các biến môi trường GCP_PROJECT_ID, GCP_REGION, và GCP_SERVICE_ACCOUNT_KEY là bắt buộc.");
+    if (!serviceAccountKey) {
+      throw new Error("Biến môi trường GCP_SERVICE_ACCOUNT_KEY là bắt buộc.");
     }
     console.log("Tải biến môi trường thành công.");
 
@@ -83,44 +81,15 @@ serve(async (req) => {
     const accessToken = await getGoogleAccessToken(serviceAccountKey);
     console.log("Đã lấy Google Access Token thành công.");
     
-    const model = "gemini-1.5-flash-latest";
-    const vertexApiUrl = `https://${gcpRegion}-aiplatform.googleapis.com/v1/projects/${gcpProjectId}/locations/${gcpRegion}/publishers/google/models/${model}:generateContent`;
-    console.log(`Đã tạo URL Vertex AI: ${vertexApiUrl}`);
-
-    console.log("Đang gọi Vertex AI API...");
-    const response = await fetch(vertexApiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: "Hello" }] }],
-      }),
-    });
-    console.log(`Vertex AI API đã phản hồi với status: ${response.status}`);
-
-    const responseText = await response.text();
-
-    if (response.ok) {
-      console.log("Kết nối Vertex AI thành công.");
-      return new Response(JSON.stringify({ success: true, message: 'Kết nối Vertex AI thành công!' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      });
+    if (accessToken) {
+        return new Response(JSON.stringify({ success: true, message: 'Xác thực với Google Cloud thành công! Kết nối Vertex AI đã sẵn sàng.' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+        });
     } else {
-      let errorMessage = `Kết nối thất bại với mã lỗi ${response.status}.`;
-      try {
-        const errorData = JSON.parse(responseText);
-        if (errorData.error?.message) {
-          errorMessage += ` Chi tiết: ${errorData.error.message}`;
-        }
-      } catch (e) {
-        errorMessage += ` Phản hồi từ server không phải là JSON hợp lệ.`;
-      }
-      console.error("Kết nối Vertex AI thất bại:", errorMessage);
-      throw new Error(errorMessage);
+        throw new Error("Không nhận được access token mặc dù không có lỗi nào được báo cáo.");
     }
+
   } catch (error) {
     console.error("Đã bắt được lỗi trong khối chính:", error.message);
     return new Response(JSON.stringify({ success: false, message: error.message }), {

@@ -27,10 +27,13 @@ const testSingleKey = async (apiKey: string, model: string) => {
     if (response.ok) {
       return { success: true, message: 'Kết nối thành công!' };
     } else {
-      return { success: false, message: responseData.error?.message || 'Kết nối thất bại. Vui lòng kiểm tra API key.' };
+      const errorMessage = responseData.error?.message 
+        ? `Lỗi từ Google: ${responseData.error.message}`
+        : `Kết nối thất bại (HTTP ${response.status}). Vui lòng kiểm tra API key và model.`;
+      return { success: false, message: errorMessage };
     }
   } catch (error) {
-    return { success: false, message: error.message };
+    return { success: false, message: `Lỗi mạng: ${error.message}` };
   }
 };
 

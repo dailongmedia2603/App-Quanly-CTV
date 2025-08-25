@@ -1,4 +1,4 @@
-/// <reference types="https://esm.sh/v135/@supabase/functions-js@2.4.1/src/edge-runtime.d.ts" />
+// @ts-nocheck
 
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
@@ -60,7 +60,17 @@ serve(async (req: Request) => {
       })
     }
 
-    // 1. Lấy API Key từ database
+    // 1. Lấy API Key và model từ database
+    const { data: settings, error: settingsError } = await supabaseAdmin
+      .from('app_settings')
+      .select('gemini_model')
+      .eq('id', 1)
+      .single();
+
+    if (settingsError || !settings?.gemini_model) {
+      throw new Error("Chưa cấu hình model cho Gemini trong cài đặt chung.");
+    }
+
     const { data: apiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key')
 
     if (apiKeyError || !apiKey) {
@@ -69,7 +79,7 @@ serve(async (req: Request) => {
 
     // 2. Tạo nội dung bằng Gemini
     const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
+    const model = genAI.getGenerativeModel({ model: settings.gemini_model })
 
     const prompt = `Viết một nội dung email marketing bằng tiếng ${language} với các thông tin sau:\n- Chủ đề: ${subject}\n- Thông tin dịch vụ: ${serviceInfo}\n\nNội dung cần chuyên nghiệp, hấp dẫn và kêu gọi hành động. Chỉ trả về phần nội dung email, không bao gồm tiêu đề hay các phần không liên quan.`
 

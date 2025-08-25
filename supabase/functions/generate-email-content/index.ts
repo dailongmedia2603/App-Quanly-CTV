@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 // @ts-ignore
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 // @ts-ignore
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.15.0";
+import * as jose from 'https://deno.land/x/jose@v5.6.3/index.ts'
 
 declare const Deno: any;
 
@@ -26,6 +26,45 @@ const logErrorToDb = async (supabaseAdmin: any, userId: string, functionName: st
     console.error("Failed to log error to DB:", dbError);
   }
 };
+
+async function getGoogleAccessToken(serviceAccountJson: string) {
+  let serviceAccount;
+  try {
+    serviceAccount = JSON.parse(serviceAccountJson);
+    if (!serviceAccount.private_key || !serviceAccount.client_email) {
+      throw new Error("Service Account JSON không hợp lệ hoặc thiếu 'private_key'/'client_email'.");
+    }
+  } catch (e) {
+    throw new Error(`Lỗi phân tích Service Account Key: ${e.message}.`);
+  }
+
+  const privateKey = await jose.importPKCS8(serviceAccount.private_key, 'RS256');
+  
+  const jwt = await new jose.SignJWT({
+    scope: 'https://www.googleapis.com/auth/cloud-platform',
+  })
+    .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
+    .setIssuedAt()
+    .setIssuer(serviceAccount.client_email)
+    .setAudience('https://oauth2.googleapis.com/token')
+    .setExpirationTime('1h')
+    .sign(privateKey);
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt,
+    }),
+  });
+
+  const tokens = await response.json();
+  if (!response.ok) {
+    throw new Error(tokens.error_description || 'Không thể lấy access token từ Google.');
+  }
+  return tokens.access_token;
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -68,13 +107,7 @@ serve(async (req) => {
       ? documentsRes.data.map(doc => `Tài liệu: ${doc.title}\nNội dung: ${doc.content}`).join('\n\n---\n\n')
       : "Không có tài liệu tham khảo.";
 
-    const contactInfo = `
-      <p>
-        <b>VUA SEEDING - TRUYỀN THÔNG ĐIỀU HƯỚNG CỘNG ĐỒNG</b><br>
-        Hotline: ${phoneNumber || 'Chưa cung cấp'}<br>
-        Website: Vuaseeding.top
-      </p>
-    `;
+    const contactInfo = `<p><b>VUA SEEDING - TRUYỀN THÔNG ĐIỀU HƯỚNG CỘNG ĐỒNG</b><br>Hotline: ${phoneNumber || 'Chưa cung cấp'}<br>Website: Vuaseeding.top</p>`;
 
     let basePrompt = templateRes.data.prompt
       .replace(/\[dịch vụ\]/gi, serviceForPrompt)
@@ -92,47 +125,36 @@ serve(async (req) => {
     }
     `;
 
-    const MAX_RETRIES = 3;
-    let lastError: Error | null = null;
-    let rawGeneratedContent = '';
-    let finalPrompt = '';
+    const finalPrompt = safetyInstruction + basePrompt;
 
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        if (attempt > 1) {
-          finalPrompt = safetyInstruction + `Lần trước bạn đã trả về một phản hồi không hợp lệ. Vui lòng thử lại và đảm bảo bạn tuân thủ nghiêm ngặt định dạng JSON được yêu cầu.\n\n${basePrompt}`;
-        } else {
-          finalPrompt = safetyInstruction + basePrompt;
-        }
-
-        const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
-        if (apiKeyError || !geminiApiKey) {
-            throw new Error("Không thể lấy Gemini API Key từ hệ thống.");
-        }
-
-        const genAI = new GoogleGenerativeAI(geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: settings.gemini_model });
-
-        const result = await model.generateContent(finalPrompt);
-        const responseText = result.response.text();
-        
-        if (responseText && responseText.trim().length > 20) {
-            rawGeneratedContent = responseText;
-            lastError = null;
-            break; 
-        } else {
-            lastError = new Error(`AI trả về nội dung trống hoặc quá ngắn ở lần thử ${attempt}.`);
-            console.log(lastError.message);
-        }
-      } catch (e) {
-        lastError = new Error(`Lần thử ${attempt} thất bại: ${e.message}`);
-        console.error(lastError.message);
-      }
+    // --- Vertex AI Integration ---
+    const gcpProjectId = Deno.env.get('GCP_PROJECT_ID');
+    const gcpRegion = Deno.env.get('GCP_REGION');
+    const serviceAccountKey = Deno.env.get('GCP_SERVICE_ACCOUNT_KEY');
+    if (!gcpProjectId || !gcpRegion || !serviceAccountKey) {
+      throw new Error("Các biến môi trường GCP để kết nối Vertex AI chưa được cấu hình.");
     }
 
-    if (lastError) {
-      throw lastError;
+    const accessToken = await getGoogleAccessToken(serviceAccountKey);
+    const vertexApiUrl = `https://${gcpRegion}-aiplatform.googleapis.com/v1/projects/${gcpProjectId}/locations/${gcpRegion}/publishers/google/models/${settings.gemini_model}:generateContent`;
+
+    const vertexResponse = await fetch(vertexApiUrl, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: finalPrompt }] }] }),
+    });
+
+    const vertexResponseText = await vertexResponse.text();
+    if (!vertexResponse.ok) {
+      throw new Error(`Lỗi từ Vertex AI: ${vertexResponse.status} ${vertexResponseText}`);
     }
+    
+    const vertexData = JSON.parse(vertexResponseText);
+    const rawGeneratedContent = vertexData.candidates[0]?.content?.parts[0]?.text;
+    if (!rawGeneratedContent) {
+      throw new Error("Vertex AI không trả về nội dung.");
+    }
+    // --- End Vertex AI Integration ---
 
     let aiResult;
     try {

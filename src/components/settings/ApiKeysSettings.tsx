@@ -226,7 +226,7 @@ const ApiKeysSettings = () => {
               </TooltipProvider>
               <Button variant="outline" size="sm" onClick={handleAddKey} className="flex items-center space-x-2"><Plus className="h-4 w-4" /><span>Thêm Key</span></Button>
             </div>
-            <div className="space-y-2"><Label htmlFor="gemini-model">Model</Label><Select value={geminiModel} onValueChange={setGeminiModel}><SelectTrigger id="gemini-model"><SelectValue placeholder="Chọn một model" /></SelectTrigger><SelectContent><SelectItem value="gemini-1.5-pro-latest">Gemini 1.5 Pro</SelectItem><SelectItem value="gemini-1.5-flash-latest">Gemini 1.5 Flash</SelectItem><SelectItem value="gemini-pro">Gemini 1.0 Pro (Ổn định)</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label htmlFor="gemini-model">Model</Label><Select value={geminiModel} onValueChange={setGeminiModel}><SelectTrigger id="gemini-model"><SelectValue placeholder="Chọn một model" /></SelectTrigger><SelectContent><SelectItem value="gemini-1.5-pro-latest">Gemini 2.5 Pro</SelectItem><SelectItem value="gemini-1.5-flash-latest">Gemini 1.5 Flash</SelectItem><SelectItem value="gemini-pro">Gemini 1.0 Pro (Ổn định)</SelectItem></SelectContent></Select></div>
             <div className="flex items-center justify-between"><Button onClick={handleTestGeminiConnection} disabled={isTestingGemini || isSaving} variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700">{isTestingGemini ? "Đang kiểm tra..." : "Kiểm tra kết nối"}</Button></div>
           </CardContent>
         </Card>

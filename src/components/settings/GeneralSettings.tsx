@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { showLoading, dismissToast, showSuccess, showError } from '@/utils/toast';
 import * as Icons from 'lucide-react';
 import { Separator } from '../ui/separator';
+import { Bot } from 'lucide-react';
 
 // Define the keys explicitly for type safety
 type IconKey = 'LifeBuoy' | 'HelpCircle' | 'MessageSquare' | 'Phone' | 'BookOpen';
@@ -27,6 +28,9 @@ const GeneralSettings = () => {
   // Page settings
   const [pageTitle, setPageTitle] = useState('');
 
+  // AI Settings
+  const [geminiModel, setGeminiModel] = useState('');
+
   // Support widget settings
   const [icon, setIcon] = useState<IconKey>('LifeBuoy');
   const [title, setTitle] = useState('');
@@ -38,17 +42,20 @@ const GeneralSettings = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('app_settings')
-        .select('page_title, support_widget_icon, support_widget_title, support_widget_description, support_widget_link')
+        .select('page_title, support_widget_icon, support_widget_title, support_widget_description, support_widget_link, gemini_model')
         .single();
 
       if (data) {
         setPageTitle(data.page_title || '');
+        setGeminiModel(data.gemini_model || 'gemini-1.5-pro-latest');
         setIcon(data.support_widget_icon as IconKey || 'LifeBuoy');
         setTitle(data.support_widget_title || '');
         setDescription(data.support_widget_description || '');
         setLink(data.support_widget_link || '');
       } else if (error && error.code !== 'PGRST116') {
         showError('Không thể tải cài đặt.');
+      } else {
+        setGeminiModel('gemini-1.5-pro-latest');
       }
       setLoading(false);
     };
@@ -61,6 +68,7 @@ const GeneralSettings = () => {
     const { error } = await supabase.from('app_settings').upsert({
       id: 1,
       page_title: pageTitle,
+      gemini_model: geminiModel,
       support_widget_icon: icon,
       support_widget_title: title,
       support_widget_description: description,
@@ -92,6 +100,20 @@ const GeneralSettings = () => {
             <div className="space-y-2">
                 <Label htmlFor="page-title">Tiêu đề trang</Label>
                 <Input id="page-title" value={pageTitle} onChange={(e) => setPageTitle(e.target.value)} placeholder="Tiêu đề hiển thị trên tab trình duyệt" />
+            </div>
+        </div>
+
+        <Separator />
+
+        {/* AI Settings */}
+        <div className="space-y-4">
+            <h3 className="text-lg font-medium flex items-center"><Bot className="h-5 w-5 mr-2" />Cài đặt AI</h3>
+            <div className="space-y-2">
+                <Label htmlFor="gemini-model">Tên Model Gemini</Label>
+                <Input id="gemini-model" value={geminiModel} onChange={(e) => setGeminiModel(e.target.value)} placeholder="VD: gemini-1.5-pro-latest" />
+                <p className="text-xs text-muted-foreground">
+                  Model này sẽ được sử dụng cho tất cả các tính năng tạo nội dung bằng AI.
+                </p>
             </div>
         </div>
 

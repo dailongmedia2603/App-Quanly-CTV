@@ -47,7 +47,7 @@ const GeneralSettings = () => {
 
       if (data) {
         setPageTitle(data.page_title || '');
-        setGeminiModel(data.gemini_model || 'gemini-1.5-flash-latest');
+        setGeminiModel(data.gemini_model || 'gemini-1.5-pro');
         setIcon(data.support_widget_icon as IconKey || 'LifeBuoy');
         setTitle(data.support_widget_title || '');
         setDescription(data.support_widget_description || '');
@@ -55,7 +55,7 @@ const GeneralSettings = () => {
       } else if (error && error.code !== 'PGRST116') {
         showError('Không thể tải cài đặt.');
       } else {
-        setGeminiModel('gemini-1.5-flash-latest');
+        setGeminiModel('gemini-1.5-pro');
       }
       setLoading(false);
     };
@@ -110,7 +110,7 @@ const GeneralSettings = () => {
             <h3 className="text-lg font-medium flex items-center"><Bot className="h-5 w-5 mr-2" />Cài đặt AI</h3>
             <div className="space-y-2">
                 <Label htmlFor="gemini-model">Tên Model Gemini</Label>
-                <Input id="gemini-model" value={geminiModel} onChange={(e) => setGeminiModel(e.target.value)} placeholder="VD: gemini-1.5-flash-latest" />
+                <Input id="gemini-model" value={geminiModel} onChange={(e) => setGeminiModel(e.target.value)} placeholder="VD: gemini-1.5-pro" />
                 <p className="text-xs text-muted-foreground">
                   Model này sẽ được sử dụng cho tất cả các tính năng tạo nội dung bằng AI.
                 </p>

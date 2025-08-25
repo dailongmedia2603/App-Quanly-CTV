@@ -31,7 +31,7 @@ type KeyStatus = { status: 'success' | 'error' | 'testing' | null; message?: str
 const ApiKeysSettings = () => {
   // Gemini states
   const [geminiApiKeys, setGeminiApiKeys] = useState<string[]>([""]);
-  const [geminiModel, setGeminiModel] = useState("gemini-1.5-pro-latest");
+  const [geminiModel, setGeminiModel] = useState("gemini-1.5-pro");
   const [geminiKeyStatuses, setGeminiKeyStatuses] = useState<Array<KeyStatus | null>>([null]);
   const [isTestingGemini, setIsTestingGemini] = useState(false);
 
@@ -58,7 +58,7 @@ const ApiKeysSettings = () => {
         const keys = data.gemini_api_keys && data.gemini_api_keys.length > 0 ? data.gemini_api_keys : [""];
         setGeminiApiKeys(keys);
         setGeminiKeyStatuses(new Array(keys.length).fill(null));
-        setGeminiModel(data.gemini_model || "gemini-1.5-pro-latest");
+        setGeminiModel(data.gemini_model || "gemini-1.5-pro");
         setFacebookApiUrl(data.facebook_api_url || "");
         setFacebookApiToken(data.facebook_api_token || "");
       }
@@ -226,7 +226,7 @@ const ApiKeysSettings = () => {
               </TooltipProvider>
               <Button variant="outline" size="sm" onClick={handleAddKey} className="flex items-center space-x-2"><Plus className="h-4 w-4" /><span>Thêm Key</span></Button>
             </div>
-            <div className="space-y-2"><Label htmlFor="gemini-model">Model</Label><Select value={geminiModel} onValueChange={setGeminiModel}><SelectTrigger id="gemini-model"><SelectValue placeholder="Chọn một model" /></SelectTrigger><SelectContent><SelectItem value="gemini-1.5-pro-latest">Gemini 2.5 Pro</SelectItem><SelectItem value="gemini-1.5-flash-latest">Gemini 1.5 Flash</SelectItem><SelectItem value="gemini-pro">Gemini 1.0 Pro (Ổn định)</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label htmlFor="gemini-model">Model</Label><Select value={geminiModel} onValueChange={setGeminiModel}><SelectTrigger id="gemini-model"><SelectValue placeholder="Chọn một model" /></SelectTrigger><SelectContent><SelectItem value="gemini-1.5-pro">Gemini 2.5 Pro</SelectItem><SelectItem value="gemini-1.5-flash-latest">Gemini 1.5 Flash</SelectItem><SelectItem value="gemini-pro">Gemini 1.0 Pro (Ổn định)</SelectItem></SelectContent></Select></div>
             <div className="flex items-center justify-between"><Button onClick={handleTestGeminiConnection} disabled={isTestingGemini || isSaving} variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700">{isTestingGemini ? "Đang kiểm tra..." : "Kiểm tra kết nối"}</Button></div>
           </CardContent>
         </Card>

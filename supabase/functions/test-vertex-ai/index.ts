@@ -13,7 +13,16 @@ const corsHeaders = {
 }
 
 async function getGoogleAccessToken(serviceAccountJson: string) {
-  const serviceAccount = JSON.parse(serviceAccountJson);
+  let serviceAccount;
+  try {
+    serviceAccount = JSON.parse(serviceAccountJson);
+    if (!serviceAccount.private_key || !serviceAccount.client_email) {
+      throw new Error("Service Account JSON không hợp lệ hoặc thiếu 'private_key'/'client_email'.");
+    }
+  } catch (e) {
+    throw new Error(`Lỗi phân tích Service Account Key: ${e.message}. Vui lòng kiểm tra lại bạn đã sao chép đúng toàn bộ nội dung file JSON chưa.`);
+  }
+
   const privateKey = await jose.importPKCS8(serviceAccount.private_key, 'RS256');
   
   const jwt = await new jose.SignJWT({
@@ -37,7 +46,7 @@ async function getGoogleAccessToken(serviceAccountJson: string) {
 
   const tokens = await response.json();
   if (!response.ok) {
-    throw new Error(tokens.error_description || 'Failed to fetch access token');
+    throw new Error(tokens.error_description || 'Không thể lấy access token từ Google.');
   }
   return tokens.access_token;
 }
@@ -58,8 +67,8 @@ serve(async (req) => {
 
     const accessToken = await getGoogleAccessToken(serviceAccountKey);
     
-    const model = "gemini-1.5-pro-latest"; // Sử dụng tên model Vertex AI hợp lệ
-    const vertexApiUrl = `https://${gcpRegion}-aiplatform.googleapis.com/v1/projects/${gcpProjectId}/locations/${gcpRegion}/publishers/google/models/${model}:streamGenerateContent`;
+    const model = "gemini-1.5-flash-latest"; // Using a faster model for a simple test
+    const vertexApiUrl = `https://${gcpRegion}-aiplatform.googleapis.com/v1/projects/${gcpProjectId}/locations/${gcpRegion}/publishers/google/models/${model}:generateContent`;
 
     const response = await fetch(vertexApiUrl, {
       method: 'POST',
@@ -72,14 +81,24 @@ serve(async (req) => {
       }),
     });
 
+    const responseText = await response.text();
+
     if (response.ok) {
       return new Response(JSON.stringify({ success: true, message: 'Kết nối Vertex AI thành công!' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });
     } else {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Kết nối thất bại. Vui lòng kiểm tra lại cấu hình.');
+      let errorMessage = `Kết nối thất bại với mã lỗi ${response.status}.`;
+      try {
+        const errorData = JSON.parse(responseText);
+        if (errorData.error?.message) {
+          errorMessage += ` Chi tiết: ${errorData.error.message}`;
+        }
+      } catch (e) {
+        errorMessage += ` Phản hồi từ server không phải là JSON hợp lệ.`;
+      }
+      throw new Error(errorMessage);
     }
   } catch (error) {
     return new Response(JSON.stringify({ success: false, message: error.message }), {

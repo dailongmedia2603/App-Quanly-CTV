@@ -143,12 +143,12 @@ serve(async (req) => {
 
     // --- Vertex AI Integration ---
     const gcpProjectId = Deno.env.get('GCP_PROJECT_ID');
-    const gcpRegion = Deno.env.get('GCP_REGION');
     const serviceAccountKey = Deno.env.get('GCP_SERVICE_ACCOUNT_KEY');
-    if (!gcpProjectId || !gcpRegion || !serviceAccountKey) throw new Error("Các biến môi trường GCP để kết nối Vertex AI chưa được cấu hình.");
+    if (!gcpProjectId || !serviceAccountKey) throw new Error("Các biến môi trường GCP để kết nối Vertex AI chưa được cấu hình.");
 
     const accessToken = await getGoogleAccessToken(serviceAccountKey);
-    const vertexApiUrl = `https://${gcpRegion}-aiplatform.googleapis.com/v1/projects/${gcpProjectId}/locations/${gcpRegion}/publishers/google/models/${settings.gemini_model}:generateContent`;
+    const location = "global"; // Use global endpoint
+    const vertexApiUrl = `https://global-aiplatform.googleapis.com/v1/projects/${gcpProjectId}/locations/${location}/publishers/google/models/${settings.gemini_model}:generateContent`;
 
     const vertexResponse = await fetch(vertexApiUrl, {
       method: 'POST',

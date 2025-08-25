@@ -84,7 +84,7 @@ serve(async (req) => {
     const responseText = await response.text();
 
     if (response.ok) {
-      return new Response(JSON.stringify({ success: true, message: 'Kết nối Vertex AI (global) thành công!' }), {
+      return new Response(JSON.stringify({ success: true, message: `Kết nối Vertex AI (${location}) thành công!` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });

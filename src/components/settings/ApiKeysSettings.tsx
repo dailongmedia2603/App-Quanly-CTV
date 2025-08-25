@@ -81,9 +81,11 @@ const ApiKeysSettings = () => {
 
     dismissToast(toastId);
     if (error) {
-      const message = `Kiểm tra thất bại: ${error.message}`;
+      // IMPROVEMENT: Extract detailed error message from the error context
+      const detailedMessage = error.context?.message || error.message;
+      const message = `Kiểm tra thất bại: ${detailedMessage}`;
       showError(message);
-      setVertexTestStatus({ status: 'error', message });
+      setVertexTestStatus({ status: 'error', message: detailedMessage });
     } else {
       showSuccess(data.message);
       setVertexTestStatus({ status: data.success ? 'success' : 'error', message: data.message });

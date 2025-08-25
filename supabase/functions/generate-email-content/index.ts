@@ -1,174 +1,93 @@
-// @ts-ignore
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-// @ts-ignore
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
-// @ts-ignore
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.15.0";
+/// <reference types="https://esm.sh/v135/@supabase/functions-js@2.4.1/src/edge-runtime.d.ts" />
 
-declare const Deno: any;
+import { serve } from 'https://deno.land/std@0.190.0/http/server.ts'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
+import { GoogleGenerativeAI } from 'https://esm.sh/@google/generative-ai'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const safetyInstruction = "Bạn là một trợ lý AI chuyên nghiệp, hữu ích và an toàn. Hãy tập trung vào việc tạo ra nội dung marketing chất lượng cao, phù hợp với ngữ cảnh được cung cấp. TUYỆT ĐỐI TRÁNH các chủ đề nhạy cảm, gây tranh cãi, hoặc có thể bị hiểu lầm là tiêu cực. Luôn duy trì một thái độ tích cực và chuyên nghiệp.\n\n---\n\n";
-
-const logErrorToDb = async (supabaseAdmin: any, userId: string, functionName: string, error: Error, context: any) => {
+// Hàm trợ giúp để ghi lại lỗi vào bảng ai_error_logs
+async function logError(supabaseAdmin: SupabaseClient, userId: string | null, error: Error, functionName: string, context: unknown) {
   try {
+    const contextObject = typeof context === 'object' && context !== null ? context : { context };
     await supabaseAdmin.from('ai_error_logs').insert({
       user_id: userId,
       error_message: error.message,
       function_name: functionName,
-      context: context,
-    });
-  } catch (dbError) {
-    console.error("Failed to log error to DB:", dbError);
+      context: { ...contextObject, stack: error.stack },
+    })
+  } catch (logErr) {
+    console.error('Failed to log error:', logErr)
   }
-};
+}
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders })
   }
 
-  let userId: string | null = null;
-  const functionName = 'generate-email-content';
-  let requestBody: any = {};
+  let userId: string | null = null
+  let requestBody: unknown;
+  const supabaseAdmin = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  )
 
   try {
+    // Xác thực người dùng từ token
     const authHeader = req.headers.get('Authorization')!
-    const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '', { global: { headers: { Authorization: authHeader } } });
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Không tìm thấy người dùng.");
-    userId = user.id;
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    )
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      throw new Error('Xác thực người dùng thất bại.')
+    }
+    userId = user.id
 
-    requestBody = await req.json();
-    const { name, serviceId, emailGoal, additionalInfo, phoneNumber, ctaLink } = requestBody;
-    if (!name || !serviceId || !emailGoal) {
-      throw new Error("Cần có tên nội dung, dịch vụ và mục tiêu email.");
+    // Đọc và kiểm tra nội dung yêu cầu
+    requestBody = await req.json()
+    const { subject, serviceInfo, language } = requestBody as { subject: string; serviceInfo: string; language: string; };
+    if (!subject || !serviceInfo || !language) {
+      return new Response(JSON.stringify({ error: 'Thiếu thông tin cần thiết (chủ đề, dịch vụ, ngôn ngữ).' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      })
     }
 
-    const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+    // 1. Lấy API Key từ database
+    const { data: apiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key')
 
-    const { data: settings, error: settingsError } = await supabaseAdmin.from('app_settings').select('gemini_model').eq('id', 1).single();
-    if (settingsError || !settings?.gemini_model) throw new Error("Chưa cấu hình model Gemini.");
-
-    const [serviceRes, templateRes, documentsRes] = await Promise.all([
-      supabaseAdmin.from('document_services').select('name, description').eq('id', serviceId).single(),
-      supabaseAdmin.from('ai_prompt_templates').select('prompt').eq('template_type', 'email').single(),
-      supabaseAdmin.from('documents').select('title, content').eq('service_id', serviceId)
-    ]);
-
-    if (serviceRes.error || !serviceRes.data) throw new Error("Không tìm thấy dịch vụ.");
-    if (templateRes.error || !templateRes.data?.prompt) throw new Error("Không tìm thấy mẫu prompt cho email.");
-
-    const serviceForPrompt = `${serviceRes.data.name}${serviceRes.data.description ? ` (Mô tả: ${serviceRes.data.description})` : ''}`;
-    const documentContent = documentsRes.data && documentsRes.data.length > 0
-      ? documentsRes.data.map(doc => `Tài liệu: ${doc.title}\nNội dung: ${doc.content}`).join('\n\n---\n\n')
-      : "Không có tài liệu tham khảo.";
-
-    const contactInfo = `
-      <p>
-        <b>VUA SEEDING - TRUYỀN THÔNG ĐIỀU HƯỚNG CỘNG ĐỒNG</b><br>
-        Hotline: ${phoneNumber || 'Chưa cung cấp'}<br>
-        Website: Vuaseeding.top
-      </p>
-    `;
-
-    let basePrompt = templateRes.data.prompt
-      .replace(/\[dịch vụ\]/gi, serviceForPrompt)
-      .replace(/\[mục tiêu\]/gi, emailGoal)
-      .replace(/\[thông tin thêm\]/gi, additionalInfo || 'Không có')
-      .replace(/\[biên tài liệu\]/gi, documentContent)
-      .replace(/\[thông tin liên hệ\]/gi, contactInfo)
-      .replace(/\[link_cta\]/gi, ctaLink || 'https://vuaseeding.top/lien-he');
-
-    basePrompt += `\n\n---
-    QUAN TRỌNG: Vui lòng trả lời bằng một đối tượng JSON hợp lệ DUY NHẤT, không có văn bản giải thích nào khác. Đối tượng JSON phải có cấu trúc sau:
-    {
-      "subject": "Tiêu đề email hấp dẫn của bạn ở đây",
-      "body": "Nội dung email của bạn ở đây, được định dạng bằng HTML. Sử dụng các thẻ HTML cơ bản như <p>, <b>, <ul>, <li>, <a>."
-    }
-    `;
-
-    const MAX_RETRIES = 3;
-    let lastError: Error | null = null;
-    let rawGeneratedContent = '';
-    let finalPrompt = '';
-
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        if (attempt > 1) {
-          finalPrompt = safetyInstruction + `Lần trước bạn đã trả về một phản hồi không hợp lệ. Vui lòng thử lại và đảm bảo bạn tuân thủ nghiêm ngặt định dạng JSON được yêu cầu.\n\n${basePrompt}`;
-        } else {
-          finalPrompt = safetyInstruction + basePrompt;
-        }
-
-        const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
-        if (apiKeyError || !geminiApiKey) {
-            throw new Error("Không thể lấy Gemini API Key từ hệ thống.");
-        }
-
-        const genAI = new GoogleGenerativeAI(geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: settings.gemini_model });
-
-        const result = await model.generateContent(finalPrompt);
-        const responseText = result.response.text();
-        
-        if (responseText && responseText.trim().length > 20) {
-            rawGeneratedContent = responseText;
-            lastError = null;
-            break; 
-        } else {
-            lastError = new Error(`AI trả về nội dung trống hoặc quá ngắn ở lần thử ${attempt}.`);
-            console.log(lastError.message);
-        }
-      } catch (e) {
-        lastError = new Error(`Lần thử ${attempt} thất bại: ${e.message}`);
-        console.error(lastError.message);
-      }
+    if (apiKeyError || !apiKey) {
+      throw new Error(apiKeyError?.message ?? 'Không tìm thấy Gemini API Key. Vui lòng kiểm tra cấu hình hệ thống.')
     }
 
-    if (lastError) {
-      throw lastError;
-    }
+    // 2. Tạo nội dung bằng Gemini
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
 
-    let aiResult;
-    try {
-        const cleanedResponse = rawGeneratedContent.replace(/```json/g, '').replace(/```/g, '').trim();
-        aiResult = JSON.parse(cleanedResponse);
-    } catch (e) {
-        console.error("Failed to parse AI JSON response:", rawGeneratedContent);
-        throw new Error("AI đã trả về một định dạng JSON không hợp lệ.");
-    }
+    const prompt = `Viết một nội dung email marketing bằng tiếng ${language} với các thông tin sau:\n- Chủ đề: ${subject}\n- Thông tin dịch vụ: ${serviceInfo}\n\nNội dung cần chuyên nghiệp, hấp dẫn và kêu gọi hành động. Chỉ trả về phần nội dung email, không bao gồm tiêu đề hay các phần không liên quan.`
 
-    const { subject, body } = aiResult;
-    if (!subject || !body) {
-        throw new Error("Phản hồi JSON của AI thiếu các trường 'subject' hoặc 'body'.");
-    }
+    const result = await model.generateContent(prompt)
+    const response = await result.response
+    const text = response.text()
 
-    const { data: savedContent, error: saveError } = await supabaseAdmin
-      .from('email_contents')
-      .insert({ user_id: user.id, name, service_id: serviceId, subject, body })
-      .select()
-      .single();
-
-    if (saveError) throw new Error(`Lưu nội dung thất bại: ${saveError.message}`);
-
-    await supabaseAdmin.from('ai_generation_logs').insert({ user_id: user.id, template_type: 'email', final_prompt: finalPrompt, generated_content: rawGeneratedContent });
-
-    return new Response(JSON.stringify(savedContent), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
-
+    return new Response(JSON.stringify({ content: text }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
   } catch (error) {
-    console.error(`Error in ${functionName}:`, error);
-    if (userId) {
-      const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
-      await logErrorToDb(supabaseAdmin, userId, functionName, error, requestBody);
-    }
-    return new Response(JSON.stringify({ error: error.message }), {
+    // Ghi lại lỗi và trả về thông báo lỗi rõ ràng
+    await logError(supabaseAdmin, userId, error as Error, 'generate-email-content', requestBody)
+    
+    return new Response(JSON.stringify({ error: `Lỗi khi tạo nội dung: ${(error as Error).message}` }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
-    });
+    })
   }
 })

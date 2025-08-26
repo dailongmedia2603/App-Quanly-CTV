@@ -127,9 +127,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Lỗi khi kiểm tra kết nối Vertex AI:", error.message);
+    // Return a 200 OK status but with an error payload.
+    // This helps ensure the detailed error message reaches the client.
     return new Response(JSON.stringify({ success: false, message: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+      status: 200,
     })
   }
 })

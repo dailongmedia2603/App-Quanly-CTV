@@ -58,17 +58,17 @@ serve(async (req) => {
 
   try {
     const gcpProjectId = Deno.env.get('GCP_PROJECT_ID');
+    const gcpRegion = Deno.env.get('GCP_REGION');
     const serviceAccountKey = Deno.env.get('GCP_SERVICE_ACCOUNT_KEY');
 
-    if (!gcpProjectId || !serviceAccountKey) {
-      throw new Error("Các biến môi trường GCP_PROJECT_ID và GCP_SERVICE_ACCOUNT_KEY là bắt buộc.");
+    if (!gcpProjectId || !gcpRegion || !serviceAccountKey) {
+      throw new Error("Các biến môi trường GCP_PROJECT_ID, GCP_REGION và GCP_SERVICE_ACCOUNT_KEY là bắt buộc.");
     }
 
     const accessToken = await getGoogleAccessToken(serviceAccountKey);
     
-    const model = "gemini-1.5-pro"; // Using a known stable model for testing
-    const location = "global";
-    const vertexApiUrl = `https://global-aiplatform.googleapis.com/v1/projects/${gcpProjectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
+    const model = "gemini-1.0-pro"; // Use a model available in the specified region
+    const vertexApiUrl = `https://${gcpRegion}-aiplatform.googleapis.com/v1/projects/${gcpProjectId}/locations/${gcpRegion}/publishers/google/models/${model}:generateContent`;
 
     const response = await fetch(vertexApiUrl, {
       method: 'POST',
@@ -84,7 +84,7 @@ serve(async (req) => {
     const responseText = await response.text();
 
     if (response.ok) {
-      return new Response(JSON.stringify({ success: true, message: `Kết nối Vertex AI (${location}) thành công!` }), {
+      return new Response(JSON.stringify({ success: true, message: `Kết nối Vertex AI (${gcpRegion}) thành công!` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });

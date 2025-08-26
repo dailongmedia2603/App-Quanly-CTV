@@ -29,7 +29,7 @@ const GeneralSettings = () => {
   const [pageTitle, setPageTitle] = useState('');
 
   // AI Settings
-  const [geminiModel, setGeminiModel] = useState('');
+  const [aiModelName, setAiModelName] = useState('');
 
   // Support widget settings
   const [icon, setIcon] = useState<IconKey>('LifeBuoy');
@@ -42,12 +42,12 @@ const GeneralSettings = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('app_settings')
-        .select('page_title, support_widget_icon, support_widget_title, support_widget_description, support_widget_link, gemini_model')
+        .select('page_title, support_widget_icon, support_widget_title, support_widget_description, support_widget_link, ai_model_name')
         .single();
 
       if (data) {
         setPageTitle(data.page_title || '');
-        setGeminiModel(data.gemini_model || 'gemini-1.5-pro-latest');
+        setAiModelName(data.ai_model_name || 'gemini-1.5-pro-latest');
         setIcon(data.support_widget_icon as IconKey || 'LifeBuoy');
         setTitle(data.support_widget_title || '');
         setDescription(data.support_widget_description || '');
@@ -55,7 +55,7 @@ const GeneralSettings = () => {
       } else if (error && error.code !== 'PGRST116') {
         showError('Không thể tải cài đặt.');
       } else {
-        setGeminiModel('gemini-1.5-pro-latest');
+        setAiModelName('gemini-1.5-pro-latest');
       }
       setLoading(false);
     };
@@ -68,7 +68,7 @@ const GeneralSettings = () => {
     const { error } = await supabase.from('app_settings').upsert({
       id: 1,
       page_title: pageTitle,
-      gemini_model: geminiModel,
+      ai_model_name: aiModelName,
       support_widget_icon: icon,
       support_widget_title: title,
       support_widget_description: description,
@@ -109,8 +109,8 @@ const GeneralSettings = () => {
         <div className="space-y-4">
             <h3 className="text-lg font-medium flex items-center"><Bot className="h-5 w-5 mr-2" />Cài đặt AI</h3>
             <div className="space-y-2">
-                <Label htmlFor="gemini-model">Tên Model Gemini</Label>
-                <Input id="gemini-model" value={geminiModel} onChange={(e) => setGeminiModel(e.target.value)} placeholder="VD: gemini-1.5-pro-latest" />
+                <Label htmlFor="ai-model-name">Tên Model AI</Label>
+                <Input id="ai-model-name" value={aiModelName} onChange={(e) => setAiModelName(e.target.value)} placeholder="VD: gemini-1.5-pro-latest" />
                 <p className="text-xs text-muted-foreground">
                   Model này sẽ được sử dụng cho tất cả các tính năng tạo nội dung bằng AI.
                 </p>

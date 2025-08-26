@@ -19,9 +19,11 @@ import { CheckCircle, XCircle, Loader2, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const ApiKeysSettings = () => {
-  // Vertex AI states
-  const [isTestingVertex, setIsTestingVertex] = useState(false);
-  const [vertexTestStatus, setVertexTestStatus] = useState<{ status: 'success' | 'error'; message: string } | null>(null);
+  // MultiApp AI states
+  const [multiappaiApiUrl, setMultiappaiApiUrl] = useState("");
+  const [multiappaiApiKey, setMultiappaiApiKey] = useState("");
+  const [isTestingMultiAppAI, setIsTestingMultiAppAI] = useState(false);
+  const [multiAppAITestStatus, setMultiAppAITestStatus] = useState<{ status: 'success' | 'error'; message: string } | null>(null);
 
   // Facebook states
   const [facebookApiUrl, setFacebookApiUrl] = useState("");
@@ -36,13 +38,15 @@ const ApiKeysSettings = () => {
     const fetchSettings = async () => {
       const { data, error } = await supabase
         .from("app_settings")
-        .select("facebook_api_url, facebook_api_token")
+        .select("multiappai_api_url, multiappai_api_key, facebook_api_url, facebook_api_token")
         .eq("id", 1)
         .single();
 
       if (error && error.code !== 'PGRST116') {
         console.error("Error fetching settings:", error);
       } else if (data) {
+        setMultiappaiApiUrl(data.multiappai_api_url || "");
+        setMultiappaiApiKey(data.multiappai_api_key || "");
         setFacebookApiUrl(data.facebook_api_url || "");
         setFacebookApiToken(data.facebook_api_token || "");
       }
@@ -59,6 +63,8 @@ const ApiKeysSettings = () => {
       .from("app_settings")
       .upsert({
         id: 1,
+        multiappai_api_url: multiappaiApiUrl,
+        multiappai_api_key: multiappaiApiKey,
         facebook_api_url: facebookApiUrl,
         facebook_api_token: facebookApiToken,
       });
@@ -72,25 +78,31 @@ const ApiKeysSettings = () => {
     setIsSaving(false);
   };
 
-  const handleTestVertexConnection = async () => {
-    setIsTestingVertex(true);
-    setVertexTestStatus(null);
-    const toastId = showLoading("Đang kiểm tra kết nối Vertex AI...");
+  const handleTestMultiAppAIConnection = async () => {
+    if (!multiappaiApiUrl || !multiappaiApiKey) {
+      showError("Vui lòng nhập đầy đủ URL và API Key.");
+      return;
+    }
+    setIsTestingMultiAppAI(true);
+    setMultiAppAITestStatus(null);
+    const toastId = showLoading("Đang kiểm tra kết nối MultiApp AI...");
 
-    const { data, error } = await supabase.functions.invoke("test-vertex-ai");
+    const { data, error } = await supabase.functions.invoke(
+      "test-multiappai-connection",
+      { body: { apiUrl: multiappaiApiUrl, apiKey: multiappaiApiKey } }
+    );
 
     dismissToast(toastId);
     if (error) {
-      // IMPROVEMENT: Extract detailed error message from the error context
-      const detailedMessage = error.context?.message || error.message;
-      const message = `Kiểm tra thất bại: ${detailedMessage}`;
+      const message = `Kiểm tra thất bại: ${error.message}`;
       showError(message);
-      setVertexTestStatus({ status: 'error', message: detailedMessage });
+      setMultiAppAITestStatus({ status: "error", message });
     } else {
-      showSuccess(data.message);
-      setVertexTestStatus({ status: data.success ? 'success' : 'error', message: data.message });
+      if (data.success) showSuccess(data.message);
+      else showError(`Kiểm tra thất bại: ${data.message}`);
+      setMultiAppAITestStatus({ status: data.success ? "success" : "error", message: data.message });
     }
-    setIsTestingVertex(false);
+    setIsTestingMultiAppAI(false);
   };
 
   const handleTestFacebookConnection = async () => {
@@ -125,24 +137,22 @@ const ApiKeysSettings = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-orange-200">
           <CardHeader>
-            <CardTitle>Vertex AI (Google Cloud)</CardTitle>
-            <CardDescription>Kết nối với Vertex AI để sử dụng các model Gemini cấp doanh nghiệp.</CardDescription>
+            <CardTitle>MultiApp AI</CardTitle>
+            <CardDescription>Cấu hình API Key để sử dụng các model AI.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Ứng dụng sẽ tự động sử dụng các secret `GCP_PROJECT_ID`, `GCP_REGION`, và `GCP_SERVICE_ACCOUNT_KEY` bạn đã cấu hình trong Supabase.
-            </p>
+            <div className="space-y-2"><Label htmlFor="multiappai-api-url">API URL</Label><Input id="multiappai-api-url" value={multiappaiApiUrl} onChange={(e) => { setMultiappaiApiUrl(e.target.value); setMultiAppAITestStatus(null); }} /></div>
+            <div className="space-y-2"><Label htmlFor="multiappai-api-key">API Key</Label><Input id="multiappai-api-key" type="password" placeholder="sk-..." value={multiappaiApiKey} onChange={(e) => { setMultiappaiApiKey(e.target.value); setMultiAppAITestStatus(null); }} /></div>
             <div className="flex items-center justify-between">
-              <Button onClick={handleTestVertexConnection} disabled={isTestingVertex || isSaving} variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700">
-                {isTestingVertex ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
-                {isTestingVertex ? "Đang kiểm tra..." : "Kiểm tra kết nối Vertex AI"}
+              <Button onClick={handleTestMultiAppAIConnection} disabled={isTestingMultiAppAI || isSaving} variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700">
+                {isTestingMultiAppAI ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
+                {isTestingMultiAppAI ? "Đang kiểm tra..." : "Kiểm tra kết nối"}
               </Button>
               <div>
-                {vertexTestStatus?.status === "success" && (<div className="flex items-center text-sm font-medium text-green-600"><CheckCircle className="w-4 h-4 mr-1.5" />Thành công</div>)}
-                {vertexTestStatus?.status === "error" && (<div className="flex items-center text-sm font-medium text-red-600"><XCircle className="w-4 h-4 mr-1.5" />Thất bại</div>)}
+                {multiAppAITestStatus?.status === "success" && (<div className="flex items-center text-sm font-medium text-green-600"><CheckCircle className="w-4 h-4 mr-1.5" />Thành công</div>)}
+                {multiAppAITestStatus?.status === "error" && (<div className="flex items-center text-sm font-medium text-red-600"><XCircle className="w-4 h-4 mr-1.5" />Thất bại</div>)}
               </div>
             </div>
-            {vertexTestStatus?.status === 'error' && <p className="text-xs text-red-500">{vertexTestStatus.message}</p>}
           </CardContent>
         </Card>
         <Card className="border-orange-200">
@@ -167,7 +177,7 @@ const ApiKeysSettings = () => {
         </Card>
       </div>
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={isSaving || isTestingFacebook || isTestingVertex} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSaving ? "Đang lưu..." : "Lưu cài đặt Facebook"}</Button>
+        <Button onClick={handleSave} disabled={isSaving || isTestingFacebook || isTestingMultiAppAI} className="bg-brand-orange hover:bg-brand-orange/90 text-white">{isSaving ? "Đang lưu..." : "Lưu tất cả cài đặt"}</Button>
       </div>
     </div>
   );

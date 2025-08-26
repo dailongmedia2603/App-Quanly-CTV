@@ -2,8 +2,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 // @ts-ignore
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
-// @ts-ignore
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.15.0";
 
 declare const Deno: any;
 
@@ -40,6 +38,48 @@ const logErrorToDb = async (supabaseAdmin: any, userId: string, functionName: st
   }
 };
 
+const callMultiAppAI = async (supabaseAdmin: any, prompt: string) => {
+  const { data: settings, error: settingsError } = await supabaseAdmin
+    .from('app_settings')
+    .select('ai_model_name, multiappai_api_url, multiappai_api_key')
+    .eq('id', 1)
+    .single();
+
+  if (settingsError || !settings) throw new Error("Could not load AI settings.");
+  const { ai_model_name, multiappai_api_url, multiappai_api_key } = settings;
+  if (!ai_model_name || !multiappai_api_url || !multiappai_api_key) {
+    throw new Error("MultiApp AI URL, Key, or Model Name is not configured in settings.");
+  }
+
+  const response = await fetch(`${multiappai_api_url.replace(/\/$/, '')}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${multiappai_api_key}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: ai_model_name,
+      messages: [{ role: 'user', content: prompt }],
+      stream: false,
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  const responseData = await response.json();
+
+  if (!response.ok) {
+    const errorMessage = responseData.error?.message || `AI API error: ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  const content = responseData.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error("AI did not return any content.");
+  }
+
+  return content;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -62,9 +102,6 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
     
-    const { data: settings, error: settingsError } = await supabaseAdmin.from('app_settings').select('gemini_model').eq('id', 1).single();
-    if (settingsError || !settings?.gemini_model) throw new Error("Chưa cấu hình model Gemini.");
-
     // Step 1: Fetch all services and the master prompt template
     const [servicesRes, templateRes] = await Promise.all([
         supabaseAdmin.from('document_services').select('id, name, description'),
@@ -97,47 +134,15 @@ serve(async (req) => {
         .replace(/\[nội dung gốc\]/gi, postContent)
         .replace(/\[danh sách dịch vụ và tài liệu\]/gi, serviceAndDocsPrompt);
 
-    // Step 4: Call AI with retry and key rotation logic
-    const MAX_RETRIES = 3;
-    let lastError: Error | null = null;
-    let rawResponse = '';
-    let finalPrompt = '';
+    const finalPrompt = safetyInstruction + basePrompt;
 
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        if (attempt > 1) {
-          finalPrompt = safetyInstruction + `Lần trước bạn đã trả về một phản hồi không hợp lệ. Vui lòng thử lại và đảm bảo bạn tuân thủ nghiêm ngặt định dạng được yêu cầu.\n\n${basePrompt}`;
-        } else {
-          finalPrompt = safetyInstruction + basePrompt;
-        }
-
-        const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
-        if (apiKeyError || !geminiApiKey) throw new Error("Không thể lấy Gemini API Key.");
-        
-        const genAI = new GoogleGenerativeAI(geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: settings.gemini_model });
-
-        const result = await model.generateContent(finalPrompt);
-        const responseText = result.response.text();
-        
-        if (responseText && responseText.trim().length > 10) {
-            rawResponse = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-            lastError = null;
-            break;
-        } else {
-            lastError = new Error(`AI trả về nội dung trống hoặc quá ngắn ở lần thử ${attempt}.`);
-        }
-      } catch (e) {
-        lastError = new Error(`Lần thử ${attempt} thất bại: ${e.message}`);
-        console.error(lastError.message);
-      }
-    }
-
-    if (lastError) throw lastError;
+    // Step 4: Call AI
+    const rawResponse = await callMultiAppAI(supabaseAdmin, finalPrompt);
     
     let aiResult;
     try {
-        aiResult = JSON.parse(rawResponse);
+        const cleanedResponse = rawResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+        aiResult = JSON.parse(cleanedResponse);
     } catch (e) {
         console.error("Failed to parse AI JSON response:", rawResponse);
         throw new Error("AI đã trả về một định dạng không hợp lệ.");

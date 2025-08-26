@@ -2,8 +2,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 // @ts-ignore
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
-// @ts-ignore
-import * as jose from 'https://deno.land/x/jose@v5.6.3/index.ts'
 
 declare const Deno: any;
 
@@ -27,44 +25,47 @@ const logErrorToDb = async (supabaseAdmin: any, userId: string, functionName: st
   }
 };
 
-async function getGoogleAccessToken(serviceAccountJson: string) {
-  let serviceAccount;
-  try {
-    serviceAccount = JSON.parse(serviceAccountJson);
-    if (!serviceAccount.private_key || !serviceAccount.client_email) {
-      throw new Error("Service Account JSON không hợp lệ hoặc thiếu 'private_key'/'client_email'.");
-    }
-  } catch (e) {
-    throw new Error(`Lỗi phân tích Service Account Key: ${e.message}.`);
+const callMultiAppAI = async (supabaseAdmin: any, prompt: string) => {
+  const { data: settings, error: settingsError } = await supabaseAdmin
+    .from('app_settings')
+    .select('ai_model_name, multiappai_api_url, multiappai_api_key')
+    .eq('id', 1)
+    .single();
+
+  if (settingsError || !settings) throw new Error("Could not load AI settings.");
+  const { ai_model_name, multiappai_api_url, multiappai_api_key } = settings;
+  if (!ai_model_name || !multiappai_api_url || !multiappai_api_key) {
+    throw new Error("MultiApp AI URL, Key, or Model Name is not configured in settings.");
   }
 
-  const privateKey = await jose.importPKCS8(serviceAccount.private_key, 'RS256');
-  
-  const jwt = await new jose.SignJWT({
-    scope: 'https://www.googleapis.com/auth/cloud-platform',
-  })
-    .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
-    .setIssuedAt()
-    .setIssuer(serviceAccount.client_email)
-    .setAudience('https://oauth2.googleapis.com/token')
-    .setExpirationTime('1h')
-    .sign(privateKey);
-
-  const response = await fetch('https://oauth2.googleapis.com/token', {
+  const response = await fetch(`${multiappai_api_url.replace(/\/$/, '')}/chat/completions`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: jwt,
+    headers: {
+      'Authorization': `Bearer ${multiappai_api_key}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: ai_model_name,
+      messages: [{ role: 'user', content: prompt }],
+      stream: false,
+      response_format: { type: "json_object" },
     }),
   });
 
-  const tokens = await response.json();
+  const responseData = await response.json();
+
   if (!response.ok) {
-    throw new Error(tokens.error_description || 'Không thể lấy access token từ Google.');
+    const errorMessage = responseData.error?.message || `AI API error: ${response.status}`;
+    throw new Error(errorMessage);
   }
-  return tokens.access_token;
-}
+
+  const content = responseData.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error("AI did not return any content.");
+  }
+
+  return content;
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -89,9 +90,6 @@ serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
-
-    const { data: settings, error: settingsError } = await supabaseAdmin.from('app_settings').select('gemini_model').eq('id', 1).single();
-    if (settingsError || !settings?.gemini_model) throw new Error("Chưa cấu hình model Gemini.");
 
     const [serviceRes, templateRes, documentsRes] = await Promise.all([
       supabaseAdmin.from('document_services').select('name, description').eq('id', serviceId).single(),
@@ -127,34 +125,7 @@ serve(async (req) => {
 
     const finalPrompt = safetyInstruction + basePrompt;
 
-    // --- Vertex AI Integration ---
-    const gcpProjectId = Deno.env.get('GCP_PROJECT_ID');
-    const gcpRegion = Deno.env.get('GCP_REGION');
-    const serviceAccountKey = Deno.env.get('GCP_SERVICE_ACCOUNT_KEY');
-    if (!gcpProjectId || !gcpRegion || !serviceAccountKey) {
-      throw new Error("Các biến môi trường GCP để kết nối Vertex AI chưa được cấu hình.");
-    }
-
-    const accessToken = await getGoogleAccessToken(serviceAccountKey);
-    const vertexApiUrl = `https://${gcpRegion}-aiplatform.googleapis.com/v1/projects/${gcpProjectId}/locations/${gcpRegion}/publishers/google/models/${settings.gemini_model}:generateContent`;
-
-    const vertexResponse = await fetch(vertexApiUrl, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: finalPrompt }] }] }),
-    });
-
-    const vertexResponseText = await vertexResponse.text();
-    if (!vertexResponse.ok) {
-      throw new Error(`Lỗi từ Vertex AI: ${vertexResponse.status} ${vertexResponseText}`);
-    }
-    
-    const vertexData = JSON.parse(vertexResponseText);
-    const rawGeneratedContent = vertexData.candidates[0]?.content?.parts[0]?.text;
-    if (!rawGeneratedContent) {
-      throw new Error("Vertex AI không trả về nội dung.");
-    }
-    // --- End Vertex AI Integration ---
+    const rawGeneratedContent = await callMultiAppAI(supabaseAdmin, finalPrompt);
 
     let aiResult;
     try {

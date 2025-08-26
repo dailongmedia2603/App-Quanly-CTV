@@ -2,8 +2,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 // @ts-ignore
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
-// @ts-ignore
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.15.0";
 
 declare const Deno: any;
 
@@ -42,6 +40,48 @@ const cleanAndParseAiResponse = (rawText: string): any => {
   }
 };
 
+const callMultiAppAI = async (supabaseAdmin: any, prompt: string) => {
+  const { data: settings, error: settingsError } = await supabaseAdmin
+    .from('app_settings')
+    .select('ai_model_name, multiappai_api_url, multiappai_api_key')
+    .eq('id', 1)
+    .single();
+
+  if (settingsError || !settings) throw new Error("Could not load AI settings.");
+  const { ai_model_name, multiappai_api_url, multiappai_api_key } = settings;
+  if (!ai_model_name || !multiappai_api_url || !multiappai_api_key) {
+    throw new Error("MultiApp AI URL, Key, or Model Name is not configured in settings.");
+  }
+
+  const response = await fetch(`${multiappai_api_url.replace(/\/$/, '')}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${multiappai_api_key}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: ai_model_name,
+      messages: [{ role: 'user', content: prompt }],
+      stream: false,
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  const responseData = await response.json();
+
+  if (!response.ok) {
+    const errorMessage = responseData.error?.message || `AI API error: ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  const content = responseData.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error("AI did not return any content.");
+  }
+
+  return content;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -60,9 +100,6 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
     
-    const { data: settings, error: settingsError } = await supabaseAdmin.from('app_settings').select('gemini_model').eq('id', 1).single();
-    if (settingsError || !settings?.gemini_model) throw new Error("Chưa cấu hình model Gemini.");
-
     const [pricesRes, templatesRes, promptTemplateRes] = await Promise.all([
       supabaseAdmin.from('service_prices').select('name, description, unit, price, category'),
       supabaseAdmin.from('quote_templates').select('name, content').in('service_id', serviceIds),
@@ -93,14 +130,7 @@ serve(async (req) => {
       .replace(/\[service_prices\]/gi, servicePricesText)
       .replace(/\[quote_templates\]/gi, quoteTemplatesText);
 
-    const { data: geminiApiKey, error: apiKeyError } = await supabaseAdmin.rpc('get_next_gemini_api_key');
-    if (apiKeyError || !geminiApiKey) throw new Error("Không thể lấy Gemini API Key.");
-
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: settings.gemini_model });
-
-    const result = await model.generateContent(prompt);
-    const rawGeneratedContent = result.response.text();
+    const rawGeneratedContent = await callMultiAppAI(supabaseAdmin, prompt);
     const generatedJson = cleanAndParseAiResponse(rawGeneratedContent);
 
     if (!generatedJson || !generatedJson.summary || typeof generatedJson.summary.total === 'undefined') {

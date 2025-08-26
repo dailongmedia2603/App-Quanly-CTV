@@ -47,7 +47,7 @@ const GeneralSettings = () => {
 
       if (data) {
         setPageTitle(data.page_title || '');
-        setAiModelName(data.ai_model_name || 'gemini-1.5-pro-latest');
+        setAiModelName(data.ai_model_name || 'gemini-2.5-flash');
         setIcon(data.support_widget_icon as IconKey || 'LifeBuoy');
         setTitle(data.support_widget_title || '');
         setDescription(data.support_widget_description || '');
@@ -55,7 +55,7 @@ const GeneralSettings = () => {
       } else if (error && error.code !== 'PGRST116') {
         showError('Không thể tải cài đặt.');
       } else {
-        setAiModelName('gemini-1.5-pro-latest');
+        setAiModelName('gemini-2.5-flash');
       }
       setLoading(false);
     };
@@ -109,8 +109,16 @@ const GeneralSettings = () => {
         <div className="space-y-4">
             <h3 className="text-lg font-medium flex items-center"><Bot className="h-5 w-5 mr-2" />Cài đặt AI</h3>
             <div className="space-y-2">
-                <Label htmlFor="ai-model-name">Tên Model AI</Label>
-                <Input id="ai-model-name" value={aiModelName} onChange={(e) => setAiModelName(e.target.value)} placeholder="VD: gemini-1.5-pro-latest" />
+                <Label htmlFor="ai-model-name">Model AI</Label>
+                <Select value={aiModelName} onValueChange={setAiModelName}>
+                  <SelectTrigger id="ai-model-name">
+                    <SelectValue placeholder="Chọn model AI" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gemini-2.5-flash">gemini-2.5-flash (Nhanh & Tiết kiệm)</SelectItem>
+                    <SelectItem value="gemini-2.5-pro">gemini-2.5-pro (Thông minh & Mạnh mẽ)</SelectItem>
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-muted-foreground">
                   Model này sẽ được sử dụng cho tất cả các tính năng tạo nội dung bằng AI.
                 </p>

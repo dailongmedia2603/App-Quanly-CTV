@@ -31,6 +31,7 @@ import ConfigQuote from "./pages/ConfigQuote";
 import PerformanceReport from "./pages/PerformanceReport";
 import PublicServices from "./pages/PublicServices";
 import EmailMarketing from "./pages/EmailMarketing";
+import AutomatedCustomerFinder from "./pages/AutomatedCustomerFinder";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,7 @@ const AppContent = () => {
           <Route path="/config/quote" element={<PermissionGuard feature="config_quote"><ConfigQuote /></PermissionGuard>} />
           <Route path="/documents" element={<PermissionGuard feature="documents"><Documents /></PermissionGuard>} />
           <Route path="/services" element={<PermissionGuard feature="public_services"><PublicServices /></PermissionGuard>} />
+          <Route path="/automated-customer-finder" element={<PermissionGuard feature="automated_customer_finder"><AutomatedCustomerFinder /></PermissionGuard>} />
           <Route path="/settings" element={<PermissionGuard feature="settings"><Settings /></PermissionGuard>} />
           <Route path="/performance-report" element={<PermissionGuard feature="performance_reports"><PerformanceReport /></PermissionGuard>} />
           <Route path="/income" element={<PermissionGuard feature="income"><Income /></PermissionGuard>} />

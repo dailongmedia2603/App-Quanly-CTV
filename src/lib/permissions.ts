@@ -8,6 +8,7 @@ export const permissionConfig = [
   { key: 'create_plan', name: 'Tạo Plan', actions: ['read', 'create', 'update', 'delete'] },
   { key: 'income', name: 'Thu nhập', actions: ['read', 'create', 'update', 'delete'] },
   { key: 'public_services', name: 'Dịch vụ (Công khai)', actions: ['read'] },
+  { key: 'automated_customer_finder', name: 'Tìm KH tự động', actions: ['read'] },
   { key: 'config_scan_post', name: 'Cấu hình Quét Post', actions: ['read', 'update'] },
   { key: 'config_content_ai', name: 'Cấu hình Content AI', actions: ['read', 'update'] },
   { key: 'config_create_plan', name: 'Cấu hình Tạo Plan', actions: ['read', 'update'] },

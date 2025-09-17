@@ -281,20 +281,19 @@ serve(async (req) => {
         newPostsData = allPostsData.filter(p => !existingPostIds.has(p.id));
     }
 
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/3) Đã tìm thấy ${allPostsData.length} bài viết, trong đó có ${newPostsData.length} bài mới. Bắt đầu lọc...`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/3) Đã tìm thấy ${newPostsData.length} bài viết mới. Bắt đầu lọc...`, null, 'progress');
     
     let filteredPosts = [];
-    // If keywords are empty or null, it means "Lấy tất cả"
-    if (!campaign.keywords || campaign.keywords.trim() === "") {
-        filteredPosts = newPostsData.map(post => ({ ...post, keywords_found: [] }));
-    } else {
-        const keywords = campaign.keywords.split('\n').map(k => k.trim()).filter(k => k);
+    const keywords = campaign.keywords ? campaign.keywords.split('\n').map(k => k.trim()).filter(k => k) : [];
+    if (keywords.length > 0) {
         for (const post of newPostsData) {
             const foundKeywords = findKeywords(post.message, keywords);
             if (foundKeywords.length > 0) {
                 filteredPosts.push({ ...post, keywords_found: foundKeywords });
             }
         }
+    } else {
+        filteredPosts = newPostsData.map(post => ({ ...post, keywords_found: [] }));
     }
 
     let finalResults = [];

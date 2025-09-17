@@ -179,9 +179,25 @@ serve(async (req) => {
     }
 
     const lastPostTime = (latestPostsData && latestPostsData.length > 0) ? latestPostsData[0].posted_at : null;
-    sinceTimestamp = lastPostTime 
-        ? toUnixTimestamp(lastPostTime)! + 1 
-        : toUnixTimestamp(campaign.scan_start_date);
+    const campaignStartTime = campaign.scan_start_date;
+
+    let effectiveStartTimeStr: string | null = null;
+
+    if (lastPostTime && campaignStartTime) {
+        effectiveStartTimeStr = new Date(lastPostTime) > new Date(campaignStartTime) ? lastPostTime : campaignStartTime;
+    } else {
+        effectiveStartTimeStr = lastPostTime || campaignStartTime;
+    }
+
+    if (effectiveStartTimeStr) {
+        if (effectiveStartTimeStr === lastPostTime) {
+            sinceTimestamp = toUnixTimestamp(effectiveStartTimeStr)! + 1;
+        } else {
+            sinceTimestamp = toUnixTimestamp(effectiveStartTimeStr);
+        }
+    } else {
+        sinceTimestamp = null;
+    }
         
     untilTimestamp = Math.floor(Date.now() / 1000);
 

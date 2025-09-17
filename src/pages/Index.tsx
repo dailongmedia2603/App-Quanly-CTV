@@ -292,7 +292,7 @@ const Index = () => {
       scan_unit: scanUnit,
       next_scan_at: (scanStartDate || new Date()).toISOString(),
       scan_start_date: scanStartDate?.toISOString() || null,
-      keywords: getAllPosts ? "" : keywords,
+      keywords: getAllPosts ? null : keywords,
       ai_filter_enabled: useAiFilter,
       ai_prompt: useAiFilter ? aiPrompt : null
     };
@@ -322,7 +322,7 @@ const Index = () => {
   };
 
   const handleEditClick = (campaign: Campaign) => {
-    setEditingCampaign(campaign); setUpdatedCampaignName(campaign.name); setUpdatedAudienceType(campaign.audience_type); setUpdatedSelectedSources(campaign.sources); setUpdatedEndDate(campaign.end_date ? new Date(campaign.end_date) : undefined); setUpdatedScanFrequency(campaign.scan_frequency); setUpdatedScanUnit(campaign.scan_unit); setUpdatedScanStartDate(campaign.scan_start_date ? new Date(campaign.scan_start_date) : undefined); setUpdatedKeywords(campaign.keywords || ""); setUpdatedGetAllPosts(!campaign.keywords); setUpdatedUseAiFilter(campaign.ai_filter_enabled || false); setUpdatedAiPrompt(campaign.ai_prompt || "");
+    setEditingCampaign(campaign); setUpdatedCampaignName(campaign.name); setUpdatedAudienceType(campaign.audience_type); setUpdatedSelectedSources(campaign.sources); setUpdatedEndDate(campaign.end_date ? new Date(campaign.end_date) : undefined); setUpdatedScanFrequency(campaign.scan_frequency); setUpdatedScanUnit(campaign.scan_unit); setUpdatedScanStartDate(campaign.scan_start_date ? new Date(campaign.scan_start_date) : undefined); setUpdatedKeywords(campaign.keywords || ""); setUpdatedGetAllPosts(campaign.keywords === null); setUpdatedUseAiFilter(campaign.ai_filter_enabled || false); setUpdatedAiPrompt(campaign.ai_prompt || "");
     setIsEditDialogOpen(true);
   };
 
@@ -332,7 +332,7 @@ const Index = () => {
     if (updatedSelectedSources.length === 0) return showError("Vui lòng chọn ít nhất một nguồn.");
     setIsUpdating(true);
     const toastId = showLoading("Đang cập nhật chiến dịch...");
-    let payload: any = { name: updatedCampaignName, audience_type: updatedAudienceType, sources: updatedSelectedSources, end_date: updatedEndDate?.toISOString() || null, scan_frequency: updatedScanFrequency, scan_unit: updatedScanUnit, scan_start_date: updatedScanStartDate?.toISOString() || null, keywords: updatedGetAllPosts ? "" : updatedKeywords, ai_filter_enabled: updatedUseAiFilter, ai_prompt: updatedUseAiFilter ? updatedAiPrompt : null };
+    let payload: any = { name: updatedCampaignName, audience_type: updatedAudienceType, sources: updatedSelectedSources, end_date: updatedEndDate?.toISOString() || null, scan_frequency: updatedScanFrequency, scan_unit: updatedScanUnit, scan_start_date: updatedScanStartDate?.toISOString() || null, keywords: updatedGetAllPosts ? null : updatedKeywords, ai_filter_enabled: updatedUseAiFilter, ai_prompt: updatedUseAiFilter ? updatedAiPrompt : null };
     if (editingCampaign.scan_frequency !== updatedScanFrequency || editingCampaign.scan_unit !== updatedScanUnit) {
       const calculateNextScan = (baseTime: Date, frequency: number, unit: string): Date => {
         const nextScan = new Date(baseTime.getTime());

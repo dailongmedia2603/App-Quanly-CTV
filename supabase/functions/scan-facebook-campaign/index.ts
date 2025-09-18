@@ -267,11 +267,14 @@ serve(async (req) => {
             allPostsData.push(...posts.map((post: any) => ({ ...post, campaign_id: campaign.id })));
         }
     }
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(1/${totalSteps}) Đã lấy xong ${allPostsData.length} bài viết.`, null, 'progress');
+    
+    const uniqueApiPosts = Array.from(new Map(allPostsData.map(post => [post.id, post])).values());
 
-    let newPostsData = allPostsData;
-    if (allPostsData.length > 0) {
-        const postIdsFromApi = allPostsData.map(p => p.id);
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(1/${totalSteps}) Đã lấy xong ${uniqueApiPosts.length} bài viết.`, null, 'progress');
+
+    let newPostsData = uniqueApiPosts;
+    if (uniqueApiPosts.length > 0) {
+        const postIdsFromApi = uniqueApiPosts.map(p => p.id);
         const existingPostIds = new Set<string>();
         const CHUNK_SIZE = 200;
 
@@ -294,7 +297,7 @@ serve(async (req) => {
             }
         }
         
-        newPostsData = allPostsData.filter(p => !existingPostIds.has(p.id));
+        newPostsData = uniqueApiPosts.filter(p => !existingPostIds.has(p.id));
     }
 
     await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/${totalSteps}) Đã tìm thấy ${newPostsData.length} bài viết mới. Bắt đầu xử lý...`, null, 'progress');
@@ -435,7 +438,7 @@ serve(async (req) => {
         
         const { error: insertError } = await supabaseAdmin
             .from(reportTable)
-            .insert(finalResults);
+            .upsert(finalResults, { onConflict: 'campaign_id, source_post_id', ignoreDuplicates: true });
 
         if (insertError) {
             await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'error', `(${totalSteps}/${totalSteps}) Lưu kết quả thất bại.`, null, 'final');

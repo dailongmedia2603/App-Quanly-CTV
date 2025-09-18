@@ -284,18 +284,16 @@ serve(async (req) => {
     await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/3) Đã tìm thấy ${newPostsData.length} bài viết mới. Bắt đầu xử lý...`, null, 'progress');
     
     let filteredPosts = [];
-    if (campaign.keywords === null) {
-        filteredPosts = newPostsData.map(post => ({ ...post, keywords_found: [] }));
-    } else {
-        const keywords = campaign.keywords ? campaign.keywords.split('\n').map(k => k.trim()).filter(k => k) : [];
-        if (keywords.length > 0) {
-            for (const post of newPostsData) {
-                const foundKeywords = findKeywords(post.message, keywords);
-                if (foundKeywords.length > 0) {
-                    filteredPosts.push({ ...post, keywords_found: foundKeywords });
-                }
+    const keywords = campaign.keywords ? campaign.keywords.split('\n').map(k => k.trim()).filter(k => k) : [];
+    if (keywords.length > 0) {
+        for (const post of newPostsData) {
+            const foundKeywords = findKeywords(post.message, keywords);
+            if (foundKeywords.length > 0) {
+                filteredPosts.push({ ...post, keywords_found: foundKeywords });
             }
         }
+    } else {
+        filteredPosts = newPostsData.map(post => ({ ...post, keywords_found: [] }));
     }
 
     let finalResults = [];

@@ -117,6 +117,8 @@ const callMultiAppAI = async (prompt: string, settings: any) => {
   return content;
 };
 
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -375,6 +377,7 @@ serve(async (req) => {
                     identified_service_id: null,
                 });
             }
+            await delay(1000); // Add 1-second delay between AI calls
         }
     } else {
         finalResults = filteredPosts.map(post => ({
@@ -438,6 +441,7 @@ serve(async (req) => {
             } catch (e) {
                 console.error(`Error auto-generating comment for post ${post.source_post_id}:`, e.message);
             }
+            await delay(1000); // Add 1-second delay between AI calls
         }
         await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(3/${totalSteps}) Đã tạo xong comment.`, null, 'progress');
     }

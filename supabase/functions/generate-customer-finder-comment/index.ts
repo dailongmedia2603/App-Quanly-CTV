@@ -97,7 +97,7 @@ serve(async (req) => {
     userId = user.id;
 
     requestBody = await req.json();
-    const { reportId, postContent } = requestBody;
+    const { reportId, postContent, updateMainTable } = requestBody;
     if (!reportId || !postContent) throw new Error("Yêu cầu ID báo cáo và nội dung bài đăng.");
 
     const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
@@ -110,7 +110,7 @@ serve(async (req) => {
 
     const { data: services, error: servicesError } = servicesRes;
     if (servicesError || !services || services.length === 0) throw new Error("Không tìm thấy dịch vụ nào để đối chiếu.");
-
+    
     const { data: templateData, error: templateError } = templateRes;
     if (templateError || !templateData?.prompt) {
         throw new Error("Không tìm thấy mẫu prompt cho 'Tìm khách hàng'. Vui lòng tạo một mẫu trong Cấu hình > Content AI.");
@@ -157,27 +157,41 @@ serve(async (req) => {
     
     const matchedService = services.find(s => s.id === identifiedServiceId);
 
-    // Step 5: Delete any existing comment for this user/report, then insert the new one.
-    await supabaseAdmin
-      .from('user_suggested_comments')
-      .delete()
-      .match({ user_id: user.id, report_id: reportId });
-
-    const { error: insertError } = await supabaseAdmin
-      .from('user_suggested_comments')
-      .insert({
-        user_id: user.id,
-        report_id: reportId,
-        comment_text: cleanedGeneratedComment,
-      });
-
-    if (insertError) throw new Error(`Lưu comment thất bại: ${insertError.message}`);
-
-    // Also update the globally identified service on the main report
-    await supabaseAdmin
+    // Step 5: Save the comment based on the updateMainTable flag
+    if (updateMainTable) {
+      // New logic for internal finder: update the main report table directly
+      const { error: updateError } = await supabaseAdmin
         .from('Bao_cao_Facebook')
-        .update({ identified_service_id: identifiedServiceId })
+        .update({ 
+          suggested_comment: cleanedGeneratedComment,
+          identified_service_id: identifiedServiceId 
+        })
         .eq('id', reportId);
+
+      if (updateError) throw new Error(`Lưu comment thất bại: ${updateError.message}`);
+    } else {
+      // Original logic for collaborator finder: save to user-specific table
+      await supabaseAdmin
+        .from('user_suggested_comments')
+        .delete()
+        .match({ user_id: user.id, report_id: reportId });
+
+      const { error: insertError } = await supabaseAdmin
+        .from('user_suggested_comments')
+        .insert({
+          user_id: user.id,
+          report_id: reportId,
+          comment_text: cleanedGeneratedComment,
+        });
+
+      if (insertError) throw new Error(`Lưu comment thất bại: ${insertError.message}`);
+
+      // Also update the globally identified service on the main report
+      await supabaseAdmin
+          .from('Bao_cao_Facebook')
+          .update({ identified_service_id: identifiedServiceId })
+          .eq('id', reportId);
+    }
 
     // Step 6: Log and return
     await supabaseAdmin.from('ai_generation_logs').insert({ user_id: user.id, template_type: 'customer_finder_comment', final_prompt: finalPrompt, generated_content: rawResponse, is_hidden_in_admin_history: false });

@@ -65,30 +65,8 @@ const AutomatedCustomerFinder = () => {
     if (reportsError) {
       showError(`Không thể tải dữ liệu: ${reportsError.message}`);
       setReportData([]);
-      setLoadingReports(false);
-      return;
-    }
-
-    if (reports && reports.length > 0) {
-      const reportIds = reports.map((r: ReportData) => r.id);
-      const { data: comments, error: commentsError } = await supabase
-        .from('user_suggested_comments')
-        .select('report_id, comment_text')
-        .eq('user_id', user.id)
-        .in('report_id', reportIds);
-
-      if (commentsError) {
-        showError("Không thể tải các comment đã tạo.");
-      }
-
-      const commentsMap = new Map(comments?.map(c => [c.report_id, c.comment_text]));
-      const mergedData = reports.map((report: ReportData) => ({
-        ...report,
-        suggested_comment: commentsMap.get(report.id) || null,
-      }));
-      setReportData(mergedData);
     } else {
-      setReportData([]);
+      setReportData(reports || []);
     }
 
     setLoadingReports(false);
@@ -133,6 +111,7 @@ const AutomatedCustomerFinder = () => {
         body: {
           reportId: item.id,
           postContent: item.description,
+          updateMainTable: true,
         },
       });
 
@@ -185,13 +164,17 @@ const AutomatedCustomerFinder = () => {
       );
     }
     return (
-      <Button 
-        onClick={() => handleGenerateComment(item)}
-        className="bg-brand-orange text-white hover:bg-brand-orange/90 animate-pulse w-full sm:w-auto"
-      >
-        <Sparkles className="h-4 w-4 mr-2" />
-        Tạo comment giới thiệu
-      </Button>
+      <div className="flex flex-col items-start space-y-2">
+        <p className="text-sm text-gray-500 italic">Chưa có comment được tạo.</p>
+        <Button 
+          onClick={() => handleGenerateComment(item)}
+          variant="outline"
+          size="sm"
+        >
+          <Sparkles className="h-4 w-4 mr-2" />
+          Thử tạo lại
+        </Button>
+      </div>
     );
   };
 

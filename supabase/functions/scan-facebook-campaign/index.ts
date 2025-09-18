@@ -31,20 +31,29 @@ const toUnixTimestamp = (dateStr: string | null | undefined): number | null => {
   return Math.floor(new Date(dateStr).getTime() / 1000);
 };
 
-// Helper function to format Unix timestamp for humans
+// Helper function to format Unix timestamp for humans in Vietnam timezone
 const formatTimestampForHumans = (timestamp: number | null): string | null => {
     if (timestamp === null) return 'N/A';
-    const date = new Date(timestamp * 1000); // Convert seconds to milliseconds
-    const pad = (num: number) => num.toString().padStart(2, '0');
+    const date = new Date(timestamp * 1000);
+    const options: Intl.DateTimeFormatOptions = {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour12: false,
+    };
+    // Using 'sv-SE' locale gives a good base format (YYYY-MM-DD HH:mm:ss) which is easy to re-arrange
+    const formatter = new Intl.DateTimeFormat('sv-SE', options);
+    const formattedString = formatter.format(date); // e.g., "2025-09-18 07:06:14"
     
-    const hours = pad(date.getHours());
-    const minutes = pad(date.getMinutes());
-    const seconds = pad(date.getSeconds());
-    const day = pad(date.getDate());
-    const month = pad(date.getMonth() + 1); // Month is 0-indexed
-    const year = date.getFullYear();
-
-    return `${hours}:${minutes}:${seconds} ${day}/${month}/${year}`;
+    // Re-arrange to "HH:mm:ss DD/MM/YYYY"
+    const [datePart, timePart] = formattedString.split(' ');
+    const [year, month, day] = datePart.split('-');
+    
+    return `${timePart} ${day}/${month}/${year}`;
 };
 
 // Helper to find keywords in content

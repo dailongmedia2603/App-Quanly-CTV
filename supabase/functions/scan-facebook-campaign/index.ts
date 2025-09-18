@@ -12,6 +12,19 @@ const corsHeaders = {
 
 const safetyInstruction = "Bạn là một trợ lý AI chuyên nghiệp, hữu ích và an toàn. Hãy tập trung vào việc tạo ra nội dung marketing chất lượng cao, phù hợp với ngữ cảnh được cung cấp. TUYỆT ĐỐI TRÁNH các chủ đề nhạy cảm, gây tranh cãi, hoặc có thể bị hiểu lầm là tiêu cực. Luôn duy trì một thái độ tích cực và chuyên nghiệp.\n\n---\n\n";
 
+const cleanAiResponse = (rawText: string): string => {
+  if (!rawText) return '';
+  let text = rawText.trim();
+  const contentMarker = "**[NỘI DUNG COMMENT]**";
+  const markerIndex = text.indexOf(contentMarker);
+  if (markerIndex !== -1) {
+    text = text.substring(markerIndex + contentMarker.length).trim();
+  }
+  text = text.replace(/^```(json|markdown|md|)\s*\n/i, '');
+  text = text.replace(/\n\s*```$/, '');
+  return text;
+};
+
 // Helper function to convert date to Unix timestamp
 const toUnixTimestamp = (dateStr: string | null | undefined): number | null => {
   if (!dateStr) return null;
@@ -140,7 +153,7 @@ serve(async (req) => {
     if (settingsError) throw new Error(`Lấy API key chung thất bại: ${settingsError.message}`);
     if (!settings) throw new Error(`Chưa cấu hình API key trong cài đặt chung.`);
 
-    if (campaign.type !== 'Facebook') {
+    if (campaign.type !== 'Facebook' && campaign.type !== 'Tổng hợp') {
         return new Response(JSON.stringify({ message: "Chức năng quét này chỉ dành cho các chiến dịch Facebook." }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
@@ -162,7 +175,10 @@ serve(async (req) => {
         throw new Error("URL hoặc Token của API Facebook chưa được cấu hình trong cài đặt chung.");
     }
 
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', 'Bắt đầu quét nguồn Facebook...', null, 'progress');
+    const isInternalCampaign = campaign.audience_type === 'internal';
+    const totalSteps = isInternalCampaign ? 4 : 3;
+
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(1/${totalSteps}) Bắt đầu quét nguồn Facebook...`, null, 'progress');
 
     const reportTable = 'Bao_cao_Facebook';
     
@@ -204,7 +220,7 @@ serve(async (req) => {
     const allPostsData = [];
     const apiCallDetails = [];
 
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(1/3) Đang lấy bài viết từ ${facebookGroupIds.length} group...`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(1/${totalSteps}) Đang lấy bài viết từ ${facebookGroupIds.length} group...`, null, 'progress');
     for (const groupId of facebookGroupIds) {
         let url = `${facebook_api_url.replace(/\/$/, '')}/${groupId}/feed?fields=message,created_time,id,permalink_url,from&access_token=${facebook_api_token}&limit=100`;
         if (sinceTimestamp) {
@@ -251,7 +267,7 @@ serve(async (req) => {
             allPostsData.push(...posts.map((post: any) => ({ ...post, campaign_id: campaign.id })));
         }
     }
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(1/3) Đã lấy xong ${allPostsData.length} bài viết.`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(1/${totalSteps}) Đã lấy xong ${allPostsData.length} bài viết.`, null, 'progress');
 
     let newPostsData = allPostsData;
     if (allPostsData.length > 0) {
@@ -281,7 +297,7 @@ serve(async (req) => {
         newPostsData = allPostsData.filter(p => !existingPostIds.has(p.id));
     }
 
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/3) Đã tìm thấy ${newPostsData.length} bài viết mới. Bắt đầu xử lý...`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/${totalSteps}) Đã tìm thấy ${newPostsData.length} bài viết mới. Bắt đầu xử lý...`, null, 'progress');
     
     let filteredPosts = [];
     const keywords = campaign.keywords ? campaign.keywords.split('\n').map(k => k.trim()).filter(k => k) : [];
@@ -296,9 +312,9 @@ serve(async (req) => {
         filteredPosts = newPostsData.map(post => ({ ...post, keywords_found: [] }));
     }
 
-    let finalResults = [];
+    let finalResults: any[] = [];
     if (campaign.ai_filter_enabled && campaign.ai_prompt) {
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/3) AI đang phân tích ${filteredPosts.length} bài viết...`, null, 'progress');
+        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(2/${totalSteps}) AI đang phân tích ${filteredPosts.length} bài viết...`, null, 'progress');
         
         for (const post of filteredPosts) {
             const prompt = safetyInstruction + `
@@ -328,6 +344,8 @@ serve(async (req) => {
                     ai_evaluation: aiResult.evaluation,
                     sentiment: aiResult.sentiment,
                     source_post_id: post.id,
+                    suggested_comment: null,
+                    identified_service_id: null,
                 });
 
             } catch (e) {
@@ -341,6 +359,8 @@ serve(async (req) => {
                     ai_evaluation: 'Xử lý bằng AI thất bại.',
                     sentiment: null,
                     source_post_id: post.id,
+                    suggested_comment: null,
+                    identified_service_id: null,
                 });
             }
         }
@@ -354,22 +374,74 @@ serve(async (req) => {
             ai_evaluation: null,
             sentiment: null,
             source_post_id: post.id,
+            suggested_comment: null,
+            identified_service_id: null,
         }));
     }
-    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(2/3) Phân tích và lọc xong.`, null, 'progress');
+    await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(2/${totalSteps}) Phân tích và lọc xong.`, null, 'progress');
+
+    if (isInternalCampaign && finalResults.length > 0) {
+        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(3/${totalSteps}) Bắt đầu tự động tạo comment cho ${finalResults.length} bài viết...`, null, 'progress');
+
+        const [servicesRes, templateRes] = await Promise.all([
+            supabaseAdmin.from('document_services').select('id, name, description'),
+            supabaseAdmin.from('ai_prompt_templates').select('prompt').eq('template_type', 'customer_finder_comment').single()
+        ]);
+
+        const { data: services, error: servicesError } = servicesRes;
+        if (servicesError || !services || services.length === 0) throw new Error("Không tìm thấy dịch vụ nào để đối chiếu.");
+        
+        const { data: templateData, error: templateError } = templateRes;
+        if (templateError || !templateData?.prompt) throw new Error("Không tìm thấy mẫu prompt cho 'Tìm khách hàng'.");
+
+        const { data: documents } = await supabaseAdmin.from('documents').select('title, content, service_id');
+        const documentsByService = (documents || []).reduce((acc: any, doc: any) => {
+            if (!acc[doc.service_id]) acc[doc.service_id] = [];
+            acc[doc.service_id].push(`Tài liệu: ${doc.title}\nNội dung: ${doc.content}`);
+            return acc;
+        }, {});
+
+        const serviceAndDocsPrompt = services.map(s => {
+            const serviceDocs = documentsByService[s.id] ? documentsByService[s.id].join('\n\n') : 'Không có tài liệu tham khảo.';
+            return `ID: ${s.id}\nTên dịch vụ: ${s.name}\nMô tả: ${s.description || 'Không có'}\n${serviceDocs}`;
+        }).join('\n---\n');
+
+        for (const post of finalResults) {
+            try {
+                const basePrompt = templateData.prompt
+                    .replace(/\[nội dung gốc\]/gi, post.content)
+                    .replace(/\[danh sách dịch vụ và tài liệu\]/gi, serviceAndDocsPrompt);
+                const finalPrompt = safetyInstruction + basePrompt;
+
+                const rawResponse = await callMultiAppAI(finalPrompt, settings);
+                const aiResult = JSON.parse(rawResponse.replace(/```json/g, '').replace(/```/g, '').trim());
+                
+                const { service_id: identifiedServiceId, comment: generatedComment } = aiResult;
+                const cleanedGeneratedComment = cleanAiResponse(generatedComment);
+
+                if (identifiedServiceId && cleanedGeneratedComment && services.some(s => s.id === identifiedServiceId)) {
+                    post.identified_service_id = identifiedServiceId;
+                    post.suggested_comment = cleanedGeneratedComment;
+                }
+            } catch (e) {
+                console.error(`Error auto-generating comment for post ${post.source_post_id}:`, e.message);
+            }
+        }
+        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(3/${totalSteps}) Đã tạo xong comment.`, null, 'progress');
+    }
 
     if (finalResults.length > 0) {
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(3/3) Đang lưu ${finalResults.length} kết quả vào báo cáo...`, null, 'progress');
+        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(${totalSteps}/${totalSteps}) Đang lưu ${finalResults.length} kết quả vào báo cáo...`, null, 'progress');
         
         const { error: insertError } = await supabaseAdmin
             .from(reportTable)
             .insert(finalResults);
 
         if (insertError) {
-            await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'error', `(3/3) Lưu kết quả thất bại.`, null, 'final');
+            await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'error', `(${totalSteps}/${totalSteps}) Lưu kết quả thất bại.`, null, 'final');
             throw new Error(`Thêm dữ liệu báo cáo thất bại: ${insertError.message}`);
         }
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(3/3) Đã lưu ${finalResults.length} kết quả.`, null, 'progress');
+        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(${totalSteps}/${totalSteps}) Đã lưu ${finalResults.length} kết quả.`, null, 'progress');
     }
     
     const successMessage = `Quét Facebook hoàn tất. Đã tìm thấy và xử lý ${finalResults.length} bài viết mới.`;

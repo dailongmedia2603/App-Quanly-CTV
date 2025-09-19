@@ -20,7 +20,7 @@ import CampaignToolbar, { CampaignFilters } from "@/components/CampaignToolbar";
 import ScanStatusPopup from "@/components/ScanStatusPopup";
 import { useAuth } from "@/contexts/AuthContext";
 import { ScanHistoryDialog, ScanHistoryLog } from "@/components/ScanHistoryDialog";
-import ListGroupTab from "@/components/campaign-scan/ListGroupTab";
+import ListGroupTab from "@/components/automated-scan/ListGroupTab";
 
 export interface Campaign {
   id: string;

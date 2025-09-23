@@ -83,7 +83,9 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ success: false, message: error.message }), {
+    // Cung cấp thông báo lỗi hữu ích hơn cho các lỗi mạng
+    const errorMessage = `Đã xảy ra lỗi mạng khi kết nối đến API. Vui lòng kiểm tra lại API URL và đảm bảo rằng máy chủ có thể truy cập được và không bị tường lửa chặn. Lỗi này cũng có thể xảy ra nếu cookie không hợp lệ. (Chi tiết: ${error.message})`;
+    return new Response(JSON.stringify({ success: false, message: errorMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200, // Return 200 so client can parse the error
     })

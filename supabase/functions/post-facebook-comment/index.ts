@@ -80,53 +80,44 @@ serve(async (req) => {
     };
     request_body_for_log = requestPayload;
 
-    // Set a 30-second timeout for the fetch request
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestPayload),
-      signal: controller.signal,
     });
 
-    clearTimeout(timeoutId); // Clear the timeout if the request completes in time
-
-    const responseText = await response.text();
-    let responseData;
-
-    try {
-      responseData = JSON.parse(responseText);
-    } catch (e) {
-      throw new Error(`API returned invalid response (status ${response.status}): ${responseText.substring(0, 200)}...`);
+    // **SOLUTION:** Check status code first. Only read body if it's an error.
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorJson;
+      try {
+        errorJson = JSON.parse(errorText);
+      } catch (e) {
+        throw new Error(`API returned non-JSON error (status ${response.status}): ${errorText.substring(0, 200)}...`);
+      }
+      await supabaseAdmin.from('manual_action_logs').insert({
+          user_id: user.id, action_type: 'post_facebook_comment', request_url: apiUrl,
+          request_body: requestPayload, response_status: response.status, response_body: errorJson
+      });
+      throw new Error(errorJson.status?.message || errorJson.message || `API Error: ${response.status}`);
     }
 
+    // If response is OK (2xx), assume success and do NOT read the large body.
+    const successResponseData = { status: { code: 1, message: "Success (body not read due to size)" } };
     await supabaseAdmin.from('manual_action_logs').insert({
-        user_id: user.id,
-        action_type: 'post_facebook_comment',
-        request_url: apiUrl,
-        request_body: requestPayload,
-        response_status: response.status,
-        response_body: responseData
+        user_id: user.id, action_type: 'post_facebook_comment', request_url: apiUrl,
+        request_body: requestPayload, response_status: response.status, response_body: successResponseData
     });
 
-    if (!response.ok || responseData.status?.code !== 1) {
-      throw new Error(responseData.status?.message || responseData.message || `API Error: ${response.status}`);
-    }
-
-    return new Response(JSON.stringify({ success: true, message: 'Đăng comment thành công!', data: responseData.data }), {
+    return new Response(JSON.stringify({ success: true, message: 'Đăng comment thành công!', data: successResponseData }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
 
   } catch (error) {
-    let errorMessage = `Lỗi khi gửi comment đến API: ${error.message}. Vui lòng kiểm tra lại API URL, API Key và Cookie Facebook.`;
-    if (error.name === 'AbortError') {
-      errorMessage = "Lỗi khi gửi comment đến API: Yêu cầu đã hết thời gian chờ sau 30 giây. Máy chủ API có thể đang phản hồi chậm.";
-    }
+    const errorMessage = `Lỗi khi gửi comment đến API: ${error.message}. Vui lòng kiểm tra lại API URL, API Key và Cookie Facebook.`;
     console.error("post-facebook-comment error:", error);
     
     if (user_id_for_log) {

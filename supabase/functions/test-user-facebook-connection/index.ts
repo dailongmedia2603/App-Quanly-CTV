@@ -44,8 +44,19 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        account: { cookie },
-        action: { name: "get_me" }
+        account: {
+          cookie: cookie,
+          ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0"
+        },
+        proxy: {
+          host: "",
+          port: "",
+          username: "",
+          password: ""
+        },
+        action: {
+          name: "get_me"
+        }
       }),
     });
 

@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { showLoading, dismissToast, showSuccess, showError } from '@/utils/toast';
 import { Separator } from '@/components/ui/separator';
-import { Landmark } from 'lucide-react';
+import { Landmark, Facebook, CheckCircle, XCircle, Loader2, Zap } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ProfileData {
   first_name: string | null;
@@ -18,6 +19,7 @@ interface ProfileData {
   bank_account_number: string | null;
   bank_account_name: string | null;
   momo: string | null;
+  facebook_cookie: string | null;
 }
 
 const Profile = () => {
@@ -34,6 +36,7 @@ const Profile = () => {
   const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [bankAccountName, setBankAccountName] = useState('');
   const [momo, setMomo] = useState('');
+  const [facebookCookie, setFacebookCookie] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   // Change password state
@@ -41,6 +44,10 @@ const Profile = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // FB Connection Test State
+  const [isTestingFb, setIsTestingFb] = useState(false);
+  const [fbTestStatus, setFbTestStatus] = useState<{ status: 'success' | 'error'; message: string } | null>(null);
 
   const fetchProfile = async () => {
     if (!user) {
@@ -50,7 +57,7 @@ const Profile = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('profiles')
-      .select('first_name, last_name, phone, bank_name, bank_account_number, bank_account_name, momo')
+      .select('first_name, last_name, phone, bank_name, bank_account_number, bank_account_name, momo, facebook_cookie')
       .eq('id', user.id)
       .single();
 
@@ -66,6 +73,7 @@ const Profile = () => {
       setBankAccountNumber(data?.bank_account_number || '');
       setBankAccountName(data?.bank_account_name || '');
       setMomo(data?.momo || '');
+      setFacebookCookie(data?.facebook_cookie || '');
     }
     setLoading(false);
   };
@@ -89,6 +97,7 @@ const Profile = () => {
         bank_account_number: bankAccountNumber,
         bank_account_name: bankAccountName,
         momo: momo,
+        facebook_cookie: facebookCookie,
         updated_at: new Date().toISOString()
       })
       .eq('id', user.id);
@@ -130,6 +139,33 @@ const Profile = () => {
       setConfirmPassword('');
     }
     setIsChangingPassword(false);
+  };
+
+  const handleTestFbConnection = async () => {
+    if (!facebookCookie) {
+      showError("Vui lòng nhập cookie Facebook.");
+      return;
+    }
+    setIsTestingFb(true);
+    setFbTestStatus(null);
+    const toastId = showLoading("Đang kiểm tra kết nối...");
+
+    const { data, error } = await supabase.functions.invoke(
+      "test-user-facebook-connection",
+      { body: { cookie: facebookCookie } }
+    );
+
+    dismissToast(toastId);
+    if (error) {
+      const message = `Kiểm tra thất bại: ${error.message}`;
+      showError(message);
+      setFbTestStatus({ status: "error", message });
+    } else {
+      if (data.success) showSuccess(data.message);
+      else showError(`Kiểm tra thất bại: ${data.message}`);
+      setFbTestStatus({ status: data.success ? "success" : "error", message: data.message });
+    }
+    setIsTestingFb(false);
   };
 
   if (loading) {
@@ -194,6 +230,20 @@ const Profile = () => {
             </div>
           </div>
 
+          <Separator className="my-6" />
+
+          <div>
+            <h3 className="text-lg font-semibold mb-3 flex items-center">
+              <Facebook className="h-5 w-5 mr-2 text-blue-600" />
+              Kết nối Facebook
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">Nhập cookie tài khoản Facebook của bạn để sử dụng các tính năng tương tác trực tiếp.</p>
+            <div className="space-y-2">
+              <Label>Cookie Facebook</Label>
+              <p className="font-semibold text-gray-800 break-all">{profile?.facebook_cookie ? `${profile.facebook_cookie.substring(0, 50)}...` : 'Chưa cập nhật'}</p>
+            </div>
+          </div>
+
           <div className="flex space-x-2 pt-4">
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
               <DialogTrigger asChild>
@@ -206,38 +256,27 @@ const Profile = () => {
                 <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-4">
                   <h4 className="font-medium">Thông tin cá nhân</h4>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="first-name">Họ</Label>
-                      <Input id="first-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="last-name">Tên</Label>
-                      <Input id="last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                    </div>
+                    <div className="space-y-2"><Label htmlFor="first-name">Họ</Label><Input id="first-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
+                    <div className="space-y-2"><Label htmlFor="last-name">Tên</Label><Input id="last-name" value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Số điện thoại</Label>
-                    <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                  </div>
+                  <div className="space-y-2"><Label htmlFor="phone">Số điện thoại</Label><Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
                   <Separator className="my-6" />
                   <h4 className="font-medium">Thông tin thanh toán</h4>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="bank-name">Ngân hàng</Label>
-                      <Input id="bank-name" value={bankName} onChange={(e) => setBankName(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="bank-account-number">Số tài khoản</Label>
-                      <Input id="bank-account-number" value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} />
-                    </div>
+                    <div className="space-y-2"><Label htmlFor="bank-name">Ngân hàng</Label><Input id="bank-name" value={bankName} onChange={(e) => setBankName(e.target.value)} /></div>
+                    <div className="space-y-2"><Label htmlFor="bank-account-number">Số tài khoản</Label><Input id="bank-account-number" value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} /></div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bank-account-name">Tên tài khoản</Label>
-                    <Input id="bank-account-name" value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="momo">Momo</Label>
-                    <Input id="momo" value={momo} onChange={(e) => setMomo(e.target.value)} />
+                  <div className="space-y-2"><Label htmlFor="bank-account-name">Tên tài khoản</Label><Input id="bank-account-name" value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value)} /></div>
+                  <div className="space-y-2"><Label htmlFor="momo">Momo</Label><Input id="momo" value={momo} onChange={(e) => setMomo(e.target.value)} /></div>
+                  <Separator className="my-6" />
+                  <h4 className="font-medium">Kết nối Facebook</h4>
+                  <div className="space-y-2"><Label htmlFor="fb-cookie">Cookie Facebook</Label><Textarea id="fb-cookie" value={facebookCookie} onChange={(e) => { setFacebookCookie(e.target.value); setFbTestStatus(null); }} className="min-h-[100px]" /></div>
+                  <div className="flex items-center justify-between">
+                    <Button onClick={handleTestFbConnection} disabled={isTestingFb} variant="secondary"><Zap className="mr-2 h-4 w-4" />{isTestingFb ? "Đang kiểm tra..." : "Kiểm tra"}</Button>
+                    <div>
+                      {fbTestStatus?.status === "success" && (<div className="flex items-center text-sm font-medium text-green-600"><CheckCircle className="w-4 h-4 mr-1.5" />Thành công</div>)}
+                      {fbTestStatus?.status === "error" && (<div className="flex items-center text-sm font-medium text-red-600"><XCircle className="w-4 h-4 mr-1.5" />Thất bại</div>)}
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
@@ -255,14 +294,8 @@ const Profile = () => {
                   <DialogTitle>Đổi mật khẩu</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Mật khẩu mới</Label>
-                    <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Xác nhận mật khẩu mới</Label>
-                    <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-                  </div>
+                  <div className="space-y-2"><Label htmlFor="password">Mật khẩu mới</Label><Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+                  <div className="space-y-2"><Label htmlFor="confirm-password">Xác nhận mật khẩu mới</Label><Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /></div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsPasswordOpen(false)}>Hủy</Button>

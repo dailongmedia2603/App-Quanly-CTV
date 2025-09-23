@@ -31,6 +31,10 @@ const ApiKeysSettings = () => {
   const [isTestingFacebook, setIsTestingFacebook] = useState(false);
   const [facebookTestStatus, setFacebookTestStatus] = useState<{ status: 'success' | 'error'; message: string } | null>(null);
 
+  // User Facebook API states
+  const [userFacebookApiUrl, setUserFacebookApiUrl] = useState("");
+  const [userFacebookApiKey, setUserFacebookApiKey] = useState("");
+
   // General state
   const [isSaving, setIsSaving] = useState(false);
 
@@ -38,7 +42,7 @@ const ApiKeysSettings = () => {
     const fetchSettings = async () => {
       const { data, error } = await supabase
         .from("app_settings")
-        .select("multiappai_api_url, multiappai_api_key, facebook_api_url, facebook_api_token")
+        .select("multiappai_api_url, multiappai_api_key, facebook_api_url, facebook_api_token, user_facebook_api_url, user_facebook_api_key")
         .eq("id", 1)
         .single();
 
@@ -49,6 +53,8 @@ const ApiKeysSettings = () => {
         setMultiappaiApiKey(data.multiappai_api_key || "");
         setFacebookApiUrl(data.facebook_api_url || "");
         setFacebookApiToken(data.facebook_api_token || "");
+        setUserFacebookApiUrl(data.user_facebook_api_url || "");
+        setUserFacebookApiKey(data.user_facebook_api_key || "");
       }
     };
 
@@ -67,6 +73,8 @@ const ApiKeysSettings = () => {
         multiappai_api_key: multiappaiApiKey,
         facebook_api_url: facebookApiUrl,
         facebook_api_token: facebookApiToken,
+        user_facebook_api_url: userFacebookApiUrl,
+        user_facebook_api_key: userFacebookApiKey,
       });
 
     dismissToast(toastId);
@@ -157,8 +165,8 @@ const ApiKeysSettings = () => {
         </Card>
         <Card className="border-orange-200">
           <CardHeader>
-            <CardTitle>Facebook API</CardTitle>
-            <CardDescription>Cấu hình tích hợp Facebook API sử dụng URL của bên thứ ba được cung cấp.</CardDescription>
+            <CardTitle>Facebook API (Quét tự động)</CardTitle>
+            <CardDescription>Cấu hình tích hợp Facebook API để quét chiến dịch tự động.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2"><Label htmlFor="facebook-api-url">API URL</Label><Input id="facebook-api-url" value={facebookApiUrl} onChange={(e) => { setFacebookApiUrl(e.target.value); setFacebookTestStatus(null); }} /></div>
@@ -172,6 +180,18 @@ const ApiKeysSettings = () => {
                 {facebookTestStatus?.status === "success" && (<div className="flex items-center text-sm font-medium text-green-600"><CheckCircle className="w-4 h-4 mr-1.5" />Thành công</div>)}
                 {facebookTestStatus?.status === "error" && (<div className="flex items-center text-sm font-medium text-red-600"><XCircle className="w-4 h-4 mr-1.5" />Thất bại</div>)}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-orange-200 lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Facebook API (Hành động thủ công)</CardTitle>
+            <CardDescription>Cấu hình API để thực hiện các hành động thủ công như đăng comment. API này sẽ sử dụng cookie của từng người dùng.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2"><Label htmlFor="user-facebook-api-url">API URL</Label><Input id="user-facebook-api-url" value={userFacebookApiUrl} onChange={(e) => setUserFacebookApiUrl(e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="user-facebook-api-key">API Key</Label><Input id="user-facebook-api-key" type="password" placeholder="Nhập API Key" value={userFacebookApiKey} onChange={(e) => setUserFacebookApiKey(e.target.value)} /></div>
             </div>
           </CardContent>
         </Card>

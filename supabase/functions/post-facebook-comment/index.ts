@@ -10,6 +10,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const extractPostId = (url: string): string | null => {
+    const patterns = [
+        /posts\/(\d+)/,
+        /permalink\/(\d+)/,
+        /fbid=(\d+)/,
+        /story_fbid=([0-9]*)&/,
+        /videos\/(\d+)/,
+        /videos\/[a-zA-Z0-9]+\/(\d+)/,
+        /photo\?fbid=(\d+)/,
+        /photo.php\?fbid=(\d+)/,
+        /photos\/[a-zA-Z0-9.-]+\/(\d+)/,
+        /notes\/[a-zA-Z0-9.-]+\/[a-zA-Z0-9.-]+\/(\d+)/
+    ];
+
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) {
+            return match[1];
+        }
+    }
+    return null;
+};
+
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -19,6 +43,11 @@ serve(async (req) => {
     const { postUrl, commentText } = await req.json();
     if (!postUrl || !commentText) {
       throw new Error("Post URL and comment text are required.");
+    }
+
+    const postId = extractPostId(postUrl);
+    if (!postId) {
+        throw new Error("Could not extract a valid Post ID from the URL.");
     }
 
     const supabaseAdmin = createClient(
@@ -55,27 +84,35 @@ serve(async (req) => {
       throw new Error("User Facebook API is not configured in settings.");
     }
 
-    // Assuming the endpoint is /comment and it takes url and content
-    const response = await fetch(`${settings.user_facebook_api_url}/comment`, {
+    const apiUrl = `${settings.user_facebook_api_url}?access_token=${settings.user_facebook_api_key}`;
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': settings.user_facebook_api_key,
       },
       body: JSON.stringify({
-        cookie: profile.facebook_cookie,
-        url: postUrl,
-        content: commentText,
+        account: {
+          cookie: profile.facebook_cookie,
+        },
+        action: {
+          name: "comment_to_post",
+          params: {
+            post_id: postId,
+            content: commentText,
+            image_url: null
+          }
+        }
       }),
     });
 
     const responseData = await response.json();
 
-    if (!response.ok) {
-      throw new Error(responseData.message || `API Error: ${response.status}`);
+    if (!response.ok || responseData.status?.code !== 1) {
+      throw new Error(responseData.status?.message || responseData.message || `API Error: ${response.status}`);
     }
 
-    return new Response(JSON.stringify({ success: true, message: 'Đăng comment thành công!', data: responseData }), {
+    return new Response(JSON.stringify({ success: true, message: 'Đăng comment thành công!', data: responseData.data }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

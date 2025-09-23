@@ -36,23 +36,26 @@ serve(async (req) => {
       throw new Error("User Facebook API is not configured in settings.");
     }
 
-    // Assuming a /me endpoint exists for testing the connection
-    const response = await fetch(`${settings.user_facebook_api_url}/me`, {
+    const testUrl = `${settings.user_facebook_api_url}?access_token=${settings.user_facebook_api_key}`;
+
+    const response = await fetch(testUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': settings.user_facebook_api_key,
       },
-      body: JSON.stringify({ cookie }),
+      body: JSON.stringify({
+        account: { cookie },
+        action: { name: "get_me" }
+      }),
     });
 
     const responseData = await response.json();
 
-    if (!response.ok) {
-      throw new Error(responseData.message || `API Error: ${response.status}`);
+    if (!response.ok || responseData.status?.code !== 1) {
+      throw new Error(responseData.status?.message || responseData.message || `API Error: ${response.status}`);
     }
 
-    return new Response(JSON.stringify({ success: true, message: 'Kết nối thành công!', data: responseData }), {
+    return new Response(JSON.stringify({ success: true, message: 'Kết nối thành công!', data: responseData.data }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

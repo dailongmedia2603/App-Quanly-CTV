@@ -115,7 +115,7 @@ const ApiKeysSettings = () => {
 
   const handleTestFacebookConnection = async () => {
     if (!facebookApiUrl || !facebookApiToken) {
-      showError("Vui lòng nhập đầy đủ URL và Token của Facebook API.");
+      showError("Vui lòng nhập đầy đủ URL và Access Token của Facebook API.");
       return;
     }
     setIsTestingFacebook(true);
@@ -170,7 +170,7 @@ const ApiKeysSettings = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2"><Label htmlFor="facebook-api-url">API URL</Label><Input id="facebook-api-url" value={facebookApiUrl} onChange={(e) => { setFacebookApiUrl(e.target.value); setFacebookTestStatus(null); }} /></div>
-            <div className="space-y-2"><Label htmlFor="facebook-api-token">API Token</Label><Input id="facebook-api-token" placeholder="Nhập API Token của bạn" value={facebookApiToken} onChange={(e) => { setFacebookApiToken(e.target.value); setFacebookTestStatus(null); }} /></div>
+            <div className="space-y-2"><Label htmlFor="facebook-api-token">Access Token</Label><Input id="facebook-api-token" placeholder="Nhập Access Token của bạn" value={facebookApiToken} onChange={(e) => { setFacebookApiToken(e.target.value); setFacebookTestStatus(null); }} /></div>
             <div className="flex items-center justify-between">
               <Button onClick={handleTestFacebookConnection} disabled={isTestingFacebook || isSaving} variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700">
                 {isTestingFacebook ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}

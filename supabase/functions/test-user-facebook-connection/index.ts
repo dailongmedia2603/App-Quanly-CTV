@@ -36,7 +36,7 @@ serve(async (req) => {
       throw new Error("User Facebook API is not configured in settings.");
     }
 
-    const testUrl = `${settings.user_facebook_api_url}?access_token=${settings.user_facebook_api_key}`;
+    const testUrl = `${settings.user_facebook_api_url.replace(/\/$/, '')}/services/fbql?access_token=${settings.user_facebook_api_key}`;
 
     const response = await fetch(testUrl, {
       method: 'POST',

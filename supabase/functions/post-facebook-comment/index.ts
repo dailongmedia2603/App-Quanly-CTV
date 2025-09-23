@@ -84,6 +84,7 @@ serve(async (req) => {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
+        'Accept': 'application/json', // Explicitly accept JSON responses
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0'
       },
       body: JSON.stringify(requestPayload),
@@ -117,7 +118,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    const errorMessage = `Lỗi khi gửi comment đến API: ${error.message}`;
+    const errorMessage = `Lỗi khi gửi comment đến API: ${error.message}. Vui lòng kiểm tra lại API URL, API Key và Cookie Facebook.`;
     console.error("post-facebook-comment error:", error);
     
     if (user_id_for_log) {

@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 interface ReportData {
   id: string;
   campaign_id: string;
+  source_post_id: string | null;
   identified_service_id?: string | null;
   identified_service_name?: string | null;
   ai_evaluation?: string | null;

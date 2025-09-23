@@ -10,44 +10,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const extractPostId = (url: string): string | null => {
-    const patterns = [
-        /posts\/(\d+)/,
-        /permalink\/(\d+)/,
-        /fbid=(\d+)/,
-        /story_fbid=([0-9]*)&/,
-        /videos\/(\d+)/,
-        /videos\/[a-zA-Z0-9]+\/(\d+)/,
-        /photo\?fbid=(\d+)/,
-        /photo.php\?fbid=(\d+)/,
-        /photos\/[a-zA-Z0-9.-]+\/(\d+)/,
-        /notes\/[a-zA-Z0-9.-]+\/[a-zA-Z0-9.-]+\/(\d+)/
-    ];
-
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match && match[1]) {
-            return match[1];
-        }
-    }
-    return null;
-};
-
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const { postUrl, commentText } = await req.json();
-    if (!postUrl || !commentText) {
-      throw new Error("Post URL and comment text are required.");
-    }
-
-    const postId = extractPostId(postUrl);
-    if (!postId) {
-        throw new Error("Could not extract a valid Post ID from the URL.");
+    const { postId, commentText } = await req.json();
+    if (!postId || !commentText) {
+      throw new Error("Post ID and comment text are required.");
     }
 
     const supabaseAdmin = createClient(

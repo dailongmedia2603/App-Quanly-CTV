@@ -107,7 +107,6 @@ serve(async (req) => {
           params: {
             post_id: postId,
             content: commentText,
-            image_url: null
           }
         }
       }),
@@ -125,9 +124,11 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ success: false, message: error.message }), {
+    const errorMessage = `Lỗi khi gửi comment đến API: ${error.message}. Điều này có thể do cookie hết hạn, nội dung bị Facebook chặn, hoặc ID bài viết không hợp lệ.`;
+    console.error("post-facebook-comment error:", errorMessage);
+    return new Response(JSON.stringify({ success: false, message: errorMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200, // Return 200 so client can parse the error message
+      status: 200,
     })
   }
 })

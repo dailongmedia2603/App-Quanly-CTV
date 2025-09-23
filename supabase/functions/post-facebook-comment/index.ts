@@ -80,13 +80,20 @@ serve(async (req) => {
     };
     request_body_for_log = requestPayload;
 
+    // Set a 30-second timeout for the fetch request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestPayload),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId); // Clear the timeout if the request completes in time
 
     const responseText = await response.text();
     let responseData;
@@ -116,7 +123,10 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    const errorMessage = `Lỗi khi gửi comment đến API: ${error.message}. Vui lòng kiểm tra lại API URL, API Key và Cookie Facebook.`;
+    let errorMessage = `Lỗi khi gửi comment đến API: ${error.message}. Vui lòng kiểm tra lại API URL, API Key và Cookie Facebook.`;
+    if (error.name === 'AbortError') {
+      errorMessage = "Lỗi khi gửi comment đến API: Yêu cầu đã hết thời gian chờ sau 30 giây. Máy chủ API có thể đang phản hồi chậm.";
+    }
     console.error("post-facebook-comment error:", error);
     
     if (user_id_for_log) {

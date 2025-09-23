@@ -84,8 +84,6 @@ serve(async (req) => {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'Accept': 'application/json', // Explicitly accept JSON responses
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0'
       },
       body: JSON.stringify(requestPayload),
     });

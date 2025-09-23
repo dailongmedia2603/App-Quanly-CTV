@@ -25,13 +25,10 @@ serve(async (req) => {
   let request_body_for_log: any = null;
 
   try {
-    const { postId: combinedPostId, commentText } = await req.json();
-    if (!combinedPostId || !commentText) {
+    const { postId, commentText } = await req.json();
+    if (!postId || !commentText) {
       throw new Error("Post ID and comment text are required.");
     }
-
-    const idParts = combinedPostId.split('_');
-    const finalPostId = idParts.length > 1 ? idParts[1] : combinedPostId;
 
     const authHeader = req.headers.get('Authorization')!;
     const supabase = createClient(
@@ -75,7 +72,7 @@ serve(async (req) => {
       action: {
         name: "comment_to_post",
         params: {
-          post_id: finalPostId,
+          post_id: postId,
           content: commentText,
           image_url: null
         }

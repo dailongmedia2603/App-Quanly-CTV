@@ -60,7 +60,18 @@ serve(async (req) => {
       }),
     });
 
-    const responseData = await response.json();
+    const responseText = await response.text();
+    let responseData;
+
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      const errorMessage = `Máy chủ API trả về phản hồi không hợp lệ (HTTP Status: ${response.status}). Phản hồi là: "${responseText.substring(0, 200)}..."`;
+      return new Response(JSON.stringify({ success: false, message: errorMessage }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
 
     if (!response.ok || responseData.status?.code !== 1) {
       throw new Error(responseData.status?.message || responseData.message || `API Error: ${response.status}`);

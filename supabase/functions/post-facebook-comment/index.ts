@@ -84,7 +84,7 @@ serve(async (req) => {
       throw new Error("User Facebook API is not configured in settings.");
     }
 
-    const apiUrl = `${settings.user_facebook_api_url}?access_token=${settings.user_facebook_api_key}`;
+    const apiUrl = `${settings.user_facebook_api_url.replace(/\/$/, '')}/services/fbql?access_token=${settings.user_facebook_api_key}`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -94,6 +94,13 @@ serve(async (req) => {
       body: JSON.stringify({
         account: {
           cookie: profile.facebook_cookie,
+          ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0"
+        },
+        proxy: {
+          host: "",
+          port: "",
+          username: "",
+          password: ""
         },
         action: {
           name: "comment_to_post",
@@ -120,7 +127,7 @@ serve(async (req) => {
   } catch (error) {
     return new Response(JSON.stringify({ success: false, message: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+      status: 200, // Return 200 so client can parse the error message
     })
   }
 })

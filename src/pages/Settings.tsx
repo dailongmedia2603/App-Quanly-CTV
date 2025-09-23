@@ -1,9 +1,10 @@
 import { useAuth } from "@/contexts/AuthContext";
 import GeneralSettings from "@/components/settings/GeneralSettings";
 import ApiKeysSettings from "@/components/settings/ApiKeysSettings";
+import ManualActionLogTab from "@/components/settings/ManualActionLogTab";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon, KeyRound } from "lucide-react";
+import { Settings as SettingsIcon, KeyRound, History } from "lucide-react";
 
 const Settings = () => {
   const { roles } = useAuth();
@@ -35,14 +36,18 @@ const Settings = () => {
         <p className="text-gray-500 mt-1">Quản lý các cài đặt chung của toàn bộ ứng dụng.</p>
       </div>
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md rounded-lg border border-orange-200 p-0 bg-white">
+        <TabsList className="grid w-full grid-cols-3 max-w-lg rounded-lg border border-orange-200 p-0 bg-white">
           <TabsTrigger value="general" className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-l-md">
             <SettingsIcon className="h-4 w-4" />
             <span>Cài đặt chung</span>
           </TabsTrigger>
-          <TabsTrigger value="api-keys" className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-r-md">
+          <TabsTrigger value="api-keys" className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold">
             <KeyRound className="h-4 w-4" />
             <span>API Keys</span>
+          </TabsTrigger>
+          <TabsTrigger value="action-logs" className="flex-1 flex items-center justify-center space-x-2 py-2 font-medium text-brand-orange data-[state=active]:bg-brand-orange-light data-[state=active]:font-bold rounded-r-md">
+            <History className="h-4 w-4" />
+            <span>Lịch sử Hành động</span>
           </TabsTrigger>
         </TabsList>
         <TabsContent value="general" className="pt-6">
@@ -50,6 +55,9 @@ const Settings = () => {
         </TabsContent>
         <TabsContent value="api-keys" className="pt-6">
           <ApiKeysSettings />
+        </TabsContent>
+        <TabsContent value="action-logs" className="pt-6">
+          <ManualActionLogTab />
         </TabsContent>
       </Tabs>
     </div>

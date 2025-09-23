@@ -25,10 +25,13 @@ serve(async (req) => {
   let request_body_for_log: any = null;
 
   try {
-    const { postId, commentText } = await req.json();
-    if (!postId || !commentText) {
+    const { postId: combinedPostId, commentText } = await req.json();
+    if (!combinedPostId || !commentText) {
       throw new Error("Post ID and comment text are required.");
     }
+
+    const idParts = combinedPostId.split('_');
+    const finalPostId = idParts.length > 1 ? idParts[1] : combinedPostId;
 
     const authHeader = req.headers.get('Authorization')!;
     const supabase = createClient(
@@ -71,7 +74,11 @@ serve(async (req) => {
       proxy: { host: "", port: "", username: "", password: "" },
       action: {
         name: "comment_to_post",
-        params: { post_id: postId, content: commentText }
+        params: {
+          post_id: finalPostId,
+          content: commentText,
+          image_url: null
+        }
       }
     };
     request_body_for_log = requestPayload;
@@ -84,7 +91,6 @@ serve(async (req) => {
 
     const responseData = await response.json();
 
-    // Log the action regardless of success or failure
     await supabaseAdmin.from('manual_action_logs').insert({
         user_id: user.id,
         action_type: 'post_facebook_comment',
@@ -107,7 +113,6 @@ serve(async (req) => {
     const errorMessage = `Lỗi khi gửi comment đến API: ${error.message}. Điều này có thể do cookie hết hạn, nội dung bị Facebook chặn, hoặc ID bài viết không hợp lệ.`;
     console.error("post-facebook-comment error:", errorMessage);
     
-    // Attempt to log the error as well
     if (user_id_for_log) {
         try {
             await supabaseAdmin.from('manual_action_logs').insert({
@@ -115,7 +120,7 @@ serve(async (req) => {
                 action_type: 'post_facebook_comment',
                 request_url: api_url_for_log,
                 request_body: request_body_for_log,
-                response_status: 500, // Internal error
+                response_status: 500,
                 response_body: { error: errorMessage, stack: error.stack }
             });
         } catch (logError) {

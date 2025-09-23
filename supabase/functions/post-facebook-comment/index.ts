@@ -25,10 +25,14 @@ serve(async (req) => {
   let request_body_for_log: any = null;
 
   try {
-    const { postId, commentText } = await req.json();
-    if (!postId || !commentText) {
+    const { postId: combinedPostId, commentText } = await req.json();
+    if (!combinedPostId || !commentText) {
       throw new Error("Post ID and comment text are required.");
     }
+
+    // Tách ID bài viết ra khỏi chuỗi kết hợp (groupid_postid)
+    const idParts = combinedPostId.split('_');
+    const finalPostId = idParts.length > 1 ? idParts[1] : combinedPostId;
 
     const authHeader = req.headers.get('Authorization')!;
     const supabase = createClient(
@@ -71,7 +75,7 @@ serve(async (req) => {
       proxy: { host: "", port: "", username: "", password: "" },
       action: {
         name: "comment_to_post",
-        params: { post_id: postId, content: commentText }
+        params: { post_id: finalPostId, content: commentText }
       }
     };
     request_body_for_log = requestPayload;

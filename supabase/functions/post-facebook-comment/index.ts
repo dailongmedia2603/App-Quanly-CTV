@@ -82,11 +82,21 @@ serve(async (req) => {
 
     const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0'
+      },
       body: JSON.stringify(requestPayload),
     });
 
-    const responseData = await response.json();
+    const responseText = await response.text();
+    let responseData;
+
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      throw new Error(`API returned invalid response (status ${response.status}): ${responseText.substring(0, 200)}...`);
+    }
 
     await supabaseAdmin.from('manual_action_logs').insert({
         user_id: user.id,
@@ -107,8 +117,8 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    const errorMessage = `Lỗi khi gửi comment đến API: ${error.message}. Điều này có thể do cookie hết hạn, nội dung bị Facebook chặn, hoặc ID bài viết không hợp lệ.`;
-    console.error("post-facebook-comment error:", errorMessage);
+    const errorMessage = `Lỗi khi gửi comment đến API: ${error.message}`;
+    console.error("post-facebook-comment error:", error);
     
     if (user_id_for_log) {
         try {
@@ -125,9 +135,9 @@ serve(async (req) => {
         }
     }
 
-    return new Response(JSON.stringify({ success: false, message: errorMessage }), {
+    return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
+      status: 500,
     })
   }
 })

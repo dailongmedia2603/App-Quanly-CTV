@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 interface ReportData {
   id: string;
   campaign_id: string;
+  source_post_id: string | null;
   identified_service_id?: string | null;
   identified_service_name?: string | null;
   ai_evaluation?: string | null;
@@ -165,8 +166,8 @@ const FindCustomers = () => {
   };
 
   const handlePostComment = async (item: ReportData) => {
-    if (!item.source_url || !item.suggested_comment) {
-      showError("Thiếu thông tin để đăng comment.");
+    if (!item.source_post_id || !item.suggested_comment) {
+      showError("Thiếu ID bài viết hoặc nội dung comment.");
       return;
     }
     setPostingCommentId(item.id);
@@ -174,7 +175,7 @@ const FindCustomers = () => {
 
     const { data, error } = await supabase.functions.invoke('post-facebook-comment', {
       body: {
-        postUrl: item.source_url,
+        postId: item.source_post_id,
         commentText: stripMarkdown(item.suggested_comment),
       }
     });

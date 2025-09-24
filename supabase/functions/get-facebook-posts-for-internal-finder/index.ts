@@ -55,11 +55,17 @@ serve(async (req) => {
         }
     }
     
-    // Step 4: Map service names back to reports
-    const allData = reports.map((report) => ({
-      ...report,
-      identified_service_name: servicesMap.get(report.identified_service_id) || null,
-    }));
+    // Step 4: Map service names and CORRECTLY FORMAT the post ID
+    const allData = reports.map((report) => {
+      const idParts = report.source_post_id ? report.source_post_id.split('_') : [];
+      const finalPostId = idParts.length > 1 ? idParts[1] : report.source_post_id;
+
+      return {
+        ...report,
+        source_post_id: finalPostId, // Overwrite with the correct ID
+        identified_service_name: servicesMap.get(report.identified_service_id) || null,
+      }
+    });
 
     // Step 5: Robustly sort by posted_at descending
     allData.sort((a, b) => {

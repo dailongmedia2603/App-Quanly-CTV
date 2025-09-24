@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FacebookReportDetailsDialog } from "@/components/FacebookReportDetailsDialog";
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { format } from 'date-fns';
-import { ExternalLink, FileText, Users, MessageSquare, Clock, Tags, Link as LinkIcon, Sparkles, Copy, RefreshCw, Loader2, ListChecks, Send } from 'lucide-react';
+import { ExternalLink, FileText, Users, MessageSquare, Clock, Tags, Link as LinkIcon, Sparkles, Copy, RefreshCw, Loader2, ListChecks } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CustomerFinderGroupsTab from '@/components/customer-finder/CustomerFinderGroupsTab';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -53,7 +53,6 @@ const FindCustomers = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
   const [generatingCommentIds, setGeneratingCommentIds] = useState<Set<string>>(new Set());
-  const [postingCommentId, setPostingCommentId] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   const fetchReportData = async () => {
@@ -165,30 +164,6 @@ const FindCustomers = () => {
     }
   };
 
-  const handlePostComment = async (item: ReportData) => {
-    if (!item.source_post_id || !item.suggested_comment) {
-      showError("Thiếu ID bài viết hoặc nội dung comment.");
-      return;
-    }
-    setPostingCommentId(item.id);
-    const toastId = showLoading("Đang đăng comment...");
-
-    const { data, error } = await supabase.functions.invoke('post-facebook-comment', {
-      body: {
-        postId: item.source_post_id,
-        commentText: stripMarkdown(item.suggested_comment),
-      }
-    });
-
-    dismissToast(toastId);
-    if (error) {
-      showError(`Đăng thất bại: ${error.message}`);
-    } else {
-      showSuccess(data.message || "Đăng comment thành công!");
-    }
-    setPostingCommentId(null);
-  };
-
   const renderCommentSection = (item: ReportData) => {
     if (generatingCommentIds.has(item.id)) {
       return (
@@ -205,9 +180,6 @@ const FindCustomers = () => {
           <div className="flex items-center space-x-1">
             <Button variant="ghost" size="sm" onClick={() => handleCopyComment(item.suggested_comment)}><Copy className="h-3 w-3 mr-1" /> Sao chép</Button>
             <Button variant="ghost" size="sm" onClick={() => handleGenerateComment(item)}><RefreshCw className="h-3 w-3 mr-1" /> Tạo lại</Button>
-            <Button variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => handlePostComment(item)} disabled={postingCommentId === item.id}>
-              {postingCommentId === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-3 w-3 mr-1" /> Đăng</>}
-            </Button>
           </div>
         </div>
       );

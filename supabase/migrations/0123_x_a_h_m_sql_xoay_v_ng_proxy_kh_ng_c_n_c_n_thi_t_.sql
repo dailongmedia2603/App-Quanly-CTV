@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.get_next_user_facebook_proxy();

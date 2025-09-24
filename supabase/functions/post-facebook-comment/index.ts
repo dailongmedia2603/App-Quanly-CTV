@@ -25,34 +25,41 @@ serve(async (req) => {
   let request_body_for_log: any = null;
 
   try {
-    const { postId, commentText } = await req.json();
+    const { postId, commentText, userId } = await req.json(); // Allow optional userId for automated calls
     if (!postId || !commentText) {
       throw new Error("Post ID and comment text are required.");
     }
 
-    const authHeader = req.headers.get('Authorization')!;
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    );
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("User not authenticated.");
-    user_id_for_log = user.id;
+    let targetUserId = userId;
+
+    // If userId is not provided in the body, get it from the auth header (manual action)
+    if (!targetUserId) {
+      const authHeader = req.headers.get('Authorization')!;
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated.");
+      targetUserId = user.id;
+    }
+    
+    user_id_for_log = targetUserId;
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('facebook_cookie')
-      .eq('id', user.id)
+      .eq('id', targetUserId)
       .single();
 
     if (profileError || !profile || !profile.facebook_cookie) {
-      throw new Error("Facebook cookie not found for this user. Please set it in your profile.");
+      throw new Error(`Facebook cookie not found for user ${targetUserId}. Please set it in the profile.`);
     }
 
     const { data: settings, error: settingsError } = await supabaseAdmin
       .from('app_settings')
-      .select('user_facebook_api_url, user_facebook_api_key, user_facebook_api_proxies')
+      .select('user_facebook_api_url, user_facebook_api_key')
       .eq('id', 1)
       .single();
 
@@ -60,50 +67,20 @@ serve(async (req) => {
       throw new Error("User Facebook API is not configured in settings.");
     }
 
-    // --- START NEW PROXY LOGIC ---
-    let proxy = { host: "", port: "", username: "", password: "" };
-    const proxies = settings.user_facebook_api_proxies as any[];
-
-    if (proxies && Array.isArray(proxies) && proxies.length > 0) {
-      const proxy_count = proxies.length;
-
-      const { data: usageData, error: usageError } = await supabaseAdmin
-        .from('api_key_usage')
-        .select('last_used_index')
-        .eq('service', 'user_facebook_proxy')
-        .single();
-
-      let last_index = -1;
-      if (usageError && usageError.code !== 'PGRST116') { // PGRST116 = no rows found
-        console.error("Error fetching proxy usage:", usageError.message);
-      } else if (usageData) {
-        last_index = usageData.last_used_index;
-      }
-
-      const next_index = (last_index + 1) % proxy_count;
-
-      const { error: updateUsageError } = await supabaseAdmin
-        .from('api_key_usage')
-        .upsert({ service: 'user_facebook_proxy', last_used_index: next_index }, { onConflict: 'service' });
-
-      if (updateUsageError) {
-        console.error("Error updating proxy usage:", updateUsageError.message);
-      }
-
-      const nextProxyData = proxies[next_index];
-      if (nextProxyData) {
-        proxy = {
-          host: nextProxyData.host || "",
-          port: nextProxyData.port || "",
-          username: nextProxyData.username || "",
-          password: nextProxyData.password || ""
-        };
-      }
-    }
-    // --- END NEW PROXY LOGIC ---
-
     const apiUrl = `${settings.user_facebook_api_url.replace(/\/$/, '')}/services/fbql?access_token=${settings.user_facebook_api_key}`;
     api_url_for_log = apiUrl;
+
+    const { data: proxyData, error: proxyError } = await supabaseAdmin.rpc('get_next_user_facebook_proxy');
+    if (proxyError) {
+        console.error("Error fetching proxy, proceeding without one:", proxyError.message);
+    }
+
+    const proxy = proxyData ? {
+        host: proxyData.host || "",
+        port: proxyData.port || "",
+        username: proxyData.username || "",
+        password: proxyData.password || ""
+    } : { host: "", port: "", username: "", password: "" };
 
     const requestPayload = {
       account: {
@@ -139,7 +116,7 @@ serve(async (req) => {
         throw new Error(`API returned non-JSON error (status ${response.status}): ${errorText.substring(0, 200)}...`);
       }
       await supabaseAdmin.from('manual_action_logs').insert({
-          user_id: user.id, action_type: 'post_facebook_comment', request_url: apiUrl,
+          user_id: targetUserId, action_type: 'post_facebook_comment', request_url: apiUrl,
           request_body: requestPayload, response_status: response.status, response_body: errorJson
       });
       throw new Error(errorJson.status?.message || errorJson.message || `API Error: ${response.status}`);
@@ -147,7 +124,7 @@ serve(async (req) => {
 
     const successResponseData = { status: { code: 1, message: "Success (body not read due to size)" } };
     await supabaseAdmin.from('manual_action_logs').insert({
-        user_id: user.id, action_type: 'post_facebook_comment', request_url: apiUrl,
+        user_id: targetUserId, action_type: 'post_facebook_comment', request_url: apiUrl,
         request_body: requestPayload, response_status: response.status, response_body: successResponseData
     });
 

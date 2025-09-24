@@ -396,7 +396,7 @@ serve(async (req) => {
     await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(2/${totalSteps}) Phân tích và lọc xong.`, null, 'progress');
 
     if (isInternalCampaign && finalResults.length > 0) {
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(3/${totalSteps}) Bắt đầu tự động tạo comment cho ${finalResults.length} bài viết...`, null, 'progress');
+        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'info', `(3/${totalSteps}) Bắt đầu tự động tạo và đăng comment cho ${finalResults.length} bài viết...`, null, 'progress');
 
         const [servicesRes, templateRes] = await Promise.all([
             supabaseAdmin.from('document_services').select('id, name, description'),
@@ -437,13 +437,25 @@ serve(async (req) => {
                 if (identifiedServiceId && cleanedGeneratedComment && services.some(s => s.id === identifiedServiceId)) {
                     post.identified_service_id = identifiedServiceId;
                     post.suggested_comment = cleanedGeneratedComment;
+
+                    // Automatically post the comment
+                    const { error: postError } = await supabaseAdmin.functions.invoke('post-facebook-comment', {
+                        body: {
+                            postId: post.source_post_id,
+                            commentText: cleanedGeneratedComment,
+                            userId: campaignOwnerId // Post on behalf of the campaign owner
+                        }
+                    });
+                    if (postError) {
+                        console.error(`Auto-posting comment failed for post ${post.source_post_id}:`, postError.message);
+                    }
                 }
             } catch (e) {
-                console.error(`Error auto-generating comment for post ${post.source_post_id}:`, e.message);
+                console.error(`Error auto-generating/posting comment for post ${post.source_post_id}:`, e.message);
             }
             await delay(1000); // Add 1-second delay between AI calls
         }
-        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(3/${totalSteps}) Đã tạo xong comment.`, null, 'progress');
+        await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(3/${totalSteps}) Đã tạo và đăng xong comment.`, null, 'progress');
     }
 
     if (finalResults.length > 0) {

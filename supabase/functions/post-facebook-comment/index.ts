@@ -32,7 +32,6 @@ serve(async (req) => {
 
     let targetUserId = userId;
 
-    // If userId is not provided in the body, get it from the auth header (manual action)
     if (!targetUserId) {
       const authHeader = req.headers.get('Authorization')!;
       const supabase = createClient(
@@ -127,6 +126,16 @@ serve(async (req) => {
         user_id: targetUserId, action_type: 'post_facebook_comment', request_url: apiUrl,
         request_body: requestPayload, response_status: response.status, response_body: successResponseData
     });
+
+    // After successful post, update the report table
+    const { error: updateReportError } = await supabaseAdmin
+      .from('Bao_cao_Facebook')
+      .update({ commented_at: new Date().toISOString() })
+      .eq('source_post_id', postId);
+
+    if (updateReportError) {
+      console.error(`Failed to update commented_at status for post ${postId}:`, updateReportError.message);
+    }
 
     return new Response(JSON.stringify({ success: true, message: 'Đăng comment thành công!', data: successResponseData }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

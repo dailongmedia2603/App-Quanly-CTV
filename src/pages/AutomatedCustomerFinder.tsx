@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FacebookReportDetailsDialog } from "@/components/FacebookReportDetailsDialog";
 import { showError, showSuccess, showLoading, dismissToast } from '@/utils/toast';
 import { format } from 'date-fns';
-import { ExternalLink, FileText, Users, MessageSquare, Clock, Tags, Link as LinkIcon, Sparkles, Copy, RefreshCw, Loader2, Send } from 'lucide-react';
+import { ExternalLink, FileText, Users, MessageSquare, Clock, Tags, Link as LinkIcon, Sparkles, Copy, RefreshCw, Loader2, Send, CheckCircle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Label } from '@/components/ui/label';
 
@@ -24,6 +24,7 @@ interface ReportData {
   posted_at: string | null;
   sentiment: 'positive' | 'negative' | 'neutral' | null;
   suggested_comment?: string | null;
+  commented_at: string | null;
   title: string | null;
   price: string | null;
   area: string | null;
@@ -161,6 +162,8 @@ const AutomatedCustomerFinder = () => {
       showError(`Đăng thất bại: ${error.message}`);
     } else {
       showSuccess(data.message || "Đăng comment thành công!");
+      // Refresh data to get the new commented_at status
+      fetchReportData();
     }
     setPostingCommentId(null);
   };
@@ -189,6 +192,13 @@ const AutomatedCustomerFinder = () => {
               {postingCommentId === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-3 w-3 mr-1" /> Đăng</>}
             </Button>
           </div>
+          {item.commented_at && (
+            <div className="flex items-center pt-2">
+              <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center">
+                <CheckCircle className="h-3 w-3 mr-1.5" /> Đã comment
+              </Badge>
+            </div>
+          )}
         </div>
       );
     }

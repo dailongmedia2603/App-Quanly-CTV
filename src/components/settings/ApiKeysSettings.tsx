@@ -233,14 +233,14 @@ const ApiKeysSettings = () => {
             <h4 className="font-medium text-sm mb-2">Cấu hình Proxy</h4>
             <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
               {proxies.map((proxy, index) => (
-                <div key={index} className="p-3 border rounded-md space-y-2 relative bg-white/50">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1"><Label htmlFor={`proxy-host-${index}`}>Host</Label><Input id={`proxy-host-${index}`} value={proxy.host} onChange={(e) => handleProxyChange(index, 'host', e.target.value)} /></div>
-                    <div className="space-y-1"><Label htmlFor={`proxy-port-${index}`}>Port</Label><Input id={`proxy-port-${index}`} value={proxy.port} onChange={(e) => handleProxyChange(index, 'port', e.target.value)} /></div>
-                    <div className="space-y-1"><Label htmlFor={`proxy-username-${index}`}>Username</Label><Input id={`proxy-username-${index}`} value={proxy.username} onChange={(e) => handleProxyChange(index, 'username', e.target.value)} /></div>
-                    <div className="space-y-1"><Label htmlFor={`proxy-password-${index}`}>Password</Label><Input id={`proxy-password-${index}`} type="password" value={proxy.password} onChange={(e) => handleProxyChange(index, 'password', e.target.value)} /></div>
+                <div key={index} className="p-3 border rounded-md relative bg-white/50">
+                  <div className="flex items-end space-x-2 pr-10">
+                    <div className="flex-1 space-y-1"><Label htmlFor={`proxy-host-${index}`}>Host</Label><Input id={`proxy-host-${index}`} value={proxy.host} onChange={(e) => handleProxyChange(index, 'host', e.target.value)} /></div>
+                    <div className="w-24 space-y-1"><Label htmlFor={`proxy-port-${index}`}>Port</Label><Input id={`proxy-port-${index}`} value={proxy.port} onChange={(e) => handleProxyChange(index, 'port', e.target.value)} /></div>
+                    <div className="flex-1 space-y-1"><Label htmlFor={`proxy-username-${index}`}>Username</Label><Input id={`proxy-username-${index}`} value={proxy.username} onChange={(e) => handleProxyChange(index, 'username', e.target.value)} /></div>
+                    <div className="flex-1 space-y-1"><Label htmlFor={`proxy-password-${index}`}>Password</Label><Input id={`proxy-password-${index}`} type="password" value={proxy.password} onChange={(e) => handleProxyChange(index, 'password', e.target.value)} /></div>
                   </div>
-                  <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-red-500" onClick={() => removeProxy(index)}><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="absolute top-1/2 right-2 -translate-y-1/2 h-8 w-8 text-red-500" onClick={() => removeProxy(index)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               ))}
             </div>

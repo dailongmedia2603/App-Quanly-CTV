@@ -113,15 +113,19 @@ export interface Database {
           support_widget_link: string | null
           created_at: string | null
           page_title: string | null
-          gemini_model: string | null
+          ai_model_name: string | null
           facebook_api_url: string | null
           facebook_api_token: string | null
-          gemini_api_keys: string[] | null
           quote_company_name: string | null
           quote_company_address: string | null
           quote_company_email: string | null
           quote_company_phone: string | null
           quote_logo_url: string | null
+          multiappai_api_url: string | null
+          multiappai_api_key: string | null
+          user_facebook_api_url: string | null
+          user_facebook_api_key: string | null
+          user_facebook_api_proxies: Json | null
         }
         Insert: {
           id: number
@@ -131,15 +135,19 @@ export interface Database {
           support_widget_link?: string | null
           created_at?: string | null
           page_title?: string | null
-          gemini_model?: string | null
+          ai_model_name?: string | null
           facebook_api_url?: string | null
           facebook_api_token?: string | null
-          gemini_api_keys?: string[] | null
           quote_company_name?: string | null
           quote_company_address?: string | null
           quote_company_email?: string | null
           quote_company_phone?: string | null
           quote_logo_url?: string | null
+          multiappai_api_url?: string | null
+          multiappai_api_key?: string | null
+          user_facebook_api_url?: string | null
+          user_facebook_api_key?: string | null
+          user_facebook_api_proxies?: Json | null
         }
         Update: {
           id?: number
@@ -149,15 +157,19 @@ export interface Database {
           support_widget_link?: string | null
           created_at?: string | null
           page_title?: string | null
-          gemini_model?: string | null
+          ai_model_name?: string | null
           facebook_api_url?: string | null
           facebook_api_token?: string | null
-          gemini_api_keys?: string[] | null
           quote_company_name?: string | null
           quote_company_address?: string | null
           quote_company_email?: string | null
           quote_company_phone?: string | null
           quote_logo_url?: string | null
+          multiappai_api_url?: string | null
+          multiappai_api_key?: string | null
+          user_facebook_api_url?: string | null
+          user_facebook_api_key?: string | null
+          user_facebook_api_proxies?: Json | null
         }
       }
       Bao_cao_Facebook: {
@@ -416,6 +428,7 @@ export interface Database {
           next_scan_at: string | null
           website_scan_type: string | null
           created_at: string | null
+          audience_type: string
         }
         Insert: {
           id?: string
@@ -434,6 +447,7 @@ export interface Database {
           next_scan_at?: string | null
           website_scan_type?: string | null
           created_at?: string | null
+          audience_type?: string
         }
         Update: {
           id?: string
@@ -452,6 +466,7 @@ export interface Database {
           next_scan_at?: string | null
           website_scan_type?: string | null
           created_at?: string | null
+          audience_type?: string
         }
       }
       document_post_types: {
@@ -718,6 +733,23 @@ export interface Database {
           created_at?: string | null
         }
       }
+      facebook_group_categories: {
+        Row: {
+          id: string
+          name: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          created_at?: string | null
+        }
+      }
       generated_quotes: {
         Row: {
           id: string
@@ -767,6 +799,7 @@ export interface Database {
           group_id: string | null
           origin: string | null
           created_at: string | null
+          category_id: string | null
         }
         Insert: {
           id?: string
@@ -775,6 +808,7 @@ export interface Database {
           group_id?: string | null
           origin?: string | null
           created_at?: string | null
+          category_id?: string | null
         }
         Update: {
           id?: string
@@ -782,6 +816,39 @@ export interface Database {
           group_name?: string | null
           group_id?: string | null
           origin?: string | null
+          created_at?: string | null
+          category_id?: string | null
+        }
+      }
+      manual_action_logs: {
+        Row: {
+          id: string
+          user_id: string | null
+          action_type: string
+          request_url: string | null
+          request_body: Json | null
+          response_status: number | null
+          response_body: Json | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          action_type: string
+          request_url?: string | null
+          request_body?: Json | null
+          response_status?: number | null
+          response_body?: Json | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          action_type?: string
+          request_url?: string | null
+          request_body?: Json | null
+          response_status?: number | null
+          response_body?: Json | null
           created_at?: string | null
         }
       }
@@ -798,6 +865,7 @@ export interface Database {
           momo: string | null
           google_refresh_token: string | null
           google_connected_email: string | null
+          facebook_cookie: string | null
         }
         Insert: {
           id: string
@@ -811,6 +879,7 @@ export interface Database {
           momo?: string | null
           google_refresh_token?: string | null
           google_connected_email?: string | null
+          facebook_cookie?: string | null
         }
         Update: {
           id?: string
@@ -824,6 +893,7 @@ export interface Database {
           momo?: string | null
           google_refresh_token?: string | null
           google_connected_email?: string | null
+          facebook_cookie?: string | null
         }
       }
       quote_templates: {
@@ -1080,6 +1150,24 @@ export interface Database {
           description: string
           suggested_comment: string
           identified_service_id: string
+          source_post_id: string
+        }[]
+      }
+      get_all_facebook_posts_for_internal_finder: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          campaign_id: string
+          posted_at: string
+          keywords_found: string[]
+          ai_evaluation: string
+          sentiment: string
+          source_url: string
+          scanned_at: string
+          description: string
+          suggested_comment: string
+          identified_service_id: string
+          source_post_id: string
         }[]
       }
       get_all_income_stats_for_month: {
@@ -1118,9 +1206,9 @@ export interface Database {
         }
         Returns: number
       }
-      get_next_gemini_api_key: {
+      get_next_user_facebook_proxy: {
         Args: Record<PropertyKey, never>
-        Returns: string
+        Returns: Json
       }
       get_old_contracts_with_payments_in_month: {
         Args: {

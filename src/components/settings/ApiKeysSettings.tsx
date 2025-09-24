@@ -15,8 +15,16 @@ import {
   showLoading,
   showSuccess,
 } from "@/utils/toast";
-import { CheckCircle, XCircle, Loader2, Zap } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Zap, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Separator } from "../ui/separator";
+
+interface Proxy {
+  host: string;
+  port: string;
+  username: string;
+  password: string;
+}
 
 const ApiKeysSettings = () => {
   // MultiApp AI states
@@ -34,6 +42,7 @@ const ApiKeysSettings = () => {
   // User Facebook API states
   const [userFacebookApiUrl, setUserFacebookApiUrl] = useState("");
   const [userFacebookApiKey, setUserFacebookApiKey] = useState("");
+  const [proxies, setProxies] = useState<Proxy[]>([{ host: "", port: "", username: "", password: "" }]);
 
   // General state
   const [isSaving, setIsSaving] = useState(false);
@@ -42,7 +51,7 @@ const ApiKeysSettings = () => {
     const fetchSettings = async () => {
       const { data, error } = await supabase
         .from("app_settings")
-        .select("multiappai_api_url, multiappai_api_key, facebook_api_url, facebook_api_token, user_facebook_api_url, user_facebook_api_key")
+        .select("multiappai_api_url, multiappai_api_key, facebook_api_url, facebook_api_token, user_facebook_api_url, user_facebook_api_key, user_facebook_api_proxies")
         .eq("id", 1)
         .single();
 
@@ -55,15 +64,41 @@ const ApiKeysSettings = () => {
         setFacebookApiToken(data.facebook_api_token || "");
         setUserFacebookApiUrl(data.user_facebook_api_url || "");
         setUserFacebookApiKey(data.user_facebook_api_key || "");
+        if (data.user_facebook_api_proxies && Array.isArray(data.user_facebook_api_proxies) && (data.user_facebook_api_proxies as Proxy[]).length > 0) {
+          setProxies(data.user_facebook_api_proxies as Proxy[]);
+        } else {
+          setProxies([{ host: "", port: "", username: "", password: "" }]);
+        }
       }
     };
 
     fetchSettings();
   }, []);
 
+  const handleProxyChange = (index: number, field: keyof Proxy, value: string) => {
+    const newProxies = [...proxies];
+    newProxies[index][field] = value;
+    setProxies(newProxies);
+  };
+
+  const addProxy = () => {
+    setProxies([...proxies, { host: "", port: "", username: "", password: "" }]);
+  };
+
+  const removeProxy = (index: number) => {
+    const newProxies = proxies.filter((_, i) => i !== index);
+    if (newProxies.length === 0) {
+      setProxies([{ host: "", port: "", username: "", password: "" }]);
+    } else {
+      setProxies(newProxies);
+    }
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     const toastId = showLoading("Đang lưu cài đặt...");
+
+    const validProxies = proxies.filter(p => p.host && p.port);
 
     const { error } = await supabase
       .from("app_settings")
@@ -75,6 +110,7 @@ const ApiKeysSettings = () => {
         facebook_api_token: facebookApiToken,
         user_facebook_api_url: userFacebookApiUrl,
         user_facebook_api_key: userFacebookApiKey,
+        user_facebook_api_proxies: validProxies,
       });
 
     dismissToast(toastId);
@@ -193,6 +229,22 @@ const ApiKeysSettings = () => {
               <div className="space-y-2"><Label htmlFor="user-facebook-api-url">API URL</Label><Input id="user-facebook-api-url" value={userFacebookApiUrl} onChange={(e) => setUserFacebookApiUrl(e.target.value)} /></div>
               <div className="space-y-2"><Label htmlFor="user-facebook-api-key">API Key</Label><Input id="user-facebook-api-key" type="password" placeholder="Nhập API Key" value={userFacebookApiKey} onChange={(e) => setUserFacebookApiKey(e.target.value)} /></div>
             </div>
+            <Separator className="my-4" />
+            <h4 className="font-medium text-sm mb-2">Cấu hình Proxy</h4>
+            <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+              {proxies.map((proxy, index) => (
+                <div key={index} className="p-3 border rounded-md space-y-2 relative bg-white/50">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1"><Label htmlFor={`proxy-host-${index}`}>Host</Label><Input id={`proxy-host-${index}`} value={proxy.host} onChange={(e) => handleProxyChange(index, 'host', e.target.value)} /></div>
+                    <div className="space-y-1"><Label htmlFor={`proxy-port-${index}`}>Port</Label><Input id={`proxy-port-${index}`} value={proxy.port} onChange={(e) => handleProxyChange(index, 'port', e.target.value)} /></div>
+                    <div className="space-y-1"><Label htmlFor={`proxy-username-${index}`}>Username</Label><Input id={`proxy-username-${index}`} value={proxy.username} onChange={(e) => handleProxyChange(index, 'username', e.target.value)} /></div>
+                    <div className="space-y-1"><Label htmlFor={`proxy-password-${index}`}>Password</Label><Input id={`proxy-password-${index}`} type="password" value={proxy.password} onChange={(e) => handleProxyChange(index, 'password', e.target.value)} /></div>
+                  </div>
+                  <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6 text-red-500" onClick={() => removeProxy(index)}><Trash2 className="h-4 w-4" /></Button>
+                </div>
+              ))}
+            </div>
+            <Button variant="outline" size="sm" onClick={addProxy} className="mt-3"><Plus className="h-4 w-4 mr-2" /> Thêm Proxy</Button>
           </CardContent>
         </Card>
       </div>

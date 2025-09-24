@@ -63,12 +63,25 @@ serve(async (req) => {
     const apiUrl = `${settings.user_facebook_api_url.replace(/\/$/, '')}/services/fbql?access_token=${settings.user_facebook_api_key}`;
     api_url_for_log = apiUrl;
 
+    // Fetch the next proxy to use
+    const { data: proxyData, error: proxyError } = await supabaseAdmin.rpc('get_next_user_facebook_proxy');
+    if (proxyError) {
+        console.error("Error fetching proxy, proceeding without one:", proxyError.message);
+    }
+
+    const proxy = proxyData ? {
+        host: proxyData.host || "",
+        port: proxyData.port || "",
+        username: proxyData.username || "",
+        password: proxyData.password || ""
+    } : { host: "", port: "", username: "", password: "" };
+
     const requestPayload = {
       account: {
         cookie: profile.facebook_cookie,
         ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0"
       },
-      proxy: { host: "", port: "", username: "", password: "" },
+      proxy: proxy,
       action: {
         name: "comment_to_post",
         params: {
@@ -88,7 +101,6 @@ serve(async (req) => {
       body: JSON.stringify(requestPayload),
     });
 
-    // SOLUTION: Check status code first. Only read body if it's an error.
     if (!response.ok) {
       const errorText = await response.text();
       let errorJson;
@@ -104,7 +116,6 @@ serve(async (req) => {
       throw new Error(errorJson.status?.message || errorJson.message || `API Error: ${response.status}`);
     }
 
-    // If response is OK (2xx), assume success and do NOT read the large body.
     const successResponseData = { status: { code: 1, message: "Success (body not read due to size)" } };
     await supabaseAdmin.from('manual_action_logs').insert({
         user_id: user.id, action_type: 'post_facebook_comment', request_url: apiUrl,

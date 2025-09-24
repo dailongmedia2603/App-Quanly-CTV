@@ -360,6 +360,7 @@ serve(async (req) => {
                     source_post_id: post.id,
                     suggested_comment: null,
                     identified_service_id: null,
+                    commented_at: null,
                 });
 
             } catch (e) {
@@ -375,6 +376,7 @@ serve(async (req) => {
                     source_post_id: post.id,
                     suggested_comment: null,
                     identified_service_id: null,
+                    commented_at: null,
                 });
             }
             await delay(1000); // Add 1-second delay between AI calls
@@ -391,6 +393,7 @@ serve(async (req) => {
             source_post_id: post.id,
             suggested_comment: null,
             identified_service_id: null,
+            commented_at: null,
         }));
     }
     await logScan(supabaseAdmin, campaign.id, campaignOwnerId, 'success', `(2/${totalSteps}) Phân tích và lọc xong.`, null, 'progress');
@@ -448,6 +451,8 @@ serve(async (req) => {
                     });
                     if (postError) {
                         console.error(`Auto-posting comment failed for post ${post.source_post_id}:`, postError.message);
+                    } else {
+                        post.commented_at = new Date().toISOString();
                     }
                 }
             } catch (e) {

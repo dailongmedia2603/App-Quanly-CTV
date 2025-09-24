@@ -136,25 +136,31 @@ serve(async (req) => {
       body: JSON.stringify(requestPayload),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorJson;
-      try {
-        errorJson = JSON.parse(errorText);
-      } catch (e) {
-        throw new Error(`API returned non-JSON error (status ${response.status}): ${errorText.substring(0, 200)}...`);
-      }
+    const responseText = await response.text();
+    let responseData;
+
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      const errorMessage = `Máy chủ API trả về phản hồi không hợp lệ (HTTP Status: ${response.status}). Phản hồi là: "${responseText.substring(0, 200)}..."`;
       await supabaseAdmin.from('manual_action_logs').insert({
           user_id: targetUserId, action_type: 'post_facebook_comment', request_url: apiUrl,
-          request_body: requestPayload, response_status: response.status, response_body: errorJson
+          request_body: requestPayload, response_status: response.status, response_body: { error: errorMessage }
       });
-      throw new Error(errorJson.status?.message || errorJson.message || `API Error: ${response.status}`);
+      throw new Error(errorMessage);
     }
 
-    const successResponseData = { status: { code: 1, message: "Success (body not read due to size)" } };
+    if (!response.ok || responseData.status?.code !== 1) {
+      await supabaseAdmin.from('manual_action_logs').insert({
+          user_id: targetUserId, action_type: 'post_facebook_comment', request_url: apiUrl,
+          request_body: requestPayload, response_status: response.status, response_body: responseData
+      });
+      throw new Error(responseData.status?.message || responseData.message || `API Error: ${response.status}`);
+    }
+
     await supabaseAdmin.from('manual_action_logs').insert({
         user_id: targetUserId, action_type: 'post_facebook_comment', request_url: apiUrl,
-        request_body: requestPayload, response_status: response.status, response_body: successResponseData
+        request_body: requestPayload, response_status: response.status, response_body: responseData
     });
 
     // After successful post, update the report table
@@ -167,7 +173,7 @@ serve(async (req) => {
       console.error(`Failed to update commented_at status for post ${postId}:`, updateReportError.message);
     }
 
-    return new Response(JSON.stringify({ success: true, message: 'Đăng comment thành công!', data: successResponseData }), {
+    return new Response(JSON.stringify({ success: true, message: 'Đăng comment thành công!', data: responseData }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

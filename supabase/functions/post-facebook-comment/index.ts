@@ -91,10 +91,14 @@ serve(async (req) => {
     const apiUrl = `${settings.user_facebook_api_url.replace(/\/$/, '')}/services/fbql?access_token=${settings.user_facebook_api_key}`;
     api_url_for_log = apiUrl;
 
+    // Clean the post ID for the external API call, but keep the original for DB updates
+    const idParts = postId ? String(postId).split('_') : [];
+    const cleanedPostId = idParts.length > 1 ? idParts[1] : postId;
+
     const requestPayload = {
       account: { cookie: profile.facebook_cookie, ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0" },
       proxy: proxy,
-      action: { name: "comment_to_post", params: { post_id: postId, content: commentText, image_url: null } }
+      action: { name: "comment_to_post", params: { post_id: cleanedPostId, content: commentText, image_url: null } }
     };
     request_body_for_log = requestPayload;
 
@@ -112,10 +116,10 @@ serve(async (req) => {
       throw new Error(errorJson.status?.message || errorJson.message || `API Error: ${response.status}`);
     }
 
-    // If response.ok is true, we assume success without reading the body
     const successResponseData = { status: { code: 1, message: "Success (body not read)" } };
     await supabaseAdmin.from('manual_action_logs').insert({ user_id: targetUserId, action_type: 'post_facebook_comment', request_url: apiUrl, request_body: requestPayload, response_status: response.status, response_body: successResponseData });
 
+    // After successful post, update the report table using the original, full postId
     const { error: updateReportError } = await supabaseAdmin
       .from('Bao_cao_Facebook')
       .update({ commented_at: new Date().toISOString() })

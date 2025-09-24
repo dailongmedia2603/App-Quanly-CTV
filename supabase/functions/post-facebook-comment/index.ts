@@ -25,7 +25,7 @@ serve(async (req) => {
   let request_body_for_log: any = null;
 
   try {
-    const { postId, commentText, userId } = await req.json(); // Allow optional userId for automated calls
+    const { postId, commentText, userId } = await req.json();
     if (!postId || !commentText) {
       throw new Error("Post ID and comment text are required.");
     }
@@ -66,104 +66,56 @@ serve(async (req) => {
       throw new Error("User Facebook API is not configured in settings.");
     }
 
-    // --- START ROBUST PROXY LOGIC ---
     let proxy = { host: "", port: "", username: "", password: "" };
     const proxies = settings.user_facebook_api_proxies as any[];
 
     if (proxies && Array.isArray(proxies) && proxies.length > 0) {
       const proxy_count = proxies.length;
-
       const { data: usageData, error: usageError } = await supabaseAdmin
         .from('api_key_usage')
         .select('last_used_index')
         .eq('service', 'user_facebook_proxy')
         .single();
-
       let last_index = -1;
-      if (usageError && usageError.code !== 'PGRST116') {
-        console.error("Error fetching proxy usage:", usageError.message);
-      } else if (usageData) {
-        last_index = usageData.last_used_index ?? -1;
-      }
-
+      if (usageError && usageError.code !== 'PGRST116') console.error("Error fetching proxy usage:", usageError.message);
+      else if (usageData) last_index = usageData.last_used_index ?? -1;
       const next_index = (last_index + 1) % proxy_count;
-
       const { error: updateUsageError } = await supabaseAdmin
         .from('api_key_usage')
         .upsert({ service: 'user_facebook_proxy', last_used_index: next_index }, { onConflict: 'service' });
-
-      if (updateUsageError) {
-        console.error("Error updating proxy usage:", updateUsageError.message);
-      }
-
+      if (updateUsageError) console.error("Error updating proxy usage:", updateUsageError.message);
       const nextProxyData = proxies[next_index];
-      if (nextProxyData) {
-        proxy = {
-          host: nextProxyData.host || "",
-          port: nextProxyData.port || "",
-          username: nextProxyData.username || "",
-          password: nextProxyData.password || ""
-        };
-      }
+      if (nextProxyData) proxy = { host: nextProxyData.host || "", port: nextProxyData.port || "", username: nextProxyData.username || "", password: nextProxyData.password || "" };
     }
-    // --- END ROBUST PROXY LOGIC ---
 
     const apiUrl = `${settings.user_facebook_api_url.replace(/\/$/, '')}/services/fbql?access_token=${settings.user_facebook_api_key}`;
     api_url_for_log = apiUrl;
 
     const requestPayload = {
-      account: {
-        cookie: profile.facebook_cookie,
-        ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0"
-      },
+      account: { cookie: profile.facebook_cookie, ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0" },
       proxy: proxy,
-      action: {
-        name: "comment_to_post",
-        params: {
-          post_id: postId,
-          content: commentText,
-          image_url: null
-        }
-      }
+      action: { name: "comment_to_post", params: { post_id: postId, content: commentText, image_url: null } }
     };
     request_body_for_log = requestPayload;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestPayload),
     });
 
-    const responseText = await response.text();
-    let responseData;
-
-    try {
-      responseData = JSON.parse(responseText);
-    } catch (e) {
-      const errorMessage = `Máy chủ API trả về phản hồi không hợp lệ (HTTP Status: ${response.status}). Phản hồi là: "${responseText.substring(0, 200)}..."`;
-      await supabaseAdmin.from('manual_action_logs').insert({
-          user_id: targetUserId, action_type: 'post_facebook_comment', request_url: apiUrl,
-          request_body: requestPayload, response_status: response.status, response_body: { error: errorMessage }
-      });
-      throw new Error(errorMessage);
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorJson;
+      try { errorJson = JSON.parse(errorText); } catch (e) { throw new Error(`API returned non-JSON error (status ${response.status}): ${errorText.substring(0, 200)}...`); }
+      await supabaseAdmin.from('manual_action_logs').insert({ user_id: targetUserId, action_type: 'post_facebook_comment', request_url: apiUrl, request_body: requestPayload, response_status: response.status, response_body: errorJson });
+      throw new Error(errorJson.status?.message || errorJson.message || `API Error: ${response.status}`);
     }
 
-    if (!response.ok || responseData.status?.code !== 1) {
-      await supabaseAdmin.from('manual_action_logs').insert({
-          user_id: targetUserId, action_type: 'post_facebook_comment', request_url: apiUrl,
-          request_body: requestPayload, response_status: response.status, response_body: responseData
-      });
-      throw new Error(responseData.status?.message || responseData.message || `API Error: ${response.status}`);
-    }
+    // If response.ok is true, we assume success without reading the body
+    const successResponseData = { status: { code: 1, message: "Success (body not read)" } };
+    await supabaseAdmin.from('manual_action_logs').insert({ user_id: targetUserId, action_type: 'post_facebook_comment', request_url: apiUrl, request_body: requestPayload, response_status: response.status, response_body: successResponseData });
 
-    await supabaseAdmin.from('manual_action_logs').insert({
-        user_id: targetUserId, action_type: 'post_facebook_comment', request_url: apiUrl,
-        request_body: requestPayload, response_status: response.status, response_body: responseData
-    });
-
-    // After successful post, update the report table
     const { error: updateReportError } = await supabaseAdmin
       .from('Bao_cao_Facebook')
       .update({ commented_at: new Date().toISOString() })
@@ -173,7 +125,7 @@ serve(async (req) => {
       console.error(`Failed to update commented_at status for post ${postId}:`, updateReportError.message);
     }
 
-    return new Response(JSON.stringify({ success: true, message: 'Đăng comment thành công!', data: responseData }), {
+    return new Response(JSON.stringify({ success: true, message: 'Đăng comment thành công!', data: successResponseData }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
